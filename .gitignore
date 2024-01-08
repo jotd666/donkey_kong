@@ -1,0 +1,15 @@
+*.o
+*.zip
+*.png
+*.pyc
+c
+s
+snapshot
+src/datetime
+*.slave
+*.bak
+graphics.68k
+palette.68k
+palette_cluts.68k
+sound_entries.68k
+sounds.68k

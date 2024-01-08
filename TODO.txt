@@ -1,0 +1,1 @@
+- change 0x6xxx unnamed ram addresses by meaningful names if possible
