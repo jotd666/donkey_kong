@@ -1,7 +1,8 @@
-# moon patrol
-transcode of Moon Patrol arcade version for Amiga
+# donkey kong
+transcode of Donkey Kong arcade version for Amiga
 
 Credits:
 
-- jotd: Z80 to 68000 conversion
-
+- jotd: Z80 to Amiga 68000 conversion
+- Jeff Willms, Kef Schecter, anon: Z80 reverse engineering
+- Mark (tcdev): graphics extraction
