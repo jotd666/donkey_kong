@@ -170,7 +170,7 @@
   "$6500": "start_of_bouncer_memory_area",
   "$6507": "destination",
   "$65a0": "start_of_pies",
-  "$65a7": "destination_is_#65a7",
+  "$65a7": "destination_is_65a7",
   "$6600": "elevator_array_start",
   "$6603": "destination_sprite_?_x_positions_?",
   "$6607": "destination_sprite_?",
