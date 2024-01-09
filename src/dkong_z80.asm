@@ -7,6 +7,8 @@
 ; * Kef Schecter (phase 2)
 ; * An anonymous contributor (most of the initial work on phase 1)
 ;
+; reworked by JOTD mainly to de-anonymize RAM variables
+;
 ; Memory map:
 ;   $0000-3fff ROM
 ;   $6000-6fff RAM
@@ -154,6 +156,7 @@ VIDEO_RAM       equ $7400
 ; been used for more than one purpose.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; those equates are the same in lower case, suffixed by their RAM address
 ; Number of credits in BCD. Can't go over MAX_CREDITS.
 NumCredits      equ RAM+1
 
@@ -930,7 +933,7 @@ NumObstaclesJumped  equ RAM+$60
 ; if there are credits or the game is being played it returns immediately.  if not, it returns to higher subroutine
 ;
 
-0008: 3A 07 60    ld      a,(nocredits) ; load A with 1 when no credits have been inserted, 0 if any credits exist or game is being played
+0008: 3A 07 60    ld      a,(nocredits_6007) ; load A with 1 when no credits have been inserted, 0 if any credits exist or game is being played
 000B: 0F          rrca                ; any credits in the game ?
 000C: D0          ret     nc          ; yes, return
 
@@ -943,7 +946,7 @@ NumObstaclesJumped  equ RAM+$60
 ; if mario is alive, it returns.  if mario is dead, it returns to the higher subroutine.
 ;
 
-0010: 3A 00 62    ld      a,($6200)   ; 1 when mario is alive, 0 when dead
+0010: 3A 00 62    ld      a,(mario_array_6200)   ; 1 when mario is alive, 0 when dead
 0013: 0F          rrca                ; is mario alive?
 0014: D8          ret     c           ; yes, return
 
@@ -955,7 +958,7 @@ NumObstaclesJumped  equ RAM+$60
 ; RST     #18
 ;
 
-0018: 21 09 60    ld      hl,waittimermsb; load timer that counts down
+0018: 21 09 60    ld      hl,waittimermsb_6009; load timer that counts down
 001B: 35          dec     (hl)        ; Count it down...
 001C: C8          ret     z           ; Return if zero
 
@@ -967,7 +970,7 @@ NumObstaclesJumped  equ RAM+$60
 ; RST     #20
 ;
 
-0020: 21 08 60    ld      hl,waittimerlsb; load HL with timer
+0020: 21 08 60    ld      hl,waittimerlsb_6008; load HL with timer
 0023: 35          dec     (hl)        ; count it down
 0024: 28 F2       jr      z,$0018     ; If zero skip up and count down the other timer
 
@@ -1028,7 +1031,7 @@ NumObstaclesJumped  equ RAM+$60
 ; used to check a screen number.  if it doesn't match, the 2nd level of subroutine is returned
 ; A is preloaded with the check value, in binary
 
-0044: 21 27 62    ld      hl,$6227    ; Load HL with address of Screen #
+0044: 21 27 62    ld      hl,screen_number_6227    ; Load HL with address of Screen #
 0047: 46          ld      b,(hl)      ; load B with Screen #, For B = 1 to screen # (1, 2, 3 or 4)
 
 0048: 0F          rrca                ; Rotate A right with carry
@@ -1043,7 +1046,7 @@ NumObstaclesJumped  equ RAM+$60
 ; this subroutine copies the memory values of HL to HL + #28 into #6908 through #6908 + #28
 ; used to set all the kong sprites
 
-004E: 11 08 69    ld      de,$6908    ; Kong's Sprites start
+004E: 11 08 69    ld      de,start_of_kong_sprite_6908    ; Kong's Sprites start
 0051: 01 28 00    ld      bc,$0028    ; #28 bytes to copy
 0054: ED B0       ldir                ; copy
 0056: C9          ret                 ; return
@@ -1052,12 +1055,12 @@ NumObstaclesJumped  equ RAM+$60
 ; it returns with A loaded with this result and also RngTimer1 with the answer.
 ; random number generator
 
-0057: 3A 18 60    ld      a,(rngtimer1) ; load A with timer
-005A: 21 1A 60    ld      hl,framecounter; load HL with other timer address
+0057: 3A 18 60    ld      a,(rngtimer1_6018) ; load A with timer
+005A: 21 1A 60    ld      hl,framecounter_601a; load HL with other timer address
 005D: 86          add     a,(hl)      ; add
-005E: 21 19 60    ld      hl,rngtimer2; load HL with yet another timer address
+005E: 21 19 60    ld      hl,rngtimer2_6019; load HL with yet another timer address
 0061: 86          add     a,(hl)      ; add
-0062: 32 18 60    ld      (rngtimer1),a; store
+0062: 32 18 60    ld      (rngtimer1_6018),a; store
 0065: C9          ret                 ; return
 
 ; interrupt routine
@@ -1077,15 +1080,15 @@ NumObstaclesJumped  equ RAM+$60
 
 007A: 21 38 01    ld      hl,$0138    ; load HL with start of table data
 007D: CD 41 01    call    $0141       ; refresh the P8257 Control registers / refresh sprites to hardware
-0080: 3A 07 60    ld      a,(nocredits) ; load the credit indicator
+0080: 3A 07 60    ld      a,(nocredits_6007) ; load the credit indicator
 0083: A7          and     a           ; are there credits present / is a game being played ?
 0084: C2 B5 00    jp      nz,$00b5    ; No, jump ahead
 
-0087: 3A 26 60    ld      a,(uprightcab) ; yes, load A with upright/cocktail
+0087: 3A 26 60    ld      a,(uprightcab_6026) ; yes, load A with upright/cocktail
 008A: A7          and     a           ; upright ?
 008B: C2 98 00    jp      nz,$0098    ; yes, jump ahead
 
-008E: 3A 0E 60    ld      a,(playerturnb) ; else load A with player number
+008E: 3A 0E 60    ld      a,(playerturnb_600e) ; else load A with player number
 0091: A7          and     a           ; is this player 2 ?
 0092: 3A 80 7C    ld      a,(in1)     ; load A with raw input from player 2
 0095: C2 9B 00    jp      nz,$009b    ; yes, skip next step
@@ -1094,7 +1097,7 @@ NumObstaclesJumped  equ RAM+$60
 009B: 47          ld      b,a         ; copy to B
 009C: E6 0F       and     $0f         ; mask left 4 bits to zero
 009E: 4F          ld      c,a         ; copy this to C
-009F: 3A 11 60    ld      a,(rawinput) ; load A with player input
+009F: 3A 11 60    ld      a,(rawinput_6011) ; load A with player input
 00A2: 2F          cpl                 ; The contents of A are inverted (one’s complement).
 00A3: A0          and     b           ; logical and with raw input - checks for jump button
 00A4: E6 10       and     $10         ; mask all bits but 4.  if jump was pressed it is there
@@ -1104,19 +1107,19 @@ NumObstaclesJumped  equ RAM+$60
 00A9: B1          or      c           ; mix back into masked input
 00AA: 60          ld      h,b         ; load H with B = raw input
 00AB: 6F          ld      l,a         ; load L with A = modified input
-00AC: 22 10 60    ld      (inputstate),hl; store into input memories, InputState and RawInput
+00AC: 22 10 60    ld      (inputstate_6010),hl; store into input memories, InputState and RawInput
 00AF: 78          ld      a,b         ; load A with raw input
 00B0: CB 77       bit     6,a         ; is the bit 6 set for reset?
 00B2: C2 00 00    jp      nz,$0000    ; if reset, jump back to #0000 for a reboot
 
-00B5: 21 1A 60    ld      hl,framecounter; else load HL with Timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
+00B5: 21 1A 60    ld      hl,framecounter_601a; else load HL with Timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
 00B8: 35          dec     (hl)        ; decrease this timer
 00B9: CD 57 00    call    $0057       ; update the random number gen
 00BC: CD 7B 01    call    $017b       ; check for credits being inserted and handle them
 00BF: CD E0 00    call    $00e0       ; update all sounds
 00C2: 21 D2 00    ld      hl,$00d2    ; load HL with return address
 00C5: E5          push    hl          ; push to stack so any RETs go there (#00D2)
-00C6: 3A 05 60    ld      a,(gamemode1) ; load A with game mode1
+00C6: 3A 05 60    ld      a,(gamemode1_6005) ; load A with game mode1
 
 ; GameMode1 is 0 when game is turned on, 1 when in attract mode.  2 when credits in waiting for start, 3 when playing game
 
@@ -1143,9 +1146,9 @@ NumObstaclesJumped  equ RAM+$60
 ; called from #00BF
 ; updates all sounds
 
-00E0: 21 80 60    ld      hl,$6080    ; source data at sound buffer
+00E0: 21 80 60    ld      hl,walking_sound_buffer_6080    ; source data at sound buffer
 00E3: 11 00 7D    ld      de,reg_sfx  ; set destination to sound outputs
-00E6: 3A 07 60    ld      a,(nocredits) ; load A with credit indicator
+00E6: 3A 07 60    ld      a,(nocredits_6007) ; load A with credit indicator
 00E9: A7          and     a           ; have credits been inserted / is there a game being played ?
 00EA: C0          ret     nz          ; no, return [change to NOP to enable sound in demo ]
 
@@ -1166,7 +1169,7 @@ NumObstaclesJumped  equ RAM+$60
 00F7: 2C          inc     l           ; next source address
 00F8: 10 F3       djnz    $00ed       ; Next B
 
-00FA: 21 8B 60    ld      hl,$608b    ; load HL with music timer
+00FA: 21 8B 60    ld      hl,music_timer_608b    ; load HL with music timer
 00FD: 7E          ld      a,(hl)      ; load A with this value
 00FE: A7          and     a           ; == 0 ?
 00FF: C2 08 01    jp      nz,$0108    ; no, skip ahead 4 steps
@@ -1181,7 +1184,7 @@ NumObstaclesJumped  equ RAM+$60
 010A: 7E          ld      a,(hl)      ; load A with this tune to use
 
 010B: 32 00 7C    ld      (reg_music),a; play music
-010E: 21 88 60    ld      hl,$6088    ; load HL with address/counter for mario dying sound
+010E: 21 88 60    ld      hl,play_death_sound_6088    ; load HL with address/counter for mario dying sound
 0111: AF          xor     a           ; A := 0
 0112: BE          cp      (hl)        ; compare.  is mario dying ?
 0113: CA 18 01    jp      z,$0118     ; no, skip next 2 steps
@@ -1198,7 +1201,7 @@ NumObstaclesJumped  equ RAM+$60
 011C: 06 08       ld      b,$08       ; For B = 1 to 8
 011E: AF          xor     a           ; A := 0
 011F: 21 00 7D    ld      hl,reg_sfx  ; [REG_SFX..REG_SFX+7] get all zeros
-0122: 11 80 60    ld      de,$6080    ; #6080-#6088 get all zeros - clears sound buffer
+0122: 11 80 60    ld      de,walking_sound_buffer_6080    ; #6080-#6088 get all zeros - clears sound buffer
 
 0125: 77          ld      (hl),a      ; clear this memory - clears sound outputs
 0126: 12          ld      (de),a      ; clear this memory
@@ -1265,7 +1268,7 @@ NumObstaclesJumped  equ RAM+$60
 
 017B: 3A 00 7D    ld      a,(in2)     ; load A with IN2
 017E: CB 7F       bit     7,a         ; is the coin switch active?
-0180: 21 03 60    ld      hl,coinswitch; load HL with pointer to coin switch indicator
+0180: 21 03 60    ld      hl,coinswitch_6003; load HL with pointer to coin switch indicator
 0183: C2 89 01    jp      nz,$0189    ; yes, skip next 2 steps
 
 0186: 36 01       ld      (hl),$01    ; otherwise store 1 into coin switch indicator  -  this is for coin insertion
@@ -1278,19 +1281,19 @@ NumObstaclesJumped  equ RAM+$60
 ; coin has been inserted
 
 018C: E5          push    hl          ; else save HL to stack
-018D: 3A 05 60    ld      a,(gamemode1) ; load A with game mode1
+018D: 3A 05 60    ld      a,(gamemode1_6005) ; load A with game mode1
 0190: FE 03       cp      $03         ; is someone playing?
 0192: CA 9D 01    jp      z,$019d     ; yes, skip ahead and don't play the sound
 
 0195: CD 1C 01    call    $011c       ; no, then clear all sounds
 0198: 3E 03       ld      a,$03       ; load sound duration
-019A: 32 83 60    ld      ($6083),a   ; plays the coin insert sound
+019A: 32 83 60    ld      (play_sound_for_bouncer_6083),a   ; plays the coin insert sound
 
 019D: E1          pop     hl          ; restore HL from stack
 019E: 36 00       ld      (hl),$00    ; store 0 into coin switch indicator - no more coins
 01A0: 2B          dec     hl          ; HL := CoinCounter
 01A1: 34          inc     (hl)        ; increase this counter
-01A2: 11 24 60    ld      de,coinspercredit2; load DE with # of coins needed per credit
+01A2: 11 24 60    ld      de,coinspercredit2_6024; load DE with # of coins needed per credit
 01A5: 1A          ld      a,(de)      ; load A with coins needed
 01A6: 96          sub     (hl)        ; has the player inserted enough coins for a new credit?
 01A7: C0          ret     nz          ; yes, return (CoinCounter is now zero)
@@ -1318,21 +1321,21 @@ NumObstaclesJumped  equ RAM+$60
 
 01C3: CD 74 08    call    $0874       ; clears the screen and sprites
 01C6: 21 BA 01    ld      hl,$01ba    ; start of table data above
-01C9: 11 B2 60    ld      de,$60b2    ; set destination
+01C9: 11 B2 60    ld      de,player_1_score_address_60b2    ; set destination
 01CC: 01 09 00    ld      bc,$0009    ; set counter to 9
 01CF: ED B0       ldir                ; copy 9 bytes above into #60B2-#60BB
 01D1: 3E 01       ld      a,$01       ; A := 1
-01D3: 32 07 60    ld      (nocredits),a; store into credit indicator == no credits exist
-01D6: 32 29 62    ld      ($6229),a   ; initialize level to 1
-01D9: 32 28 62    ld      ($6228),a   ; set number of lives remaining to 1
+01D3: 32 07 60    ld      (nocredits_6007),a; store into credit indicator == no credits exist
+01D6: 32 29 62    ld      (else_level_number_6229),a   ; initialize level to 1
+01D9: 32 28 62    ld      (number_of_lives_remaining_6228),a   ; set number of lives remaining to 1
 01DC: CD B8 06    call    $06b8       ; if a game is played or credits exist, display remaining lives-1 and level
 01DF: CD 07 02    call    $0207       ; set all dip switch settings and create default high score table from ROM
 01E2: 3E 01       ld      a,$01       ; A := 1
 01E4: 32 82 7D    ld      (reg_flipscreen),a; store into flip screen setting
-01E7: 32 05 60    ld      (gamemode1),a; store into game mode 1
-01EA: 32 27 62    ld      ($6227),a   ; initialize screen to 1 (girders)
+01E7: 32 05 60    ld      (gamemode1_6005),a; store into game mode 1
+01EA: 32 27 62    ld      (screen_number_6227),a   ; initialize screen to 1 (girders)
 01ED: AF          xor     a           ; A := 0
-01EE: 32 0A 60    ld      (gamemode2),a; store into game mode 2
+01EE: 32 0A 60    ld      (gamemode2_600a),a; store into game mode 2
 01F1: CD 53 0A    call    $0a53       ; draw "1UP" on screen
 01F4: 11 04 03    ld      de,$0304    ; load task data to draw "HIGH SCORE"
 01F7: CD 9F 30    call    $309f       ; insert task to draw text
@@ -1346,7 +1349,7 @@ NumObstaclesJumped  equ RAM+$60
 
 0207: 3A 80 7D    ld      a,(dsw1)    ; load A with Dip switch settings
 020A: 4F          ld      c,a         ; copy to C
-020B: 21 20 60    ld      hl,startinglives; set destination address to initial number of lives
+020B: 21 20 60    ld      hl,startinglives_6020; set destination address to initial number of lives
 020E: E6 03       and     $03         ; mask bits, now between 0 and 3 inclusive
 0210: C6 03       add     a,$03       ; Add 3, now between 3 and 6 inclusive
 0212: 77          ld      (hl),a      ; store in initial number of lives
@@ -1407,7 +1410,7 @@ NumObstaclesJumped  equ RAM+$60
 
 0259: 77          ld      (hl),a      ; store into upright / cocktail
 025A: 21 65 35    ld      hl,$3565    ; source = #3565 = default high score table
-025D: 11 00 61    ld      de,$6100    ; dest = #6100 = high score RAM
+025D: 11 00 61    ld      de,high_score_ram_6100    ; dest = #6100 = high score RAM
 0260: 01 AA 00    ld      bc,$00aa    ; byte counter = #AA
 0263: ED B0       ldir                ; copy high score table into RAM
 0265: C9          ret                 ; return
@@ -1458,7 +1461,7 @@ Init:
 
 ; Loads #60C0 to #60FF (task list) with #FF
 
-0291: 21 C0 60    ld      hl,$60c0    ; HL points to start of task list
+0291: 21 C0 60    ld      hl,start_of_task_list_60c0    ; HL points to start of task list
 0294: 06 40       ld      b,$40       ; For B = 1 to #40
 0296: 3E FF       ld      a,$ff       ; load A with code for no task
 
@@ -1469,8 +1472,8 @@ Init:
 ; reset some memories to 0 and 1
 
 029C: 3E C0       ld      a,$c0       ; load A with #C0 for the #60B0 and #60B1 timers
-029E: 32 B0 60    ld      ($60b0),a   ; store into timer
-02A1: 32 B1 60    ld      ($60b1),a   ; store into timer
+029E: 32 B0 60    ld      (task_list_pointer_60b0),a   ; store into timer
+02A1: 32 B1 60    ld      (the_task_pointer_60b1),a   ; store into timer
 02A4: AF          xor     a           ; A := 0
 02A5: 32 83 7D    ld      (reg_sprite),a; Clear dkong_spritebank_w  /* 2 PSL Signal */
 
@@ -1478,7 +1481,7 @@ Init:
 02AB: 32 87 7D    ld      (reg_palette_b),a; clear palette bank selector
 02AE: 3C          inc     a           ; A: = 1
 02AF: 32 82 7D    ld      (reg_flipscreen),a; set flip screen setting
-02B2: 31 00 6C    ld      sp,$6c00    ; set Stack Pointer to #6C00
+02B2: 31 00 6C    ld      sp,stack_pointer_6c00    ; set Stack Pointer to #6C00
 02B5: CD 1C 01    call    $011c       ; clear all sounds
 02B8: 3E 01       ld      a,$01       ; A := 1
 02BA: 32 84 7D    ld      (reg_vblank_enable),a; enable interrupts
@@ -1489,7 +1492,7 @@ Init:
 ;
 
 02BD: 26 60       ld      h,$60       ; H := #60
-02BF: 3A B1 60    ld      a,($60b1)   ; load A with task pointer
+02BF: 3A B1 60    ld      a,(the_task_pointer_60b1)   ; load A with task pointer
 02C2: 6F          ld      l,a         ; copy to L.  HL now has #60XX which is the current task
 02C3: 7E          ld      a,(hl)      ; load A with task
 02C4: 87          add     a,a         ; double.  Is there a task to do ?
@@ -1497,10 +1500,10 @@ Init:
 
 02C7: CD 15 03    call    $0315       ; else flash the "1UP" above the score when it is time to do so
 02CA: CD 50 03    call    $0350       ; check for and handle awarding extra lives
-02CD: 21 19 60    ld      hl,rngtimer2; load HL with timer
+02CD: 21 19 60    ld      hl,rngtimer2_6019; load HL with timer
 02D0: 34          inc     (hl)        ; increase the timer
-02D1: 21 83 63    ld      hl,$6383    ; load HL with address of memory used to track tasks
-02D4: 3A 1A 60    ld      a,(framecounter) ; load A with timer that constantly counts down from #FF to 0
+02D1: 21 83 63    ld      hl,memory_used_to_track_tasks_6383    ; load HL with address of memory used to track tasks
+02D4: 3A 1A 60    ld      a,(framecounter_601a) ; load A with timer that constantly counts down from #FF to 0
 02D7: BE          cp      (hl)        ; equal ?
 02D8: 28 E3       jr      z,$02bd     ; yes, loop back to check for more tasks
 
@@ -1529,7 +1532,7 @@ Init:
 
 02F4: 3E C0       ld      a,$c0       ; reset low byte to #C0
 
-02F6: 32 B1 60    ld      ($60b1),a   ; store into the task pointer
+02F6: 32 B1 60    ld      (the_task_pointer_60b1),a   ; store into the task pointer
 02F9: 79          ld      a,c         ; load A with the 2nd byte of the task
 02FA: 21 BD 02    ld      hl,$02bd    ; load HL with return address
 02FD: E5          push    hl          ; push to stack so RET will go to #02BD = task list
@@ -1555,14 +1558,14 @@ Init:
 ; called from #02C7
 ; flashes 1UP or 2UP
 
-0315: 3A 1A 60    ld      a,($601a)   ; load A with timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
+0315: 3A 1A 60    ld      a,(timer_constantly_counts_down_601a)   ; load A with timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
 0318: 47          ld      b,a         ; copy to B
 0319: E6 0F       and     $0f         ; mask bits, now between 0 and #F.  Is it zero ?
 031B: C0          ret     nz          ; no, return
 
 031C: CF          rst     $8          ; if credits exist or someone is playing, continue.  else RET
 
-031D: 3A 0D 60    ld      a,(playerturna) ; Load A with player # (0 for player 1, 1 for player 2)
+031D: 3A 0D 60    ld      a,(playerturna_600d) ; Load A with player # (0 for player 1, 1 for player 2)
 0320: CD 47 03    call    $0347       ; Loads HL with location for score (either player 1 or 2)
 0323: 11 E0 FF    ld      de,$ffe0    ; load DE with offset for each column
 0326: CB 60       bit     4,b         ; test bit 4 of timer.  Is it zero ?
@@ -1574,11 +1577,11 @@ Init:
 032E: 77          ld      (hl),a      ; clear the text "U" from "1UP"
 032F: 19          add     hl,de       ; next column
 0330: 77          ld      (hl),a      ; clear the text "P" from "1UP"
-0331: 3A 0F 60    ld      a,(twoplayergame) ; load A with # of players in game
+0331: 3A 0F 60    ld      a,(twoplayergame_600f) ; load A with # of players in game
 0334: A7          and     a           ; is this a 1 player game?
 0335: C8          ret     z           ; yes, return
 
-0336: 3A 0D 60    ld      a,(playerturna) ; Load current player #
+0336: 3A 0D 60    ld      a,(playerturna_600d) ; Load current player #
 0339: EE 01       xor     $01         ; change player from 1 to 2 or from 2 to 1
 033B: CD 47 03    call    $0347       ; Loads HL with location for score (either player 1 or 2)
 
@@ -1602,16 +1605,16 @@ Init:
 ; called from #02CA
 ; checks for and handles extra life
 
-0350: 3A 2D 62    ld      a,($622d)   ; load A with high score indicator
+0350: 3A 2D 62    ld      a,(extra_life_indicator_622d)   ; load A with high score indicator
 0353: A7          and     a           ; has this player already been awarded extra life?
 0354: C0          ret     nz          ; yes, return
 
-0355: 21 B3 60    ld      hl,$60b3    ; load HL with address for player 1 score
-0358: 3A 0D 60    ld      a,(playerturna) ; load A with 0 when player 1 is up, 1 when player 2 is up
+0355: 21 B3 60    ld      hl,address_for_player_1_score_60b3    ; load HL with address for player 1 score
+0358: 3A 0D 60    ld      a,(playerturna_600d) ; load A with 0 when player 1 is up, 1 when player 2 is up
 035B: A7          and     a           ; player 1 up ?
 035C: 28 03       jr      z,$0361     ; yes, skip next step
 
-035E: 21 B6 60    ld      hl,$60b6    ; else load HL with address of player 2 score
+035E: 21 B6 60    ld      hl,address_of_player_2_score_60b6    ; else load HL with address of player 2 score
 
 0361: 7E          ld      a,(hl)      ; load A with a byte of the player's score
 0362: E6 F0       and     $f0         ; mask bits
@@ -1624,13 +1627,13 @@ Init:
 036B: 0F          rrca
 036C: 0F          rrca
 036D: 0F          rrca                ; rotate right 4 times, this swaps the high and low bytes
-036E: 21 21 60    ld      hl,extralifethreshold; load HL with score needed for extra life
+036E: 21 21 60    ld      hl,extralifethreshold_6021; load HL with score needed for extra life
 0371: BE          cp      (hl)        ; compare player's score to high score.  is it greater?
 0372: D8          ret     c           ; no, return
 
 0373: 3E 01       ld      a,$01       ; A := 1
-0375: 32 2D 62    ld      ($622d),a   ; store into extra life indicator
-0378: 21 28 62    ld      hl,$6228    ; load HL with address of number of lives remaining
+0375: 32 2D 62    ld      (extra_life_indicator_622d),a   ; store into extra life indicator
+0378: 21 28 62    ld      hl,number_of_lives_remaining_6228    ; load HL with address of number of lives remaining
 037B: 34          inc     (hl)        ; increase
 037C: C3 B8 06    jp      $06b8       ; skip ahead and update # of lives on the screen
 
@@ -1639,7 +1642,7 @@ Init:
 
 ; [timer_6384++ ; IF timer_6384 != 256 THEN RETURN ; timer_6384 := 0 ; ]
 
-037F: 21 84 63    ld      hl,$6384    ; load HL with timer address
+037F: 21 84 63    ld      hl,timer_address_6384    ; load HL with timer address
 0382: 7E          ld      a,(hl)      ; load A with the timer
 0383: 34          inc     (hl)        ; increase the timer
 0384: A7          and     a           ; was the timer at zero?
@@ -1647,7 +1650,7 @@ Init:
 
 ; [timer_6381++ ; IF (timer_6381/8) != INT(timer_6381/8) THEN RETURN]
 
-0386: 21 81 63    ld      hl,$6381    ; load HL with timer
+0386: 21 81 63    ld      hl,timer_6381    ; load HL with timer
 0389: 7E          ld      a,(hl)      ; load A with timer value
 038A: 47          ld      b,a         ; copy to B
 038B: 34          inc     (hl)        ; increase timer
@@ -1663,14 +1666,14 @@ Init:
 0391: 0F          rrca
 0392: 0F          rrca
 0393: 47          ld      b,a         ; store result into B
-0394: 3A 29 62    ld      a,($6229)   ; load A with level number
+0394: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level number
 0397: 80          add     a,b         ; add B to A
 0398: FE 05       cp      $05         ; is this answer > 5 ?
 039A: 38 02       jr      c,$039e     ; no, skip next step
 
 039C: 3E 05       ld      a,$05       ; otherwise A := 5
 
-039E: 32 80 63    ld      ($6380),a   ; store result into difficulty
+039E: 32 80 63    ld      (unknown_6380),a   ; store result into difficulty
 03A1: c9          ret                 ; return to #02DE
 
 ; called from #02DE
@@ -1680,24 +1683,24 @@ Init:
 
 03A5: D7          rst     $10         ; if mario is alive, continue, else RET
 
-03A6: 3A 50 63    ld      a,($6350)   ; load A with 1 when an item has been hit with hammer
+03A6: 3A 50 63    ld      a,(item_hit_indicator_unknown_6350)   ; load A with 1 when an item has been hit with hammer
 03A9: 0F          rrca                ; has an item been hit with the hammer ?
 03AA: D8          ret     c           ; yes, return, we don't do anything here while hammer hits occur
 
-03AB: 21 B8 62    ld      hl,$62b8    ; load HL with this counter
+03AB: 21 B8 62    ld      hl,this_counter_62b8    ; load HL with this counter
 03AE: 35          dec     (hl)        ; decrease.  at zero?
 03AF: C0          ret     nz          ; no, return
 
 03B0: 36 04       ld      (hl),$04    ; yes, reset counter to 4
-03B2: 3A B9 62    ld      a,($62b9)   ; load A with fire release indicator
+03B2: 3A B9 62    ld      a,(fire_release_62b9)   ; load A with fire release indicator
 03B5: 0F          rrca                ; roll right.  carry?  Is there a fire onscreen or is it time to release a new fire?
 03B6: D0          ret     nc          ; no, return
 
 ; a fire is onscreen or to be released
 
-03B7: 21 29 6A    ld      hl,$6a29    ; load HL with sprite for fire above oil can
+03B7: 21 29 6A    ld      hl,sprite_for_fire_above_oil_can_6a29    ; load HL with sprite for fire above oil can
 03BA: 06 40       ld      b,$40       ; B := #40
-03BC: DD 21 A0 66 ld      ix,$66a0    ; load IX with fire array start ?
+03BC: DD 21 A0 66 ld      ix,oil_can_address_66a0    ; load IX with fire array start ?
 03C0: 0F          rrca                ; roll A right again.  carry ?  Is it time to release another fire?
 03C1: D2 E4 03    jp      nc,$03e4    ; no, skip ahead, animate oilcan, reset timer and return
 
@@ -1708,18 +1711,18 @@ Init:
 03CC: 04          inc     b
 03CD: 04          inc     b           ; B := #42 = extra fire oilcan sprite value
 03CE: CD F2 03    call    $03f2       ; randomly store B or B+1 into (HL) - animates the oilcan fire with extra fire
-03D1: 21 BA 62    ld      hl,$62ba    ; load HL with this timer.  usually it is set at #10 when a level begins
+03D1: 21 BA 62    ld      hl,timer_reset_62ba    ; load HL with this timer.  usually it is set at #10 when a level begins
 03D4: 35          dec     (hl)        ; decrease timer.  zero ?
 03D5: C0          ret     nz          ; no, return
 
 ; release a fire, or do something when fires already exist
 
 03D6: 3E 01       ld      a,$01       ; A := 1
-03D8: 32 B9 62    ld      ($62b9),a   ; store into fire release indicator
-03DB: 32 A0 63    ld      ($63a0),a   ; store into other fireball release indicator
+03D8: 32 B9 62    ld      (fire_release_62b9),a   ; store into fire release indicator
+03DB: 32 A0 63    ld      (unknown_63a0),a   ; store into other fireball release indicator
 
 03DE: 3E 10       ld      a,$10       ; A := #10
-03E0: 32 BA 62    ld      ($62ba),a   ; reset timer back to #10
+03E0: 32 BA 62    ld      (timer_reset_62ba),a   ; reset timer back to #10
 03E3: C9          ret                 ; return
 
 03E4: DD 36 09 02 ld      (ix+$09),$02; set +9 to 2 (size ???)
@@ -1731,7 +1734,7 @@ Init:
 ; animates the oilcan fire
 
 03F2: 70          ld      (hl),b      ; store B into (HL) - set the oilcan fire sprite
-03F3: 3A 19 60    ld      a,(rngtimer2) ; load A with random number
+03F3: 3A 19 60    ld      a,(rngtimer2_6019) ; load A with random number
 03F6: 0F          rrca                ; rotate right.  carry ?
 03F7: D8          ret     c           ; yes, return
 
@@ -1742,41 +1745,41 @@ Init:
 ; called from main routine at #19B0
 ; animates kong, checks for kong beating chest, animates girl and her screams for help
 
-03FB: 3A 27 62    ld      a,($6227)   ; load A with screen number
+03FB: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 03FE: FE 02       cp      $02         ; are we on the conveyors?
 0400: C2 13 04    jp      nz,$0413    ; no, skip ahead
 
 ; conveyors
 
-0403: 21 08 69    ld      hl,$6908    ; load HL with kongs sprite start
-0406: 3A A3 63    ld      a,($63a3)   ; load A with kongs direction
+0403: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with kongs sprite start
+0406: 3A A3 63    ld      a,(top_conveyor_direction_vector_63a3)   ; load A with kongs direction
 0409: 4F          ld      c,a         ; copy to C for subroutine below
 040A: FF          rst     $38         ; move kong
-040B: 3A 10 69    ld      a,($6910)   ; load A with kong's X position
+040B: 3A 10 69    ld      a,(kongs_x_position_6910)   ; load A with kong's X position
 040E: D6 3B       sub     $3b         ; subtract #3B (59 decimal)
-0410: 32 B7 63    ld      ($63b7),a   ; store into kong's position
+0410: 32 B7 63    ld      (kongs_position_63b7),a   ; store into kong's position
 
 ; #6390 - counts from 0 to 7F periodically
 ; #6391 - is 0, then changed to 1 when timer in #6390 is counting up
 
-0413: 3A 91 63    ld      a,($6391)   ; load A with indicator
+0413: 3A 91 63    ld      a,(indicator_6391)   ; load A with indicator
 0416: A7          and     a           ; == 0 ?
 0417: C2 26 04    jp      nz,$0426    ; no, skip next 5 steps
 
-041A: 3A 1A 60    ld      a,(framecounter) ; else load A with this clock counts down from #FF to 00 over and over...
+041A: 3A 1A 60    ld      a,(framecounter_601a) ; else load A with this clock counts down from #FF to 00 over and over...
 041D: A7          and     a           ; == 0 ?
 041E: C2 86 04    jp      nz,$0486    ; no, skip ahead
 
 0421: 3E 01       ld      a,$01       ; else A := 1
-0423: 32 91 63    ld      ($6391),a   ; store into indicator
+0423: 32 91 63    ld      (indicator_6391),a   ; store into indicator
 
-0426: 21 90 63    ld      hl,$6390    ; load HL with timer
+0426: 21 90 63    ld      hl,timer_unknown_6390    ; load HL with timer
 0429: 34          inc     (hl)        ; increase
 042A: 7E          ld      a,(hl)      ; load A with timer value
 042B: FE 80       cp      $80         ; == #80 ?
 042D: CA 64 04    jp      z,$0464     ; yes, skip ahead
 
-0430: 3A 93 63    ld      a,($6393)   ; else get barrel deployment
+0430: 3A 93 63    ld      a,(barrel_deployment_indicator_6393)   ; else get barrel deployment
 0433: A7          and     a           ; is a barrel deployment in progress?
 0434: C2 86 04    jp      nz,$0486    ; yes, jump ahead
 
@@ -1794,9 +1797,9 @@ Init:
 0445: 21 F7 39    ld      hl,$39f7    ; start of table data
 0448: CD 4E 00    call    $004e       ; update kong's sprites
 044B: 3E 03       ld      a,$03       ; load sound duration of 3
-044D: 32 82 60    ld      ($6082),a   ; play boom sound using sound buffer
+044D: 32 82 60    ld      (boom_sound_address_6082),a   ; play boom sound using sound buffer
 
-0450: 3A 27 62    ld      a,($6227)   ; load A with screen number
+0450: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 0453: 0F          rrca                ; is this the girders or the elevators ?
 0454: D2 78 04    jp      nc,$0478    ; no, skip ahead
 
@@ -1805,7 +1808,7 @@ Init:
 
 ; else pie factory
 
-045B: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite data
+045B: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite data
 045E: 0E FC       ld      c,$fc       ; C := #FC.  used in sub below to move kong by -4
 0460: FF          rst     $38         ; move kong
 0461: C3 86 04    jp      $0486       ; skip ahead
@@ -1816,7 +1819,7 @@ Init:
 0465: 77          ld      (hl),a      ; clear timer
 0466: 23          inc     hl          ; increase address to #6391
 0467: 77          ld      (hl),a      ; clear this one too
-0468: 3A 93 63    ld      a,($6393)   ; Load Barrel deployment indicator
+0468: 3A 93 63    ld      a,(barrel_deployment_indicator_6393)   ; Load Barrel deployment indicator
 046B: A7          and     a           ; is a deployment in progress?
 046C: C2 86 04    jp      nz,$0486    ; yes, jump ahead
 
@@ -1827,20 +1830,20 @@ Init:
 ; arrive here from #0454 when on rivets and conveyors
 ; moves kong, updates girl and her screams for help
 
-0478: 21 08 69    ld      hl,$6908    ; load HL with start of kong sprite X position
+0478: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of kong sprite X position
 047B: 0E 44       ld      c,$44       ; set offset to #44, used only on rivets
 047D: 0F          rrca                ; roll screen number right (again).  is this the conveyors screen?
 047E: D2 85 04    jp      nc,$0485    ; no, skip next 2 steps
 
-0481: 3A B7 63    ld      a,($63b7)   ; load A with kong's position
+0481: 3A B7 63    ld      a,(kongs_position_63b7)   ; load A with kong's position
 0484: 4F          ld      c,a         ; copy to C for sub below, controls position of kong
 
 0485: FF          rst     $38         ; move kong to his position
 
-0486: 3A 90 63    ld      a,($6390)   ; load A with timer
+0486: 3A 90 63    ld      a,(timer_unknown_6390)   ; load A with timer
 0489: 4F          ld      c,a         ; copy to C
 048A: 11 20 00    ld      de,$0020    ; DE := #20, used for offset in call at #04A6
-048D: 3A 27 62    ld      a,($6227)   ; load A with screen number
+048D: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 0490: FE 04       cp      $04         ; are we on the rivets level?
 0492: CA BE 04    jp      z,$04be     ; yes, jump ahead to handle
 
@@ -1856,9 +1859,9 @@ Init:
 
 04A3: 21 C4 75    ld      hl,$75c4    ; load HL with address of a location in video RAM where girl yells "HELP"
 04A6: CD 14 05    call    $0514       ; update girl yelling "HELP"
-04A9: 3A 05 69    ld      a,($6905)   ; load A with girl's sprite
+04A9: 3A 05 69    ld      a,(girls_sprite_6905)   ; load A with girl's sprite
 
-04AC: 32 05 69    ld      ($6905),a   ; store girl's sprite
+04AC: 32 05 69    ld      (girls_sprite_6905),a   ; store girl's sprite
 04AF: CB 71       bit     6,c         ; is bit 6 of the timer set ?
 04B1: C8          ret     z           ; yes, return
 
@@ -1869,7 +1872,7 @@ Init:
 
 04B7: 78          ld      a,b         ; restore A which has girl's sprite
 04B8: EE 03       xor     $03         ; toggle bits 0 and 1
-04BA: 32 05 69    ld      ($6905),a   ; store into girl's sprite
+04BA: 32 05 69    ld      (girls_sprite_6905),a   ; store into girl's sprite
 04BD: C9          ret                 ; return to #19B3 - main routine
 
 ; arrive here when we are on the rivets level
@@ -1882,7 +1885,7 @@ Init:
 04CC: CB 71       bit     6,c         ; check timer bit 6.  zero?
 04CE: CA 09 05    jp      z,$0509     ; yes, skip ahead
 
-04D1: 3A 03 62    ld      a,($6203)   ; load A with mario X position
+04D1: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario X position
 04D4: FE 80       cp      $80         ; is mario on left side of screen ?
 04D6: D2 F1 04    jp      nc,$04f1    ; yes, skip ahead
 
@@ -1890,10 +1893,10 @@ Init:
 04DB: 21 23 76    ld      hl,$7623    ; load HL with video RAM for girl location
 04DE: CD 14 05    call    $0514       ; draw "help" on the left side
 
-04E1: 3A 01 69    ld      a,($6901)   ; load A with sprite used for girl
+04E1: 3A 01 69    ld      a,(unknown_6901)   ; load A with sprite used for girl
 04E4: F6 80       or      $80         ; set bit 7
-04E6: 32 01 69    ld      ($6901),a   ; store into sprite used for girl
-04E9: 3A 05 69    ld      a,($6905)   ; load A with girl's sprite
+04E6: 32 01 69    ld      (unknown_6901),a   ; store into sprite used for girl
+04E9: 3A 05 69    ld      a,(girls_sprite_6905)   ; load A with girl's sprite
 04EC: F6 80       or      $80         ; set bit 7
 04EE: C3 AC 04    jp      $04ac       ; jump back and animate girl
 
@@ -1901,16 +1904,16 @@ Init:
 04F3: 21 83 75    ld      hl,$7583    ; load HL with video RAM for girl location
 04F6: CD 14 05    call    $0514       ; draw "help" on the right side
 
-04F9: 3A 01 69    ld      a,($6901)   ; load A with sprite used for girl
+04F9: 3A 01 69    ld      a,(unknown_6901)   ; load A with sprite used for girl
 04FC: E6 7F       and     $7f         ; mask bits, turns off bit 7
-04FE: 32 01 69    ld      ($6901),a   ; store result
-0501: 3A 05 69    ld      a,($6905)   ; load A with girl's sprite
+04FE: 32 01 69    ld      (unknown_6901),a   ; store result
+0501: 3A 05 69    ld      a,(girls_sprite_6905)   ; load A with girl's sprite
 0504: E6 7F       and     $7f         ; mask bits, turns off bit 7
 0506: C3 AC 04    jp      $04ac       ; jump back and store into girl's sprite and check for animation and RET
 
 ; jump from #04CE
 
-0509: 3A 03 62    ld      a,($6203)   ; load A with mario X position
+0509: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario X position
 050C: FE 80       cp      $80         ; is mario on left side of screen?
 050E: D2 F9 04    jp      nc,$04f9    ; yes, jump back
 
@@ -1962,11 +1965,11 @@ Init:
 
 0536: D5          push    de          ; save DE
 0537: 1B          dec     de          ; DE is now the last byte of score
-0538: 3A 0D 60    ld      a,(playerturna) ; 0 for player 1, 1 for player 2
+0538: 3A 0D 60    ld      a,(playerturna_600d) ; 0 for player 1, 1 for player 2
 053B: CD 6B 05    call    $056b       ; update onscreen score
 053E: D1          pop     de          ; restore DE
 053F: 1B          dec     de          ; decrement
-0540: 21 BA 60    ld      hl,$60ba    ; load HL with high score address
+0540: 21 BA 60    ld      hl,high_score_60ba    ; load HL with high score address
 0543: 06 03       ld      b,$03       ; for B = 1 to  3
 
 0545: 1A          ld      a,(de)      ; load A with player score
@@ -1982,7 +1985,7 @@ Init:
 054F: C9          ret                 ; return
 
 0550: CD 5F 05    call    $055f       ; load DE with address of player score
-0553: 21 B8 60    ld      hl,$60b8    ; load HL with high score address
+0553: 21 B8 60    ld      hl,high_score_60b8    ; load HL with high score address
 
 0556: 1A          ld      a,(de)      ; load A with player score byte
 0557: 77          ld      (hl),a      ; store into high score byte
@@ -1995,12 +1998,12 @@ Init:
 ; called from #051E and #0550
 ; loads DE with address of current player's score
 
-055F: 11 B2 60    ld      de,$60b2    ; load DE with player 1 score
-0562: 3A 0D 60    ld      a,(playerturna) ; load number of players
+055F: 11 B2 60    ld      de,player_1_score_address_60b2    ; load DE with player 1 score
+0562: 3A 0D 60    ld      a,(playerturna_600d) ; load number of players
 0565: A7          and     a           ; is this player 2 ?
 0566: C8          ret     z           ; no, return
 
-0567: 11 B5 60    ld      de,$60b5    ; else load DE with player 2 score
+0567: 11 B5 60    ld      de,player_2_score_address_60b5    ; else load DE with player 2 score
 056A: C9          ret                 ; return
 
 ; called from #053B
@@ -2056,15 +2059,15 @@ Init:
 ; #60B5, #60B6, #60B7 - player 2 score
 
 05A0: F5          push    af          ; save AF
-05A1: 21 B2 60    ld      hl,$60b2    ; load HL with player 1 score
+05A1: 21 B2 60    ld      hl,player_1_score_address_60b2    ; load HL with player 1 score
 05A4: A7          and     a           ; parameter == 0 ?
 05A5: CA AB 05    jp      z,$05ab     ; yes, skip next step
 
-05A8: 21 B5 60    ld      hl,$60b5    ; else load HL with player 2 score
+05A8: 21 B5 60    ld      hl,player_2_score_address_60b5    ; else load HL with player 2 score
 05AB: FE 02       cp      $02         ; parameter == 2 ? [when would it do this ??? A always 0 or 1 ??? ]
 05AD: C2 B3 05    jp      nz,$05b3    ; no, skip next step
 
-05B0: 21 B8 60    ld      hl,$60b8    ; load HL with high score
+05B0: 21 B8 60    ld      hl,high_score_60b8    ; load HL with high score
 
 05B3: AF          xor     a           ; A := 0
 05B4: 77          ld      (hl),a      ; clear score
@@ -2094,18 +2097,18 @@ Init:
 05C6: FE 03       cp      $03         ; task parameter == 3 ?
 05C8: CA E0 05    jp      z,$05e0     ; yes, skip ahead to handle high score
 
-05CB: 11 B4 60    ld      de,$60b4    ; load DE with player 1 score
+05CB: 11 B4 60    ld      de,player_1_score_60b4    ; load DE with player 1 score
 05CE: A7          and     a           ; parameter == 0 ? (1 player game)
 05CF: CA D5 05    jp      z,$05d5     ; yes, skip next step
 
-05D2: 11 B7 60    ld      de,$60b7    ; else load DE with player 2 score
+05D2: 11 B7 60    ld      de,player_2_score_60b7    ; else load DE with player 2 score
 
 05D5: FE 02       cp      $02         ; parameter == 2 ?
 05D7: C2 6B 05    jp      nz,$056b    ; no, jump back and display score
 
 ; arrive here from #055C
 
-05DA: 11 BA 60    ld      de,$60ba    ; yes, load DE with high score
+05DA: 11 BA 60    ld      de,high_score_60ba    ; yes, load DE with high score
 05DD: C3 78 05    jp      $0578       ; jump back and display high score
 
 05E0: 3D          dec     a           ; decrease A
@@ -2159,7 +2162,7 @@ Init:
 ; draws credits on screen if any are present
 ;
 
-0611: 3A 07 60    ld      a,(nocredits) ; 1 when no credits have been inserted; 0 if any credits exist
+0611: 3A 07 60    ld      a,(nocredits_6007) ; 1 when no credits have been inserted; 0 if any credits exist
 0614: 0F          rrca                ; credits in game ?
 0615: D0          ret     nc          ; yes, return
 
@@ -2167,7 +2170,7 @@ Init:
 
 0616: 3E 05       ld      a,$05       ; load text code for "CREDIT"
 0618: cd e9 05    call    $05e9       ; draw to screen
-061B: 21 01 60    ld      hl,numcredits; load HL with pointer to number of credits
+061B: 21 01 60    ld      hl,numcredits_6001; load HL with pointer to number of credits
 061E: 11 E0 Ff    ld      de,$ffe0    ; load DE with #ffe0 = offset for columns?
 0621: dd 21 Bf 74 ld      ix,$74bf    ; load IX with screen address to draw
 0625: 06 01       ld      b,$01       ; B := 1
@@ -2182,17 +2185,17 @@ Init:
 062A: A7          and     a           ; parameter == 0 ?
 062B: cA 91 06    jp      z,$0691     ; yes, skip ahead and add bonus to player's score
 
-062E: 3A 8C 63    ld      a,($638c)   ; else load onscreen timer
+062E: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; else load onscreen timer
 0631: A7          and     a           ; timer == 0 ?
 0632: c2 A8 06    jp      nz,$06a8    ; no, jump ahead
 
-0635: 3A b8 63    ld      a,($63b8)   ; else load A with timer expired indicator
+0635: 3A b8 63    ld      a,(mario_dead_flag_63b8)   ; else load A with timer expired indicator
 0638: A7          and     a           ; has timer expired ?
 0639: c0          ret     nz          ; yes, return
 
 ; the following code sets up the on screen timer initial value
 
-063A: 3A b0 62    ld      a,($62b0)   ; load a with value from #62B0 (expects a decimal number here)
+063A: 3A b0 62    ld      a,(initial_clock_value_62b0)   ; load a with value from #62B0 (expects a decimal number here)
 063D: 01 0A 00    ld      bc,$000a    ; B := 0, C := #0A (10 decimal)
 
 0640: 04          inc     b           ; increment b
@@ -2204,7 +2207,7 @@ Init:
 0647: 07          rlca                ; rotate left (x4)
 0648: 07          rlca                ; rotate left (x8)
 0649: 07          rlca                ; rotate left (x16)
-064A: 32 8C 63    ld      ($638c),a   ; load on screen timer with result.  hex value converts to decimal.
+064A: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; load on screen timer with result.  hex value converts to decimal.
 
 
 064D: 21 4A 38    ld      hl,$384a    ; load HL with #384A - table data
@@ -2224,7 +2227,7 @@ Init:
 
 ; check to see if timer is below 1000
 
-0667: 3A 8C 63    ld      a,($638c)   ; load a with value from on screen timer
+0667: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; load a with value from on screen timer
 
 066A: 4f          ld      c,a         ; copy to C
 066b: e6 0F       and     $0f         ; zeroes out left 4 bits
@@ -2240,7 +2243,7 @@ Init:
 ; arrive here when timer runs below 1000
 
 0678: 3E 03       ld      a,$03       ; else load A with warning sound
-067A: 32 89 60    ld      ($6089),a   ; set warning sound
+067A: 32 89 60    ld      (background_music_value_6089),a   ; set warning sound
 067D: 3E 70       ld      a,$70       ; A := #70 = color code for red?
 067f: 32 86 74    ld      ($7486),a   ; store A into #7486 = paint score red (MSB) ?
 0682: 32 A6 74    ld      ($74a6),a   ; store A into #74A6 = paint score red (LSB) ?
@@ -2258,7 +2261,7 @@ Init:
 ; adds bonus to player's score
 ;
 
-0691: 3A 8C 63    ld      a,($638c)   ; load A with timer value from #638C
+0691: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; load A with timer value from #638C
 0694: 47          ld      b,a         ; copy to B
 0695: e6 0F       and     $0f         ; and with #0F - mask four left bits.  how has low byte of bonus
 0697: c5          push    bc          ; save BC
@@ -2280,11 +2283,11 @@ Init:
 
 ; timer at zero
 
-06Ac: 21 B8 63    ld      hl,$63b8    ; load HL with mario dead flag
+06Ac: 21 B8 63    ld      hl,mario_dead_flag_63b8    ; load HL with mario dead flag
 06Af: 36 01       ld      (hl),$01    ; store 1 - mario will die soon on next timer click
 
 06b1: 27          daa                 ; Decimal adjust
-06b2: 32 8C 63    ld      ($638c),a   ; store A into timer
+06b2: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; store A into timer
 06b5: c3 6A 06    jp      $066a       ; jump back
 
 ;
@@ -2304,7 +2307,7 @@ Init:
 06C4: 19          add     hl,de       ; add offset for next column
 06C5: 10 FB       djnz    $06c2       ; next B
 
-06C7: 3A 28 62    ld      a,($6228)   ; load A with number of lives remaining
+06C7: 3A 28 62    ld      a,(number_of_lives_remaining_6228)   ; load A with number of lives remaining
 06CA: 91          sub     c           ; subtract the task parameter.  zero lives to draw?
 06CB: CA D7 06    jp      z,$06d7     ; yes, skip next 5 steps
 
@@ -2319,12 +2322,12 @@ Init:
 06DA: 36 1C       ld      (hl),$1c    ; draw "L"
 06DC: 21 E3 74    ld      hl,$74e3    ; next location
 06DF: 36 34       ld      (hl),$34    ; draw "="
-06E1: 3A 29 62    ld      a,($6229)   ; load A with level #
+06E1: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
 06E4: fe 64       cp      $64         ; level < #64 (100 decimal) ?
 06E6: 38 05       jr      c,$06ed     ; yes, skip next 2 steps
 
 06E8: 3E 63       ld      a,$63       ; otherwise A := #63 (99 decimal)
-06Ea: 32 29 62    ld      ($6229),a   ; store into level #
+06Ea: 32 29 62    ld      (else_level_number_6229),a   ; store into level #
 
 06Ed: 01 0A ff    ld      bc,$ff0a    ; B: = #FF, C := #0A (10 decimal)
 
@@ -2341,7 +2344,7 @@ Init:
 ; start of main routine when playing a game
 ; arrive here from #00C9
 
-06FE: 3A 0A 60    ld      a,(gamemode2) ; load A with game mode2
+06FE: 3A 0A 60    ld      a,(gamemode2_600a) ; load A with game mode2
 0701: EF          rst     $28         ; jump based on what the game state is
 
 0702  86 09                             ; (0) #0986     ; game start = clears screen, clears sounds, sets screen flip if needed
@@ -2372,8 +2375,8 @@ Init:
 
 ; arrive from #00C9 when attract mode starts
 
-073C: 21 0A 60    ld      hl,gamemode2; load HL with game mode2 address
-073F: 3A 01 60    ld      a,(numcredits) ; load A with number of credits
+073C: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2 address
+073F: 3A 01 60    ld      a,(numcredits_6001) ; load A with number of credits
 0742: A7          and     a           ; any credits exist ?
 0743: C2 5C 07    jp      nz,$075c    ; yes, skip ahead, zero out game mode2, increase game mode1, and RET
 
@@ -2395,7 +2398,7 @@ Init:
 ; arrive from #0743 when credits exist
 
 075C: 36 00       ld      (hl),$00    ; set game mode2 to zero
-075E: 21 05 60    ld      hl,gamemode1; load HL with game mode1
+075E: 21 05 60    ld      hl,gamemode1_6005; load HL with game mode1
 0761: 34          inc     (hl)        ; increase
 0762: C9          ret                 ; return
 
@@ -2404,12 +2407,12 @@ Init:
 0763: E7          rst     $20         ; only continue here once per frame, else RET
 
 0764: AF          xor     a           ; A := 0
-0765: 32 92 63    ld      ($6392),a   ; clear barrel deployment indicator
-0768: 32 A0 63    ld      ($63a0),a   ; clear fireball release indicator
+0765: 32 92 63    ld      (barrel_deployment_indicator_6392),a   ; clear barrel deployment indicator
+0768: 32 A0 63    ld      (unknown_63a0),a   ; clear fireball release indicator
 076B: 3E 01       ld      a,$01       ; A := 1
-076D: 32 27 62    ld      ($6227),a   ; load screen number with 1
-0770: 32 29 62    ld      ($6229),a   ; load level # with 1
-0773: 32 28 62    ld      ($6228),a   ; load number of lives with 1
+076D: 32 27 62    ld      (screen_number_6227),a   ; load screen number with 1
+0770: 32 29 62    ld      (else_level_number_6229),a   ; load level # with 1
+0773: 32 28 62    ld      (number_of_lives_remaining_6228),a   ; load number of lives with 1
 0776: C3 92 0C    jp      $0c92       ; skip ahead
 
 ; arrive from #0747 when GameMode2 == 0
@@ -2424,17 +2427,17 @@ Init:
 0787: 1C          inc     e           ; load task data for text "PLAYER    COIN"
 0788: CD 9F 30    call    $309f       ; insert task to draw text
 078B: CD 65 09    call    $0965       ; draws credits on screen if any are present and displays high score table
-078E: 21 09 60    ld      hl,waittimermsb; load HL with timer address
+078E: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer address
 0791: 36 02       ld      (hl),$02    ; set timer at 2
 0793: 23          inc     hl          ; load HL with game mode2
 0794: 34          inc     (hl)        ; increase
 0795: CD 74 08    call    $0874       ; clears the screen and sprites
 0798: CD 53 0A    call    $0a53       ; draw "1UP" on screen
-079B: 3A 0F 60    ld      a,(twoplayergame) ; load A with number of players in game
+079B: 3A 0F 60    ld      a,(twoplayergame_600f) ; load A with number of players in game
 079E: FE 01       cp      $01         ; 2 player game?
 07A0: CC EE 09    call    z,$09ee     ; yes, skip ahead to handle
 
-07A3: ED 5B 22 60 ld      de,(coinspercredit) ; D := CoinsPer2Credits; E := CoinsPerCredit
+07A3: ED 5B 22 60 ld      de,(coinspercredit_6022) ; D := CoinsPer2Credits; E := CoinsPerCredit
 07A7: 21 6C 75    ld      hl,$756c    ; load HL with screen RAM location
 07AA: CD AD 07    call    $07ad       ; run this sub below twice
 
@@ -2457,18 +2460,18 @@ Init:
 ; arrive from #0747 when GameMode2 == 5
 
 07C3: CD 74 08    call    $0874       ; clears the screen and sprites
-07C6: 21 0A 60    ld      hl,gamemode2; load HL with game mode 2
+07C6: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode 2
 07C9: 34          inc     (hl)        ; increase game mode2
 07CA: C9          ret                 ; return
 
 ; arrive from jump at #0747 when GameMode2 == 6
 
-07CB: 3A 8A 63    ld      a,($638a)   ; load A with kong screen flash counter
+07CB: 3A 8A 63    ld      a,(kong_intro_flash_counter_638a)   ; load A with kong screen flash counter
 07CE: FE 00       cp      $00         ; == 0 ?  time to flash?
 07D0: C2 2D 08    jp      nz,$082d    ; no, skip ahead : load C with (#638B), decreases #638A, loads A with (#638A) ; loads C with #638B, decreases #638A returns to #07DA
 
 07D3: 3E 60       ld      a,$60       ; else A := #60
-07D5: 32 8A 63    ld      ($638a),a   ; store into kong screen flash counter
+07D5: 32 8A 63    ld      (kong_intro_flash_counter_638a),a   ; store into kong screen flash counter
 07D8: 0E 5F       ld      c,$5f       ; C := #5F
 
 ; can arrive here from jump at #0838
@@ -2491,7 +2494,7 @@ Init:
 
 07F2: 36 01       ld      (hl),$01    ; set pallete bank selector to 1
 
-07F4: 32 8B 63    ld      ($638b),a   ; store A into ???
+07F4: 32 8B 63    ld      (unknown_638b),a   ; store A into ???
 
 ; draws DONKEY KONG logo to screen
 
@@ -2521,10 +2524,10 @@ Init:
 0819: CD 4E 00    call    $004e       ; update kong's sprites
 081C: CD 24 3F    call    $3f24       ; draw TM logo onscreen [patch? orig japanese had 3 NOPs here]
 081F: 00          nop                 ; no operation
-0820: 21 08 69    ld      hl,$6908    ; load HL with start of kong sprite X pos
+0820: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of kong sprite X pos
 0823: 0E 44       ld      c,$44       ; load C with offset to add X
 0825: FF          rst     $38         ; draw kong in new position
-0826: 21 0B 69    ld      hl,$690b    ; load HL with start of kong sprite Y pos
+0826: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of kong sprite Y pos
 0829: 0E 78       ld      c,$78       ; load C with offset to add Y
 082B: FF          rst     $38         ; draw kong
 082C: C9          ret                 ; return
@@ -2532,20 +2535,20 @@ Init:
 ; jump here from #07D0
 ; loads C with #638B, decreases #638A
 
-082D: 3A 8B 63    ld      a,($638b)   ; load A with ???
+082D: 3A 8B 63    ld      a,(unknown_638b)   ; load A with ???
 0830: 4F          ld      c,a         ; copy to C
-0831: 3A 8A 63    ld      a,($638a)   ; load A with kong intro flash counter
+0831: 3A 8A 63    ld      a,(kong_intro_flash_counter_638a)   ; load A with kong intro flash counter
 0834: 3D          dec     a           ; decrease
-0835: 32 8A 63    ld      ($638a),a   ; store result
+0835: 32 8A 63    ld      (kong_intro_flash_counter_638a),a   ; store result
 0838: C3 DA 07    jp      $07da       ; jump back
 
 ; jump here from #07DC
 
-083B: 21 09 60    ld      hl,waittimermsb; load HL with timer address
+083B: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer address
 083E: 36 02       ld      (hl),$02    ; set timer to 2
 0840: 23          inc     hl          ; HL := GameMode2
 0841: 34          inc     (hl)        ; increase game mode2
-0842: 21 8A 63    ld      hl,$638a    ; load HL with kong intro flash counter
+0842: 21 8A 63    ld      hl,kong_intro_flash_counter_638a    ; load HL with kong intro flash counter
 0845: 36 00       ld      (hl),$00    ; clear counter
 0847: 23          inc     hl          ; HL := #638B = ???
 0848: 36 00       ld      (hl),$00    ; clear this memory
@@ -2555,7 +2558,7 @@ Init:
 
 084B: E7          rst     $20         ; update timer and continue here only when complete, else RET
 
-084C: 21 0A 60    ld      hl,gamemode2; load HL with game mode2
+084C: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2
 084F: 36 00       ld      (hl),$00    ; set to 0
 0851: C9          ret                 ; return
 
@@ -2574,7 +2577,7 @@ Init:
 085F: 0D          dec     c           ; Next C
 0860: C2 57 08    jp      nz,$0857    ; loop until done
 
-0863: 21 00 69    ld      hl,$6900    ; load HL with start of sprite RAM
+0863: 21 00 69    ld      hl,girls_head_sprite_6900    ; load HL with start of sprite RAM
 0866: 0E 02       ld      c,$02       ; for C = 1 to 2
 0868: 06 C0       ld      b,$c0       ; for B = 1 to #C0
 086A: AF          xor     a           ; A := 0
@@ -2620,7 +2623,7 @@ Init:
 089C: 0D          dec     c           ; done ?
 089D: C2 93 08    jp      nz,$0893    ; no, loop again
 
-08A0: 21 00 69    ld      hl,$6900    ; load HL with start of sprite RAM
+08A0: 21 00 69    ld      hl,girls_head_sprite_6900    ; load HL with start of sprite RAM
 08A3: 06 00       ld      b,$00       ; For B = 0 to #FF
 08A5: 3E 00       ld      a,$00       ; A := 0
 
@@ -2638,7 +2641,7 @@ Init:
 ; jump from #00C9
 ; arrive here when credits have been inserted, waiting for game to start
 
-08B2: 3A 0A 60    ld      a,(gamemode2) ; load A with game mode2
+08B2: 3A 0A 60    ld      a,(gamemode2_600a) ; load A with game mode2
 
 ; GameMode2 = 1 during attract mode, 7 during intro , A during how high can u get,
 ;         B right before play, C during play, D when dead, 10 when game over
@@ -2650,10 +2653,10 @@ Init:
 
 08BA: CD 74 08    call    $0874       ; clear the screen and sprites
 08BD: AF          xor     a           ; A := 0
-08BE: 32 07 60    ld      (nocredits),a; store into credit indicator
+08BE: 32 07 60    ld      (nocredits_6007),a; store into credit indicator
 08C1: 11 0C 03    ld      de,$030c    ; load DE with task code to display "PUSH" onscreen
 08C4: CD 9F 30    call    $309f       ; insert task
-08C7: 21 0A 60    ld      hl,gamemode2; load A with game mode2
+08C7: 21 0A 60    ld      hl,gamemode2_600a; load A with game mode2
 08CA: 34          inc     (hl)        ; increase game mode2
 08CB: CD 65 09    call    $0965       ; draw credits on screen if any are present and displays high score table
 08CE: AF          xor     a           ; A := 0
@@ -2666,14 +2669,14 @@ Init:
 
 08D5: 06 04       ld      b,$04       ; B := 4 = 0100 binary
 08D7: 1E 09       ld      e,$09       ; E := 9 , code for "ONLY 1 PLAYER BUTTON"
-08D9: 3A 01 60    ld      a,(numcredits) ; load A with number of credits
+08D9: 3A 01 60    ld      a,(numcredits_6001) ; load A with number of credits
 08DC: FE 01       cp      $01         ; == 1 ?
 08DE: CA E4 08    jp      z,$08e4     ; yes, skip next 2 steps
 
 08E1: 06 0C       ld      b,$0c       ; B := #0C = 1100 binary
 08E3: 1C          inc     e           ; E := #0A, code for "1 OR 2 PLAYERS BUTTON"
 
-08E4: 3A 1A 60    ld      a,(framecounter) ; load A with # Timer constantly counts down from FF to 00
+08E4: 3A 1A 60    ld      a,(framecounter_601a) ; load A with # Timer constantly counts down from FF to 00
 08E7: E6 07       and     $07         ; mask bits. zero ?
 08E9: C2 F3 08    jp      nz,$08f3    ; no, skip next 3 steps
 
@@ -2699,7 +2702,7 @@ Init:
 ; player 1 start
 
 0906: CD 77 09    call    $0977       ; subtract 1 credit and update screen credit counter
-0909: 21 48 60    ld      hl,p2numlives; load HL with RAM used for player 2
+0909: 21 48 60    ld      hl,p2numlives_6048; load HL with RAM used for player 2
 090C: 06 08       ld      b,$08       ; for B = 1 to 8
 090E: AF          xor     a           ; A := 0
 
@@ -2714,8 +2717,8 @@ Init:
 
 0919: CD 77 09    call    $0977       ; subtract 1 credit and update screen credit counter
 091C: CD 77 09    call    $0977       ; subtract 1 credit and update screen credit counter
-091F: 11 48 60    ld      de,p2numlives; load DE with RAM location used for player 2
-0922: 3A 20 60    ld      a,(startinglives) ; load initial number of lives
+091F: 11 48 60    ld      de,p2numlives_6048; load DE with RAM location used for player 2
+0922: 3A 20 60    ld      a,(startinglives_6020) ; load initial number of lives
 0925: 12          ld      (de),a      ; store into number of lives player 2
 0926: 1C          inc     e           ; DE := Unk6049
 0927: 21 5E 09    ld      hl,$095e    ; load HL with source data table start
@@ -2725,10 +2728,10 @@ Init:
 0932: CD 9F 30    call    $309f       ; insert task
 0935: 21 00 01    ld      hl,$0100    ; HL := #100
 
-0938: 22 0E 60    ld      (playerturnb),hl; store HL into PlayerTurnB and TwoPlayerGame.  TwoPlayerGame is the number of players in the game
+0938: 22 0E 60    ld      (playerturnb_600e),hl; store HL into PlayerTurnB and TwoPlayerGame.  TwoPlayerGame is the number of players in the game
 093B: CD 74 08    call    $0874       ; clear the screen and sprites
-093E: 11 40 60    ld      de,p1numlives; load DE with address for number of lives player 1
-0941: 3A 20 60    ld      a,(startinglives) ; number of initial lives set with dip switches (3, 4, 5, or 6)
+093E: 11 40 60    ld      de,p1numlives_6040; load DE with address for number of lives player 1
+0941: 3A 20 60    ld      a,(startinglives_6020) ; number of initial lives set with dip switches (3, 4, 5, or 6)
 0944: 12          ld      (de),a      ; store into number of lives
 0945: 1C          inc     e           ; DE := Unk6041
 0946: 21 5E 09    ld      hl,$095e    ; load HL with start of table data
@@ -2737,9 +2740,9 @@ Init:
 094E: 11 00 01    ld      de,$0100    ; load task #1, parameter 0.  clears player 1 score and displays it
 0951: CD 9F 30    call    $309f       ; insert task
 0954: AF          xor     a           ; A := 0
-0955: 32 0A 60    ld      (gamemode2),a; reset game mode2
+0955: 32 0A 60    ld      (gamemode2_600a),a; reset game mode2
 0958: 3E 03       ld      a,$03       ; A := 3
-095A: 32 05 60    ld      (gamemode1),a; store into game mode1
+095A: 32 05 60    ld      (gamemode1_6005),a; store into game mode1
 095D: C9          ret                 ; return
 
 ; table data use in code above - gets copied to Unk6041 to Unk6041+7
@@ -2761,7 +2764,7 @@ Init:
 
 ; subtract 1 credit and update screen credit counter
 
-0977: 21 01 60    ld      hl,numcredits; load HL with pointer to number of credits
+0977: 21 01 60    ld      hl,numcredits_6001; load HL with pointer to number of credits
 097A: 3E 99       ld      a,$99       ; A := #99
 097C: 86          add     a,(hl)      ; add to number of credits.   equivalent of subtracting 1
 097D: 27          daa                 ; decimal adjust
@@ -2779,15 +2782,15 @@ Init:
 098C: 11 82 7D    ld      de,reg_flipscreen; load DE with flip screen setting
 098F: 3E 01       ld      a,$01       ; A := 1
 0991: 12          ld      (de),a      ; store
-0992: 21 0A 60    ld      hl,gamemode2; load HL with game mode 2 address
-0995: 3A 0E 60    ld      a,(playerturnb) ; load A with 0 when player 1 is up, = 1 when player 2 is up
+0992: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode 2 address
+0995: 3A 0E 60    ld      a,(playerturnb_600e) ; load A with 0 when player 1 is up, = 1 when player 2 is up
 0998: A7          and     a           ; is player 1 up?
 0999: C2 9F 09    jp      nz,$099f    ; no, skip next 2 steps
 
 099C: 36 01       ld      (hl),$01    ; set game mode 2 to 1
 099E: C9          ret                 ; return
 
-099F: 3A 26 60    ld      a,(uprightcab) ; load A with upright/cocktail
+099F: 3A 26 60    ld      a,(uprightcab_6026) ; load A with upright/cocktail
 09A2: 3D          dec     a           ; is this cocktail mode ?
 09A3: CA A8 09    jp      z,$09a8     ; no, skip next 2 steps
 
@@ -2800,17 +2803,17 @@ Init:
 ; jump from #0701 when GameMode2 == 1
 ; copy player data, set screen, set next game mode based on number of players
 
-09AB: 21 40 60    ld      hl,p1numlives; load HL with source data location
-09AE: 11 28 62    ld      de,$6228    ; load DE with destination data location.  start with remaining lives
+09AB: 21 40 60    ld      hl,p1numlives_6040; load HL with source data location
+09AE: 11 28 62    ld      de,number_of_lives_remaining_6228    ; load DE with destination data location.  start with remaining lives
 09B1: 01 08 00    ld      bc,$0008    ; byte counter set to 8
 09B4: ED B0       ldir                ; copy (HL) into (DE) from P1NumLives to P2NumLives into #6228 to #622F
-09B6: 2A 2A 62    ld      hl,($622a)  ; EG #3A65.  start of table data for screens/levels
+09B6: 2A 2A 62    ld      hl,(store_622a)  ; EG #3A65.  start of table data for screens/levels
 09B9: 7E          ld      a,(hl)      ; load screen number from table
-09BA: 32 27 62    ld      ($6227),a   ; store screen number
-09BD: 3A 0F 60    ld      a,(twoplayergame) ; load A with number of players
+09BA: 32 27 62    ld      (screen_number_6227),a   ; store screen number
+09BD: 3A 0F 60    ld      a,(twoplayergame_600f) ; load A with number of players
 09C0: A7          and     a           ; 1 player game?
-09C1: 21 09 60    ld      hl,waittimermsb; load HL with timer address
-09C4: 11 0A 60    ld      de,gamemode2; load DE with game mode2 address
+09C1: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer address
+09C4: 11 0A 60    ld      de,gamemode2_600a; load DE with game mode2 address
 09C7: CA D0 09    jp      z,$09d0     ; if 1 player game, skip ahead
 
 ; 2 player game
@@ -2840,7 +2843,7 @@ Init:
 09E3: 11 01 02    ld      de,$0201    ; load task #2, parameter 1 to display player 2 score
 09E6: CD 9F 30    call    $309f       ; insert task
 09E9: 3E 05       ld      a,$05       ; A := 5
-09EB: 32 0A 60    ld      (gamemode2),a; store into game mode2
+09EB: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 
 09EE: 3E 02       ld      a,$02       ; load A with "2"
 09F0: 32 E0 74    ld      ($74e0),a   ; write to screen
@@ -2852,17 +2855,17 @@ Init:
 
 ; arrive from #0701 when GameMode2 == 3
 
-09FE: 21 48 60    ld      hl,p2numlives; source location is ???
-0A01: 11 28 62    ld      de,$6228    ; destination is player lives remaining plus other player variables
+09FE: 21 48 60    ld      hl,p2numlives_6048; source location is ???
+0A01: 11 28 62    ld      de,number_of_lives_remaining_6228    ; destination is player lives remaining plus other player variables
 0A04: 01 08 00    ld      bc,$0008    ; byte counter set to 8
 0A07: ED B0       ldir                ; copy
-0A09: 2A 2A 62    ld      hl,($622a)  ; load HL with table for screens/levels
+0A09: 2A 2A 62    ld      hl,(store_622a)  ; load HL with table for screens/levels
 0A0C: 7E          ld      a,(hl)      ; load A with screen number from table
-0A0D: 32 27 62    ld      ($6227),a   ; store A into screen number
+0A0D: 32 27 62    ld      (screen_number_6227),a   ; store A into screen number
 0A10: 3E 78       ld      a,$78       ; A := #78
-0A12: 32 09 60    ld      (waittimermsb),a; store into timer
+0A12: 32 09 60    ld      (waittimermsb_6009),a; store into timer
 0A15: 3E 04       ld      a,$04       ; A := 4
-0A17: 32 0A 60    ld      (gamemode2),a; store into game mode2
+0A17: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 0A1A: C9          ret                 ; return
 
 ; arrive from #0701 when GameMode2 == 4
@@ -2877,7 +2880,7 @@ Init:
 0A2B: CD 9F 30    call    $309f       ; insert task
 0A2E: CD EE 09    call    $09ee       ; draw "2UP" to screen
 0A31: 3E 05       ld      a,$05       ; A := 5
-0A33: 32 0A 60    ld      (gamemode2),a; store into game mode2
+0A33: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 0A36: C9          ret                 ; return
 
 ; arrive from #0701 when GameMode2 == 5
@@ -2891,7 +2894,7 @@ Init:
 0A46: CD 9F 30    call    $309f       ; insert task
 0A49: 11 00 06    ld      de,$0600    ; load task #6 parameter 0 to display lives remaining and level
 0A4C: CD 9F 30    call    $309f       ; insert task
-0A4F: 21 0A 60    ld      hl,gamemode2; load HL with game mode2 address
+0A4F: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2 address
 0A52: 34          inc     (hl)        ; increase game mode
 
 ;  called from #01F1 , #0798, and other places
@@ -2910,11 +2913,11 @@ Init:
 
 0A63: DF          rst     $18         ; count down WaitTimerMSB and only continue here if == 0, else return to higher sub.
 0A64: CD 74 08    call    $0874       ; clears the screen and sprites
-0A67: 21 09 60    ld      hl,waittimermsb; load HL with timer
+0A67: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 0A6A: 36 01       ld      (hl),$01    ; set timer to 1
 0A6C: 2C          inc     l           ; HL := GameMode2
 0A6D: 34          inc     (hl)        ; increase game mode2 to 7
-0A6E: 11 2C 62    ld      de,$622c    ; load DE with game start flag address
+0A6E: 11 2C 62    ld      de,game_start_flag_622c    ; load DE with game start flag address
 0A71: 1A          ld      a,(de)      ; load A with game start flag
 0A72: A7          and     a           ; is this game just beginning?
 0A73: C0          ret     nz          ; yes, return
@@ -2924,7 +2927,7 @@ Init:
 
 ; arrive from #0701 when GameMode2 == 7
 
-0A76: 3A 85 63    ld      a,($6385)   ; varies from 0 to 7 while the intro screen runs, when kong climbs the dual ladders and scary music is played
+0A76: 3A 85 63    ld      a,(intro_screen_counter_6385)   ; varies from 0 to 7 while the intro screen runs, when kong climbs the dual ladders and scary music is played
 0A79: EF          rst     $28         ; jump based on A
 
 0A7A  8A 0A                     0       ; #0A8A
@@ -2950,14 +2953,14 @@ Init:
 0AA0: 3E D4       ld      a,$d4       ; A := #D4
 0AA2: 32 AA 75    ld      ($75aa),a   ; draw a ladder at top of screen
 0AA5: AF          xor     a           ; A := 0
-0AA6: 32 AF 62    ld      ($62af),a   ; store into kong climbing counter
+0AA6: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; store into kong climbing counter
 0AA9: 21 B4 38    ld      hl,$38b4    ; load HL with start of table data
-0AAC: 22 C2 63    ld      ($63c2),hl  ; store
+0AAC: 22 C2 63    ld      (store_63c2),hl  ; store
 0AAF: 21 CB 38    ld      hl,$38cb    ; load HL with start of table data
-0AB2: 22 C4 63    ld      ($63c4),hl  ; store
+0AB2: 22 C4 63    ld      (unknown_63c4),hl  ; store
 0AB5: 3E 40       ld      a,$40       ; A := #40
-0AB7: 32 09 60    ld      (waittimermsb),a; set timer to #40
-0ABA: 21 85 63    ld      hl,$6385    ; load HL with intro screen counter
+0AB7: 32 09 60    ld      (waittimermsb_6009),a; set timer to #40
+0ABA: 21 85 63    ld      hl,intro_screen_counter_6385    ; load HL with intro screen counter
 0ABD: 34          inc     (hl)        ; increase
 0ABE: C9          ret                 ; return
 
@@ -2966,122 +2969,122 @@ Init:
 0ABF: DF          rst     $18         ; count down timer and only continue here if zero, else RET
 0AC0: 21 8C 38    ld      hl,$388c    ; load HL with start of table data for kong
 0AC3: CD 4E 00    call    $004e       ; update kong's sprites
-0AC6: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+0AC6: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 0AC9: 0E 30       ld      c,$30       ; load offset to add
 0ACB: FF          rst     $38         ; move kong
-0ACC: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+0ACC: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 0ACF: 0E 99       ld      c,$99       ; load offset to add
 0AD1: FF          rst     $38         ; move kong
 0AD2: 3E 1F       ld      a,$1f       ; A := #1F
-0AD4: 32 8E 63    ld      ($638e),a   ; store into kong ladder climb counter
+0AD4: 32 8E 63    ld      (kong_ladder_climb_counter_638e),a   ; store into kong ladder climb counter
 0AD7: AF          xor     a           ; A := 0
-0AD8: 32 0C 69    ld      ($690c),a   ; store into kong's right arm sprite
-0ADB: 21 8A 60    ld      hl,$608a    ; load HL with music buffer
+0AD8: 32 0C 69    ld      (clear_kongs_top_right_sprite_690c),a   ; store into kong's right arm sprite
+0ADB: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with music buffer
 0ADE: 36 01       ld      (hl),$01    ; play scary music for start of game sound
 0AE0: 23          inc     hl          ; load HL with duration
 0AE1: 36 03       ld      (hl),$03    ; set duration to 3
-0AE3: 21 85 63    ld      hl,$6385    ; load HL with intro screen counter
+0AE3: 21 85 63    ld      hl,intro_screen_counter_6385    ; load HL with intro screen counter
 0AE6: 34          inc     (hl)        ; increase
 0AE7: C9          ret                 ; return
 
 ; arrive from #0A79 when intro screen indicator == 2
 
 0AE8: CD 6F 30    call    $306f       ; animate kong climbing up the ladder with girl under arm
-0AEB: 3A AF 62    ld      a,($62af)   ; load A with kong climbing counter
+0AEB: 3A AF 62    ld      a,(kong_climbing_counter_62af)   ; load A with kong climbing counter
 0AEE: E6 0F       and     $0f         ; mask bits, now between 0 and #F.  zero?
 0AF0: CC 4A 30    call    z,$304a     ; yes, roll up kong's ladder behind him
 
-0AF3: 3A 0B 69    ld      a,($690b)   ; load HL with start of Kong sprite
+0AF3: 3A 0B 69    ld      a,(kong_sprite_array_690b)   ; load HL with start of Kong sprite
 0AF6: FE 5D       cp      $5d         ; < #5D ?
 0AF8: D0          ret     nc          ; no, return
 
 0AF9: 3E 20       ld      a,$20       ; A := #20
-0AFB: 32 09 60    ld      (waittimermsb),a; set timer to #20
-0AFE: 21 85 63    ld      hl,$6385    ; load HL with intro screen counter
+0AFB: 32 09 60    ld      (waittimermsb_6009),a; set timer to #20
+0AFE: 21 85 63    ld      hl,intro_screen_counter_6385    ; load HL with intro screen counter
 0B01: 34          inc     (hl)        ; increase
-0B02: 22 C0 63    ld      ($63c0),hl  ; store HL into ???
+0B02: 22 C0 63    ld      (timer_unknown_63c0),hl  ; store HL into ???
 0B05: C9          ret                 ; return
 
 ; arrive from #0A79 when intro screen indicator == 4
 
-0B06: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+0B06: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 0B09: 0F          rrca                ; rotate right.  carry bit?
 0B0A: D8          ret     c           ; yes, return
 
-0B0B: 2A C2 63    ld      hl,($63c2)  ; load HL with ??? EG HL = #38B4
+0B0B: 2A C2 63    ld      hl,(store_63c2)  ; load HL with ??? EG HL = #38B4
 0B0E: 7E          ld      a,(hl)      ; load table data
 0B0F: FE 7F       cp      $7f         ; end of data ?
 0B11: CA 1E 0B    jp      z,$0b1e     ; yes, jump ahead
 
 0B14: 23          inc     hl          ; next HL
-0B15: 22 C2 63    ld      ($63c2),hl  ; store
+0B15: 22 C2 63    ld      (store_63c2),hl  ; store
 0B18: 4F          ld      c,a         ; C := A
-0B19: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+0B19: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 0B1C: FF          rst     $38         ; move kong
 0B1D: C9          ret                 ; return
 
 0B1E: 21 5C 38    ld      hl,$385c    ; load HL with start of kong graphic table data
 0B21: CD 4E 00    call    $004e       ; update kong's sprites
-0B24: 11 00 69    ld      de,$6900    ; load destination with girl sprite
+0B24: 11 00 69    ld      de,girls_head_sprite_6900    ; load destination with girl sprite
 0B27: 01 08 00    ld      bc,$0008    ; set counter to 8
 0B2A: ED B0       ldir                ; draw the girl after kong takes her up the ladder
-0B2C: 21 08 69    ld      hl,$6908    ; load HL with kong sprite start address
+0B2C: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with kong sprite start address
 0B2F: 0E 50       ld      c,$50       ; C := #50
 0B31: FF          rst     $38         ; move kong
-0B32: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+0B32: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 0B35: 0E FC       ld      c,$fc       ; C := #FC
 0B37: FF          rst     $38         ; move kong
 
 0B38: CD 4A 30    call    $304a       ; roll up kong's ladder behind him
-0B3B: 3A 8E 63    ld      a,($638e)   ; load A with kong ladder climb counter
+0B3B: 3A 8E 63    ld      a,(kong_ladder_climb_counter_638e)   ; load A with kong ladder climb counter
 0B3E: FE 0A       cp      $0a         ; == #A ? (all done)
 0B40: C2 38 0B    jp      nz,$0b38    ; no, loop again
 
 0B43: 3E 03       ld      a,$03       ; set boom sound duration
-0B45: 32 82 60    ld      ($6082),a   ; play boom sound
+0B45: 32 82 60    ld      (boom_sound_address_6082),a   ; play boom sound
 0B48: 11 2C 39    ld      de,$392c    ; load DE with table data start for first angled girder
 0B4B: CD A7 0D    call    $0da7       ; draw the angled girder
 0B4E: 3E 10       ld      a,$10       ; A := #10 = clear character
 0B50: 32 AA 74    ld      ($74aa),a   ; clear the right end of the top girder
 0B53: 32 8A 74    ld      ($748a),a   ; clear the right end of the top girder
 0B56: 3E 05       ld      a,$05       ; A := 5
-0B58: 32 8D 63    ld      ($638d),a   ; store into kong bounce counter
+0B58: 32 8D 63    ld      (kong_bounce_counter_638d),a   ; store into kong bounce counter
 0B5B: 3E 20       ld      a,$20       ; A := #20
-0B5D: 32 09 60    ld      (waittimermsb),a; set timer to #20
-0B60: 21 85 63    ld      hl,$6385    ; load HL with intro screen counter
+0B5D: 32 09 60    ld      (waittimermsb_6009),a; set timer to #20
+0B60: 21 85 63    ld      hl,intro_screen_counter_6385    ; load HL with intro screen counter
 0B63: 34          inc     (hl)        ; increase
-0B64: 22 C0 63    ld      ($63c0),hl  ; store into ???
+0B64: 22 C0 63    ld      (timer_unknown_63c0),hl  ; store into ???
 0B67: C9          ret                 ; return
 
 ; arrive from #0A79 when intro screen indicator == 6
 
-0B68: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+0B68: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 0B6B: 0F          rrca                ; rotate right.  carry bit set?
 0B6C: D8          ret     c           ; yes, return
 
 ; make kong jump to the left during intro
 
-0B6D: 2A C4 63    ld      hl,($63c4)  ; load HL with ??? (table data?)
+0B6D: 2A C4 63    ld      hl,(unknown_63c4)  ; load HL with ??? (table data?)
 0B70: 7E          ld      a,(hl)      ; get table data
 0B71: FE 7F       cp      $7f         ; done ?
 0B73: CA 86 0B    jp      z,$0b86     ; yes, jump ahead
 
 0B76: 23          inc     hl          ; next table entry
-0B77: 22 C4 63    ld      ($63c4),hl  ; store for next
-0B7A: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+0B77: 22 C4 63    ld      (unknown_63c4),hl  ; store for next
+0B7A: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 0B7D: 4F          ld      c,a         ; C := A
 0B7E: FF          rst     $38         ; move kong
-0B7F: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+0B7F: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 0B82: 0E FF       ld      c,$ff       ; C := #FF (negative 1)
 0B84: FF          rst     $38         ; move kong
 0B85: C9          ret                 ; return
 
 0B86: 21 CB 38    ld      hl,$38cb    ; load HL with start of table data
-0B89: 22 C4 63    ld      ($63c4),hl  ; store into ???
+0B89: 22 C4 63    ld      (unknown_63c4),hl  ; store into ???
 0B8C: 3E 03       ld      a,$03       ; set boom sound duration
-0B8E: 32 82 60    ld      ($6082),a   ; play boom sound
+0B8E: 32 82 60    ld      (boom_sound_address_6082),a   ; play boom sound
 0B91: 21 DC 38    ld      hl,$38dc    ; load HL with start of table data
-0B94: 3A 8D 63    ld      a,($638d)   ; load A with kong bounce counter
+0B94: 3A 8D 63    ld      a,(kong_bounce_counter_638d)   ; load A with kong bounce counter
 0B97: 3D          dec     a           ; decrease
 0B98: 07          rlca
 0B99: 07          rlca
@@ -3092,40 +3095,40 @@ Init:
 0B9F: 19          add     hl,de       ; add to HL
 0BA0: EB          ex      de,hl       ; DE <> HL
 0BA1: CD A7 0D    call    $0da7       ; draw the screen
-0BA4: 21 8D 63    ld      hl,$638d    ; load HL with kong bounce counter
+0BA4: 21 8D 63    ld      hl,kong_bounce_counter_638d    ; load HL with kong bounce counter
 0BA7: 35          dec     (hl)        ; decrease.  done bouncing?
 0BA8: C0          ret     nz          ; no, return
 
 0BA9: 3E B0       ld      a,$b0       ; else A := #B0
-0BAB: 32 09 60    ld      (waittimermsb),a; store into counter
-0BAE: 21 85 63    ld      hl,$6385    ; load HL with intro screen counter
+0BAB: 32 09 60    ld      (waittimermsb_6009),a; store into counter
+0BAE: 21 85 63    ld      hl,intro_screen_counter_6385    ; load HL with intro screen counter
 0BB1: 34          inc     (hl)        ; increase
 0BB2: C9          ret                 ; return
 
 ; arrive from #0A79 - last part of the intro to the game ?
 
-0BB3: 21 8A 60    ld      hl,$608a    ; load HL with music sound address
-0BB6: 3A 09 60    ld      a,(waittimermsb) ; load A with timer value
+0BB3: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with music sound address
+0BB6: 3A 09 60    ld      a,(waittimermsb_6009) ; load A with timer value
 0BB9: FE 90       cp      $90         ; == #90 ?
 0BBB: 20 0B       jr      nz,$0bc8    ; no, skip ahead
 
 0BBD: 36 0F       ld      (hl),$0f    ; play sound #0F = X X X kong sound
 0BBF: 23          inc     hl          ; HL := GameMode2
 0BC0: 36 03       ld      (hl),$03    ; set game mode2 to 3
-0BC2: 21 19 69    ld      hl,$6919    ; load HL with kong's face sprite
+0BC2: 21 19 69    ld      hl,unknown_6919    ; load HL with kong's face sprite
 0BC5: 34          inc     (hl)        ; increase - kong is now showing teeth
 0BC6: 18 09       jr      $0bd1       ; skip ahead
 
 0BC8: FE 18       cp      $18         ; timer == #18 ?
 0BCA: 20 05       jr      nz,$0bd1    ; no, skip ahead
 
-0BCC: 21 19 69    ld      hl,$6919    ; load HL with kong's face sprite
+0BCC: 21 19 69    ld      hl,unknown_6919    ; load HL with kong's face sprite
 0BCF: 35          dec     (hl)        ; decrease - kong is normal face
 0BD0: 00          nop                 ; no operation [?]
 
 0BD1: DF          rst     $18         ; count down timer and only continue here if zero, else RET.  HL is loaded with WaitTimerMSB address
 0BD2: AF          xor     a           ; A := 0
-0BD3: 32 85 63    ld      ($6385),a   ; reset intro screen counter to zero
+0BD3: 32 85 63    ld      (intro_screen_counter_6385),a   ; reset intro screen counter to zero
 0BD6: 34          inc     (hl)        ; increase timer in WaitTimerMSB
 0BD7: 23          inc     hl          ; HL := GameMode2
 0BD8: 34          inc     (hl)        ; increase game mode2 (to 8?)
@@ -3142,39 +3145,39 @@ Init:
 
 0BDE: CD 74 08    call    $0874       ; clear the screen and sprites
 0BE1: 16 06       ld      d,$06       ; load task #6
-0BE3: 3A 00 62    ld      a,($6200)   ; load A with 1 when mario is alive, 0 when dead
+0BE3: 3A 00 62    ld      a,(mario_array_6200)   ; load A with 1 when mario is alive, 0 when dead
 0BE6: 5F          ld      e,a         ; store into task parameter
 0BE7: CD 9F 30    call    $309f       ; insert task to display remaining lives and level number
 0BEA: 21 86 7D    ld      hl,reg_palette_a; load HL with palette bank
 0BED: 36 01       ld      (hl),$01    ; set palette bank selector
 0BEF: 23          inc     hl          ; next pallete bank
 0BF0: 36 00       ld      (hl),$00    ; clear palette bank selector
-0BF2: 21 8A 60    ld      hl,$608a    ; load HL with tune address
+0BF2: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with tune address
 0BF5: 36 02       ld      (hl),$02    ; play how high can you get sound?
 0BF7: 23          inc     hl          ; HL := #608B .  load HL with music timer ?
 0BF8: 36 03       ld      (hl),$03    ; set to 3 units
-0BFA: 21 A7 63    ld      hl,$63a7    ; load HL with address of counter
+0BFA: 21 A7 63    ld      hl,store_63a7    ; load HL with address of counter
 0BFD: 36 00       ld      (hl),$00    ; clear the counter
 0BFF: 21 DC 76    ld      hl,$76dc    ; load HL with screen address to draw the number of meters ?
-0C02: 22 A8 63    ld      ($63a8),hl  ; store - used at #0C54
-0C05: 3A 2E 62    ld      a,($622e)   ; load A with number of goofy kongs to draw
+0C02: 22 A8 63    ld      (result_63a8),hl  ; store - used at #0C54
+0C05: 3A 2E 62    ld      a,(number_of_goofys_to_draw_622e)   ; load A with number of goofy kongs to draw
 0C08: FE 06       cp      $06         ; < 6 ?
 0C0A: 38 05       jr      c,$0c11     ; yes, skip next 2 steps [BUG.  change to 0C0A  1805   JR #0C11 to fix]
 
 0C0C: 3E 05       ld      a,$05       ; else A := 5
-0C0E: 32 2E 62    ld      ($622e),a   ; store into number of goofy kongs to draw
+0C0E: 32 2E 62    ld      (number_of_goofys_to_draw_622e),a   ; store into number of goofy kongs to draw
 
-0C11: 3A 2F 62    ld      a,($622f)   ; load A with current screen/level
+0C11: 3A 2F 62    ld      a,(current_screen_level_622f)   ; load A with current screen/level
 0C14: 47          ld      b,a         ; copy to B
-0C15: 3A 2A 62    ld      a,($622a)   ; load A with the low byte of the pointer for lookup to screens/levels
+0C15: 3A 2A 62    ld      a,(store_622a)   ; load A with the low byte of the pointer for lookup to screens/levels
 0C18: B8          cp      b           ; are they the same ?
 0C19: 28 04       jr      z,$0c1f     ; yes, skip next 2 steps
 
-0C1B: 21 2E 62    ld      hl,$622e    ; else load HL with number of goofys to draw
+0C1B: 21 2E 62    ld      hl,number_of_goofys_to_draw_622e    ; else load HL with number of goofys to draw
 0C1E: 34          inc     (hl)        ; increase
 
-0C1F: 32 2F 62    ld      ($622f),a   ; store A into current screen/level
-0C22: 3A 2E 62    ld      a,($622e)   ; load A with number of goofys to draw
+0C1F: 32 2F 62    ld      (current_screen_level_622f),a   ; store A into current screen/level
+0C22: 3A 2E 62    ld      a,(number_of_goofys_to_draw_622e)   ; load A with number of goofys to draw
 0C25: 47          ld      b,a         ; copy to B for use as loop counter, refer to #0C7E
 0C26: 21 BC 75    ld      hl,$75bc    ; load HL with screen location start for goofy kong
 
@@ -3199,16 +3202,16 @@ Init:
 0C3F: 19          add     hl,de       ; add to screen location
 0C40: C3 2B 0C    jp      $0c2b       ; loop again
 
-0C43: 3A A7 63    ld      a,($63a7)   ; load A with counter
+0C43: 3A A7 63    ld      a,(store_63a7)   ; load A with counter
 0C46: 3C          inc     a           ; increase
-0C47: 32 A7 63    ld      ($63a7),a   ; store
+0C47: 32 A7 63    ld      (store_63a7),a   ; store
 0C4A: 3D          dec     a           ; decrease
 0C4B: CB 27       sla     a
 0C4D: CB 27       sla     a           ; shift left twice, it is now a usable offset
 0C4F: E5          push    hl          ; save HL
 0C50: 21 F0 3C    ld      hl,$3cf0    ; load HL with start of table data for 25m, 50m, etc.
 0C53: C5          push    bc          ; save BC
-0C54: DD 2A A8 63 ld      ix,($63a8)  ; load IX with screen VRAM address to draw number of meters
+0C54: DD 2A A8 63 ld      ix,(result_63a8)  ; load IX with screen VRAM address to draw number of meters
 0C58: 4F          ld      c,a         ; C := A, used for offset
 0C59: 06 00       ld      b,$00       ; B := 0
 0C5B: 09          add     hl,bc       ; add offset
@@ -3226,7 +3229,7 @@ Init:
 0C71: E1          pop     hl          ; transfer IX to HL (part 2/2)
 0C72: 11 FC FF    ld      de,$fffc    ; load offset for next screen location
 0C75: 19          add     hl,de       ; add offset
-0C76: 22 A8 63    ld      ($63a8),hl  ; store result
+0C76: 22 A8 63    ld      (result_63a8),hl  ; store result
 0C79: E1          pop     hl          ; restore HL
 0C7A: 11 5F FF    ld      de,$ff5f    ; load DE with offset for goofy
 0C7D: 19          add     hl,de       ; add offset to draw next goofy
@@ -3235,7 +3238,7 @@ Init:
 
 0C82: 11 07 03    ld      de,$0307    ; load task data for text #7 "HOW HIGH CAN YOU GET?"
 0C85: CD 9F 30    call    $309f       ; insert task to draw text
-0C88: 21 09 60    ld      hl,waittimermsb; load HL with timer to wait
+0C88: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer to wait
 0C8B: 36 A0       ld      (hl),$a0    ; set timer for #A0 units
 0C8D: 23          inc     hl          ; HL := GameMode2
 0C8E: 34          inc     (hl)
@@ -3251,14 +3254,14 @@ Init:
 
 0C92: CD 74 08    call    $0874       ; clears the screen and sprites
 0C95: AF          xor     a           ; A := 0
-0C96: 32 8C 63    ld      ($638c),a   ; reset onscreen timer
+0C96: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; reset onscreen timer
 0C99: 11 01 05    ld      de,$0501    ; load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 0C9C: CD 9F 30    call    $309f       ; insert task
 0C9F: 21 86 7D    ld      hl,reg_palette_a; load HL with palette bank selector
 0CA2: 36 00       ld      (hl),$00    ; clear palette bank selector
 0CA4: 23          inc     hl          ; next bank
 0CA5: 36 01       ld      (hl),$01    ; set palette bank selector
-0CA7: 3A 27 62    ld      a,($6227)   ; load A with screen number
+0CA7: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 0CAA: 3D          dec     a           ; decrease by 1
 0CAB: CA D4 0C    jp      z,$0cd4     ; if zero jump to #0Cd4 - we were on girders - continue on #0CC6
 
@@ -3274,14 +3277,14 @@ Init:
 0CB9: 21 86 7D    ld      hl,reg_palette_a; load HL with palette bank selector
 0CBC: 36 01       ld      (hl),$01    ; set palette bank selector
 0CBE: 3E 0B       ld      a,$0b       ; load A with music code For rivets
-0CC0: 32 89 60    ld      ($6089),a   ; set music
+0CC0: 32 89 60    ld      (background_music_value_6089),a   ; set music
 0CC3: 11 8B 3C    ld      de,$3c8b    ; load DE with start of table data for rivets
 
 ; other screens return here
 
 0CC6: CD A7 0D    call    $0da7       ; draw the screen
 
-0CC9: 3A 27 62    ld      a,($6227)   ; load A with screen number
+0CC9: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 0CCC: FE 04       cp      $04         ; screen is rivets level?
 0CCE: CC 00 0D    call    z,$0d00     ; yes, call sub to draw the rivets
 
@@ -3291,7 +3294,7 @@ Init:
 
 0CD4: 11 E4 3A    ld      de,$3ae4    ; Load DE with start of table data for girders
 0CD7: 3E 08       ld      a,$08       ; A := 8 = music code for girders
-0CD9: 32 89 60    ld      ($6089),a   ; set music for girders
+0CD9: 32 89 60    ld      (background_music_value_6089),a   ; set music for girders
 0CDC: C3 C6 0C    jp      $0cc6       ; jump back
 
 ; conveyors from #0CAF
@@ -3302,14 +3305,14 @@ Init:
 0CE7: 23          inc     hl
 0CE8: 36 00       ld      (hl),$00    ; clear palette bank selector
 0CEA: 3E 09       ld      a,$09       ; load A with conveyor music
-0CEC: 32 89 60    ld      ($6089),a   ; set music for conveyors
+0CEC: 32 89 60    ld      (background_music_value_6089),a   ; set music for conveyors
 0CEF: C3 C6 0C    jp      $0cc6       ; jump back
 
 ; elevators from #0CB3
 
 0CF2: CD 27 0D    call    $0d27       ; draw elevator cables
 0CF5: 3E 0A       ld      a,$0a       ; A := #A
-0CF7: 32 89 60    ld      ($6089),a   ; set music for elevators
+0CF7: 32 89 60    ld      (background_music_value_6089),a   ; set music for elevators
 0CFA: 11 E5 3B    ld      de,$3be5    ; load DE with start of table data for the elevators
 0CFD: C3 C6 0C    jp      $0cc6       ; jump back
 
@@ -3397,18 +3400,18 @@ Init:
 
 0D5F: CD 56 0F    call    $0f56       ; clear and initialize RAM values, compute initial timer, draw all initial sprites
 0D62: CD 41 24    call    $2441
-0D65: 21 09 60    ld      hl,waittimermsb; load HL with timer addr.
+0D65: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer addr.
 0D68: 36 40       ld      (hl),$40    ; set timer to #40
 0D6A: 23          inc     hl          ; HL := GameMode2
 0D6B: 34          inc     (hl)        ; increase game mode2
 0D6C: 21 5C 38    ld      hl,$385c    ; load HL with start of kong graphic table data
 0D6F: CD 4E 00    call    $004e       ; update kong's sprites
 
-0D72: 11 00 69    ld      de,$6900    ; set destination to girl sprite
+0D72: 11 00 69    ld      de,girls_head_sprite_6900    ; set destination to girl sprite
 0D75: 01 08 00    ld      bc,$0008    ; set counter to 8
 0D78: ED B0       ldir                ; draw the girl on screen
 
-0D7A: 3A 27 62    ld      a,($6227)   ; load a with screen number
+0D7A: 3A 27 62    ld      a,(screen_number_6227)   ; load a with screen number
 0D7D: fe 04       cp      $04         ; is this rivets screen?
 0D7f: 28 0A       jr      z,$0d8b     ; if yes, jump ahead a bit
 
@@ -3418,24 +3421,24 @@ Init:
 
                                         ; else this is girders, kong needs to be moved
 
-0D84: 21 0B 69    ld      hl,$690b    ; load HL with start of kong sprite
+0D84: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of kong sprite
 0D87: 0E FC       ld      c,$fc       ; set to move by -4
 0D89: FF          rst     $38         ; move kong
 0D8A: C9          ret                 ; return
 
 ; on the rivets
 
-0D8B: 21 08 69    ld      hl,$6908    ; load HL with kong sprite RAM
+0D8B: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with kong sprite RAM
 0D8E: 0E 44       ld      c,$44       ; set counter to #44 ?
 0D90: FF          rst     $38         ; move kong
 
 0D91: 11 04 00    ld      de,$0004    ; load counters
 0D94: 01 10 02    ld      bc,$0210    ; load counters
-0D97: 21 00 69    ld      hl,$6900    ; load HL with start of sprite RAM (girl sprite first)
+0D97: 21 00 69    ld      hl,girls_head_sprite_6900    ; load HL with start of sprite RAM (girl sprite first)
 0D9A: CD 3D 00    call    $003d       ; move girl to right
 
 0D9D: 01 F8 02    ld      bc,$02f8    ; load counters
-0DA0: 21 03 69    ld      hl,$6903    ; load HL with Y value of girl -1
+0DA0: 21 03 69    ld      hl,sprite_girl_table_data_y_position_6903    ; load HL with Y value of girl -1
 0DA3: CD 3D 00    call    $003d       ; move girl up
 
 0DA6: C9          ret                 ; return [to #1983]
@@ -3445,7 +3448,7 @@ Init:
 ; called from many places
 
 0DA7: 1A          ld      a,(de)      ; load a with DE - points to start of table data
-0DA8: 32 B3 63    ld      ($63b3),a   ; save for later use
+0DA8: 32 B3 63    ld      (original_data_item_63b3),a   ; save for later use
 0DAB: FE AA       cp      $aa         ; is this the end of the data?
 0DAD: C8          ret     z           ; yes, return
 
@@ -3462,13 +3465,13 @@ Init:
 0DB6: D5          push    de          ; save DE
 0DB7: CD F0 2F    call    $2ff0       ; convert HL into VRAM address
 0DBA: D1          pop     de          ; restore DE
-0DBB: 22 AB 63    ld      ($63ab),hl  ; store the VRAM address into this location for later use.  starting point of whatever we are drawing
+0DBB: 22 AB 63    ld      (unknown_63ab),hl  ; store the VRAM address into this location for later use.  starting point of whatever we are drawing
 0DBE: 78          ld      a,b         ; A := B = original data item
 0DBF: E6 07       and     $07         ; mask bits, now between 0 and 7
-0DC1: 32 B4 63    ld      ($63b4),a   ; store into ???
+0DC1: 32 B4 63    ld      (unknown_63b4),a   ; store into ???
 0DC4: 79          ld      a,c         ; A := C = 2nd data item
 0DC5: E6 07       and     $07         ; mask bits, now between 0 and 7
-0DC7: 32 AF 63    ld      ($63af),a   ; store into ???
+0DC7: 32 AF 63    ld      (original_data_item__63af),a   ; store into ???
 0DCA: 13          inc     de          ; next table entry
 0DCB: 1A          ld      a,(de)      ; load A with table data
 0DCC: 67          ld      h,a         ; copy to H
@@ -3477,59 +3480,59 @@ Init:
 
 0DD1: ED 44       neg                 ; Negate A (A := #FF - A)
 
-0DD3: 32 B1 63    ld      ($63b1),a   ; store into ???
+0DD3: 32 B1 63    ld      (result_63b1),a   ; store into ???
 0DD6: 13          inc     de          ; next table entry
 0DD7: 1A          ld      a,(de)      ; load A with table data
 0DD8: 6F          ld      l,a         ; copy to L
 0DD9: 91          sub     c           ; subtract the 2nd data item
-0DDA: 32 B2 63    ld      ($63b2),a   ; store into ???
+0DDA: 32 B2 63    ld      (unknown_63b2),a   ; store into ???
 0DDD: 1A          ld      a,(de)      ; load A with same table data
 0DDE: E6 07       and     $07         ; mask bits, now between 0 and 7
-0DE0: 32 B0 63    ld      ($63b0),a   ; store into ???
+0DE0: 32 B0 63    ld      (unknown_63b0),a   ; store into ???
 0DE3: D5          push    de          ; save DE
 0DE4: CD F0 2F    call    $2ff0       ; convert HL into VRAM address
 0DE7: D1          pop     de          ; restore DE
-0DE8: 22 AD 63    ld      ($63ad),hl  ; store into ???
-0DEB: 3A B3 63    ld      a,($63b3)   ; load A with first data item
+0DE8: 22 AD 63    ld      (unknown_63ad),hl  ; store into ???
+0DEB: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with first data item
 0DEE: FE 02       cp      $02         ; < 2 ? are we drawing a ladder or a broken ladder?
 0DF0: F2 4F 0E    jp      p,$0e4f     ; no, skip ahead [why P, instead of NC ?]
 
 ; else we are drawing a ladder
 
-0DF3: 3A B2 63    ld      a,($63b2)   ; load A with ???
+0DF3: 3A B2 63    ld      a,(unknown_63b2)   ; load A with ???
 0DF6: D6 10       sub     $10         ; subtract #10
 0DF8: 47          ld      b,a         ; copy answer to B
-0DF9: 3A AF 63    ld      a,($63af)   ; load A with ???
+0DF9: 3A AF 63    ld      a,(original_data_item__63af)   ; load A with ???
 0DFC: 80          add     a,b         ; add B
-0DFD: 32 B2 63    ld      ($63b2),a   ; store into ???
-0E00: 3A AF 63    ld      a,($63af)   ; load A with ??? computed above
+0DFD: 32 B2 63    ld      (unknown_63b2),a   ; store into ???
+0E00: 3A AF 63    ld      a,(original_data_item__63af)   ; load A with ??? computed above
 0E03: C6 F0       add     a,$f0       ; add #F0
-0E05: 2A AB 63    ld      hl,($63ab)  ; load HL with VRAM address to begin drawing
+0E05: 2A AB 63    ld      hl,(unknown_63ab)  ; load HL with VRAM address to begin drawing
 0E08: 77          ld      (hl),a      ; draw element to screen = girder above top of ladder ?
 0E09: 2C          inc     l           ; next location
 0E0A: D6 30       sub     $30         ; subtract #30.  now the element to draw is a ladder
 0E0C: 77          ld      (hl),a      ; draw element to screen = top of ladder
-0E0D: 3A B3 63    ld      a,($63b3)   ; load A with original data item
+0E0D: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with original data item
 0E10: FE 01       cp      $01         ; == 1 ? (is this a broken ladder?)
 0E12: C2 19 0E    jp      nz,$0e19    ; no, skip next 2 steps
 
 0E15: AF          xor     a           ; A := 0
-0E16: 32 B2 63    ld      ($63b2),a   ; store into ???
+0E16: 32 B2 63    ld      (unknown_63b2),a   ; store into ???
 
-0E19: 3A B2 63    ld      a,($63b2)   ; load A with ???
+0E19: 3A B2 63    ld      a,(unknown_63b2)   ; load A with ???
 0E1C: D6 08       sub     $08         ; subtract 8
-0E1E: 32 B2 63    ld      ($63b2),a   ; store.  are we done?
+0E1E: 32 B2 63    ld      (unknown_63b2),a   ; store.  are we done?
 0E21: DA 2A 0E    jp      c,$0e2a     ; yes, skip ahead
 
 0E24: 2C          inc     l           ; next HL
 0E25: 36 C0       ld      (hl),$c0    ; draw ladder to screen
 0E27: C3 19 0E    jp      $0e19       ; loop again
 
-0E2A: 3A B0 63    ld      a,($63b0)   ; load A with ???
+0E2A: 3A B0 63    ld      a,(unknown_63b0)   ; load A with ???
 0E2D: C6 D0       add     a,$d0       ; add #D0
-0E2F: 2A AD 63    ld      hl,($63ad)
+0E2F: 2A AD 63    ld      hl,(unknown_63ad)
 0E32: 77          ld      (hl),a
-0E33: 3A B3 63    ld      a,($63b3)   ; load A with original data item
+0E33: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with original data item
 0E36: FE 01       cp      $01         ; == 1 ?  (is this a broken ladder ?)
 0E38: C2 3F 0E    jp      nz,$0e3f    ; no, skip next 3 steps
 
@@ -3539,7 +3542,7 @@ Init:
 0E3C: 36 C0       ld      (hl),$c0    ; set HL to #C0 - draws bottom part of broken ladder to screen
 0E3E: 2C          inc     l           ; increase HL
 
-0E3F: 3A B0 63    ld      a,($63b0)   ; load A with ???
+0E3F: 3A B0 63    ld      a,(unknown_63b0)   ; load A with ???
 0E42: FE 00       cp      $00         ; == 0 ?
 0E44: CA 4B 0E    jp      z,$0e4b     ; yes, skip next 3 steps
 
@@ -3552,25 +3555,25 @@ Init:
 
 ; arrive from #0DF0
 
-0E4F: 3A B3 63    ld      a,($63b3)   ; load A with original data item [why do this again ?  it was loaded just before coming here]
+0E4F: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with original data item [why do this again ?  it was loaded just before coming here]
 0E52: FE 02       cp      $02         ; == 2 ?
 0E54: C2 E8 0E    jp      nz,$0ee8    ; no, skip ahead
 
 ; else data item type 2 = girder ???
 
-0E57: 3A AF 63    ld      a,($63af)   ; load A with original data item #2, masked to be between 0 and 7
+0E57: 3A AF 63    ld      a,(original_data_item__63af)   ; load A with original data item #2, masked to be between 0 and 7
 0E5A: C6 F0       add     a,$f0       ; add #F0
-0E5C: 32 B5 63    ld      ($63b5),a   ; store into ???
-0E5F: 2A AB 63    ld      hl,($63ab)  ; load HL with screen address to being drawing the item
+0E5C: 32 B5 63    ld      (unknown_63b5),a   ; store into ???
+0E5F: 2A AB 63    ld      hl,(unknown_63ab)  ; load HL with screen address to being drawing the item
 
-0E62: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0E62: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0E65: 77          ld      (hl),a      ; draw element to screen
 0E66: 23          inc     hl          ; next screen location
 0E67: 7D          ld      a,l         ; A := L
 0E68: E6 1F       and     $1f         ; mask bits, now between 0 and #1F.  at zero ?
 0E6A: CA 78 0E    jp      z,$0e78     ; yes, skip ahead
 
-0E6D: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0E6D: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0E70: FE F0       cp      $f0         ; == #F0 ?
 0E72: CA 78 0E    jp      z,$0e78     ; yes, skip next 2 steps
 
@@ -3579,46 +3582,46 @@ Init:
 
 0E78: 01 1F 00    ld      bc,$001f    ; load BC with offset
 0E7B: 09          add     hl,bc       ; add offset to HL
-0E7C: 3A B1 63    ld      a,($63b1)   ; load A with ???
+0E7C: 3A B1 63    ld      a,(result_63b1)   ; load A with ???
 0E7F: D6 08       sub     $08         ; subtract 8.  done?
 0E81: DA CF 0E    jp      c,$0ecf     ; yes, skip ahead for next
 
-0E84: 32 B1 63    ld      ($63b1),a   ; store A into ???
-0E87: 3A B2 63    ld      a,($63b2)   ; load A with ???
+0E84: 32 B1 63    ld      (result_63b1),a   ; store A into ???
+0E87: 3A B2 63    ld      a,(unknown_63b2)   ; load A with ???
 0E8A: FE 00       cp      $00         ; == 0 ? [why written this way?]
 0E8C: CA 62 0E    jp      z,$0e62     ; yes, jump back and draw another [of same?]
 
-0E8F: 3A B5 63    ld      a,($63b5)
+0E8F: 3A B5 63    ld      a,(unknown_63b5)
 0E92: 77          ld      (hl),a      ; draw element to screen
 0E93: 23          inc     hl          ; next screen location
 0E94: 7D          ld      a,l         ; A := L
 0E95: E6 1F       and     $1f         ; mask bits, now between 0 and #1F.  at zero?
 0E97: CA A0 0E    jp      z,$0ea0     ; yes, skip next 3 steps
 
-0E9A: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0E9A: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0E9D: D6 10       sub     $10         ; subtract #10
 0E9F: 77          ld      (hl),a      ; store to screen.  draws bottom half of a girder
 
 0EA0: 01 1F 00    ld      bc,$001f    ; load BC with offset
 0EA3: 09          add     hl,bc       ; add offset for next screen element
-0EA4: 3A B1 63    ld      a,($63b1)   ; load A with ???
+0EA4: 3A B1 63    ld      a,(result_63b1)   ; load A with ???
 0EA7: D6 08       sub     $08         ; subtract 8.  done?
 0EA9: DA CF 0E    jp      c,$0ecf     ; yes, skip ahead for next
 
-0EAC: 32 B1 63    ld      ($63b1),a   ; store A into ???
-0EAF: 3A B2 63    ld      a,($63b2)   ; load A with ???
+0EAC: 32 B1 63    ld      (result_63b1),a   ; store A into ???
+0EAF: 3A B2 63    ld      a,(unknown_63b2)   ; load A with ???
 0EB2: CB 7F       bit     7,a         ; test bit 7.  is it zero?
 0EB4: C2 D3 0E    jp      nz,$0ed3    ; no, skip ahead
 
-0EB7: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0EB7: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0EBA: 3C          inc     a           ; increase
-0EBB: 32 B5 63    ld      ($63b5),a   ; store result
+0EBB: 32 B5 63    ld      (unknown_63b5),a   ; store result
 0EBE: FE F8       cp      $f8         ; == #F8 ?
 0EC0: C2 C9 0E    jp      nz,$0ec9    ; no, skip next 3 steps
 
 0EC3: 23          inc     hl          ; next screen location
 0EC4: 3E F0       ld      a,$f0       ; A := #F0
-0EC6: 32 B5 63    ld      ($63b5),a   ; store into ???
+0EC6: 32 B5 63    ld      (unknown_63b5),a   ; store into ???
 
 0EC9: 7D          ld      a,l         ; A := L
 0ECA: E6 1F       and     $1f         ; mask bits.  now between 0 and #1F.  at zero?
@@ -3627,42 +3630,42 @@ Init:
 0ECF: 13          inc     de          ; next table entry
 0ED0: C3 A7 0D    jp      $0da7       ; loop back for more
 
-0ED3: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0ED3: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0ED6: 3D          dec     a           ; decrease
-0ED7: 32 B5 63    ld      ($63b5),a   ; store result
+0ED7: 32 B5 63    ld      (unknown_63b5),a   ; store result
 0EDA: FE F0       cp      $f0         ; compare to #F0.  is the sign positive?
 0EDC: F2 E5 0E    jp      p,$0ee5     ; yes, skip next 3 steps [why?  #0EE5 is a jump - it should jump directly instead]
 
 0EDF: 2B          dec     hl
 0EE0: 3E F7       ld      a,$f7       ; A := #F7
-0EE2: 32 B5 63    ld      ($63b5),a   ; store into ???
+0EE2: 32 B5 63    ld      (unknown_63b5),a   ; store into ???
 
 0EE5: C3 62 0E    jp      $0e62       ; jump back
 
 ; arrive from #0E54
 
-0EE8: 3A B3 63    ld      a,($63b3)   ; load A with original data item [why load it again ? A already has #63B3]
+0EE8: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with original data item [why load it again ? A already has #63B3]
 0EEB: FE 03       cp      $03         ; == 3?
 0EED: C2 1B 0F    jp      nz,$0f1b    ; no, skip ahead
 
 ; we are drawing a conveyor
 
-0EF0: 2A AB 63    ld      hl,($63ab)  ; load HL with VRAM screen address to begin drawing
+0EF0: 2A AB 63    ld      hl,(unknown_63ab)  ; load HL with VRAM screen address to begin drawing
 0EF3: 3E B3       ld      a,$b3       ; A := #B3 = code graphic for conveyor
 0EF5: 77          ld      (hl),a      ; draw on screen
 0EF6: 01 20 00    ld      bc,$0020    ; load BC with offset
 0EF9: 09          add     hl,bc       ; add offset to HL
-0EFA: 3A B1 63    ld      a,($63b1)   ; load A with ???
+0EFA: 3A B1 63    ld      a,(result_63b1)   ; load A with ???
 0EFD: D6 10       sub     $10         ; subtract #10.  done ?
 
 0EFF: DA 14 0F    jp      c,$0f14     ; yes, skip ahead
 
-0F02: 32 B1 63    ld      ($63b1),a
+0F02: 32 B1 63    ld      (result_63b1),a
 0F05: 3E B1       ld      a,$b1       ; A := #B1
 0F07: 77          ld      (hl),a      ; store into ???
 0F08: 01 20 00    ld      bc,$0020    ; load BC with offset
 0F0B: 09          add     hl,bc       ; add offset to HL
-0F0C: 3A B1 63    ld      a,($63b1)   ; load A with ???
+0F0C: 3A B1 63    ld      a,(result_63b1)   ; load A with ???
 0F0F: D6 08       sub     $08         ; subtract 8
 0F11: C3 FF 0E    jp      $0eff       ; loop again
 
@@ -3673,7 +3676,7 @@ Init:
 
 ; arrive from #0EED
 
-0F1B: 3A B3 63    ld      a,($63b3)   ; load A with original data item [why load it again ? A already has #63B3]
+0F1B: 3A B3 63    ld      a,(original_data_item_63b3)   ; load A with original data item [why load it again ? A already has #63B3]
 0F1E: FE 07       cp      $07         ; <= 7 ?
 0F20: F2 CF 0E    jp      p,$0ecf     ; no, skip back and loop for next data item
 
@@ -3687,16 +3690,16 @@ Init:
 
 0F2D: 3E FE       ld      a,$fe       ; A := #FE
 
-0F2F: 32 B5 63    ld      ($63b5),a   ; store into ???
-0F32: 2A AB 63    ld      hl,($63ab)  ; load HL with ???
+0F2F: 32 B5 63    ld      (unknown_63b5),a   ; store into ???
+0F32: 2A AB 63    ld      hl,(unknown_63ab)  ; load HL with ???
 
-0F35: 3A B5 63    ld      a,($63b5)   ; load A with ???
+0F35: 3A B5 63    ld      a,(unknown_63b5)   ; load A with ???
 0F38: 77          ld      (hl),a      ; store into ???
 0F39: 01 20 00    ld      bc,$0020    ; set offset to #20
 0F3C: 09          add     hl,bc       ; add offset for next
-0F3D: 3A B1 63    ld      a,($63b1)   ; load A with ???
+0F3D: 3A B1 63    ld      a,(result_63b1)   ; load A with ???
 0F40: D6 08       sub     $08         ; subtract 8
-0F42: 32 B1 63    ld      ($63b1),a   ; store result.  done ?
+0F42: 32 B1 63    ld      (result_63b1),a   ; store result.  done ?
 0F45: D2 35 0F    jp      nc,$0f35    ; no, loop again
 
 0F48: 13          inc     de          ; else increase DE
@@ -3715,7 +3718,7 @@ Init:
 ; initializes all sprites
 
 0F56: 06 27       ld      b,$27       ; for B = 1 to #27
-0F58: 21 00 62    ld      hl,$6200    ; load HL with start of address
+0F58: 21 00 62    ld      hl,mario_array_6200    ; load HL with start of address
 0F5B: AF          xor     a           ; A := #00
 
 0F5C: 77          ld      (hl),a      ; clear memory
@@ -3724,7 +3727,7 @@ Init:
 
 0F60: 0E 11       ld      c,$11       ; For C = 1 to 11
 0F62: 16 80       ld      d,$80       ; load D with 80, used to reset B in inner loop
-0F64: 21 80 62    ld      hl,$6280    ; start of memory to clear
+0F64: 21 80 62    ld      hl,left_side_rectractable_ladder_6280    ; start of memory to clear
 0F67: 42          ld      b,d         ; For B = 1 to #80
 
 0F68: 77          ld      (hl),a      ; clear (HL)
@@ -3735,7 +3738,7 @@ Init:
 0F6D: 20 F8       jr      nz,$0f67    ; loop until done
 
 0F6F: 21 9C 3D    ld      hl,$3d9c    ; source addr. = #3D9C - table data
-0F72: 11 80 62    ld      de,$6280    ; Destination = #6280
+0F72: 11 80 62    ld      de,left_side_rectractable_ladder_6280    ; Destination = #6280
 0F75: 01 40 00    ld      bc,$0040    ; counter = #40 Bytes
 0F78: ED B0       ldir                ; copy
 
@@ -3751,7 +3754,7 @@ Init:
 ; set up initial timer
 ; timer is either 5000, 6000, 7000 or 8000 depending on level
 
-0F7A: 3A 29 62    ld      a,($6229)   ; load level number
+0F7A: 3A 29 62    ld      a,(else_level_number_6229)   ; load level number
 0F7D: 47          ld      b,a         ; copy to B
 0F7E: A7          and     a           ; clear carry flag
 0F7f: 17          rla                 ; rotate A left (double =2x)
@@ -3767,7 +3770,7 @@ Init:
 
 0F8C: 3E 50       ld      a,$50       ; otherwise load A with #50 (80 decimal)
 
-0F8E: 21 B0 62    ld      hl,$62b0    ; load HL with start of timers
+0F8E: 21 B0 62    ld      hl,initial_clock_value_62b0    ; load HL with start of timers
 0F91: 06 03       ld      b,$03       ; For B = 1 to 3
 
 0F93: 77          ld      (hl),a      ; store A into timer memory
@@ -3786,11 +3789,11 @@ Init:
 0FA2: 77          ld      (hl),a      ; store A into address of HL=#62B3 which controls timers
 0FA3: 2C          inc     l           ; HL := #62B4
 0FA4: 77          ld      (hl),a      ; store A into the timer control
-0FA5: 21 09 62    ld      hl,$6209    ; load HL with #6209
+0FA5: 21 09 62    ld      hl,unknown_6209    ; load HL with #6209
 0FA8: 36 04       ld      (hl),$04    ; store 4 into #6209
 0FAA: 2C          inc     l           ; HL := #620A
 0FAB: 36 08       ld      (hl),$08    ; store 8 into #620A
-0FAD: 3A 27 62    ld      a,($6227)   ; load A with screen number
+0FAD: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 0FB0: 4F          ld      c,a         ; copy to C, used at #0FCB
 0FB1: CB 57       bit     2,a         ; is this the rivets ?
 0FB3: 20 16       jr      nz,$0fcb    ; yes, skip ahead [would be better to jump to #1131, or JR to #0FCC]
@@ -3798,7 +3801,7 @@ Init:
 ; draw 3 black sprites above the top kongs ladder
 ; effect to erase the 2 girders at the top of kong's ladder
 
-0FB5: 21 00 6A    ld      hl,$6a00    ; else load HL sprite RAM - used for blank space sprite
+0FB5: 21 00 6A    ld      hl,blank_space_sprite_6a00    ; else load HL sprite RAM - used for blank space sprite
 0FB8: 3E 4F       ld      a,$4f       ; A := #4F = X position of this sprite
 0FBA: 06 03       ld      b,$03       ; For B = 1 to 3
 
@@ -3827,12 +3830,12 @@ Init:
 ; arrive here when playing girders
 
 0FD7: 21 DC 3D    ld      hl,$3ddc    ; source - has the information about the barrel pile at #3DDC
-0FDA: 11 A8 69    ld      de,$69a8    ; destination = sprites
+0FDA: 11 A8 69    ld      de,extra_barrels_sprites_69a8    ; destination = sprites
 0FDD: 01 10 00    ld      bc,$0010    ; counter is #10
 0FE0: ED B0       ldir                ; draws the barrels pile next to kong
 
 0FE2: 21 EC 3D    ld      hl,$3dec    ; set up a copy job from table in #3DEC
-0FE5: 11 07 64    ld      de,$6407    ; destination in memory is #6407
+0FE5: 11 07 64    ld      de,unknown_6407    ; destination in memory is #6407
 0FE8: 0E 1C       ld      c,$1c       ; #1C is a secondary counter
 0FEA: 06 05       ld      b,$05       ; #05 is a secondary counter
 0FEC: CD 2A 12    call    $122a       ; copy
@@ -3841,7 +3844,7 @@ Init:
 0FF2: CD FA 11    call    $11fa       ; ???
 
 0FF5: 21 00 3E    ld      hl,$3e00    ; source table at #3E00 = oil can
-0FF8: 11 FC 69    ld      de,$69fc    ; destination sprite at #69FC
+0FF8: 11 FC 69    ld      de,unknown_sprite_69fc    ; destination sprite at #69FC
 0FFB: 01 04 00    ld      bc,$0004    ; 4 bytes
 0FFE: ED B0       ldir                ; draw to screen
 
@@ -3849,11 +3852,11 @@ Init:
 1003: CD A6 11    call    $11a6       ; ???
 
 1006: 21 1B 10    ld      hl,$101b    ; set up copy job from table in #101B
-1009: 11 07 67    ld      de,$6707    ; set destination ?
+1009: 11 07 67    ld      de,destination_6707    ; set destination ?
 100C: 01 1C 08    ld      bc,$081c    ; set counters ?
 100F: CD 2A 12    call    $122a       ; copy
 
-1012: 11 07 68    ld      de,$6807    ; set destination ?
+1012: 11 07 68    ld      de,destination_6807    ; set destination ?
 1015: 06 02       ld      b,$02       ; set counter to 2
 1017: CD 2A 12    call    $122a       ; copy
 101A: C9          ret                 ; return
@@ -3869,19 +3872,19 @@ Init:
 ; draws parts of the screen
 
 101F: 21 EC 3D    ld      hl,$3dec    ; set up a copy job from table in #3DEC
-1022: 11 07 64    ld      de,$6407    ; desitnation in memory is #6407
+1022: 11 07 64    ld      de,unknown_6407    ; desitnation in memory is #6407
 1025: 01 1C 05    ld      bc,$051c    ; counters are #05 and #1C
 1028: CD 2A 12    call    $122a       ; copy
 
 102B: CD 86 11    call    $1186
 
 102E: 21 18 3E    ld      hl,$3e18    ; set up copy job from table in #3E18
-1031: 11 A7 65    ld      de,$65a7    ; destination is #65A7
+1031: 11 A7 65    ld      de,destination_is_65a7_65a7    ; destination is #65A7
 1034: 01 0C 06    ld      bc,$060c    ; counters are #05 and #0C
 1037: CD 2A 12    call    $122a       ; copy
 
-103A: DD 21 A0 65 ld      ix,$65a0    ; load IX with start of pies
-103E: 21 B8 69    ld      hl,$69b8    ; load HL with sprites for pies
+103A: DD 21 A0 65 ld      ix,start_of_pies_65a0    ; load IX with start of pies
+103E: 21 B8 69    ld      hl,start_of_pie_sprites_69b8    ; load HL with sprites for pies
 1041: 11 10 00    ld      de,$0010    ; DE := #10
 1044: 06 06       ld      b,$06       ; B := 6
 1046: CD D3 11    call    $11d3
@@ -3890,17 +3893,17 @@ Init:
 104C: CD FA 11    call    $11fa       ; set fireball sprite
 
 104F: 21 04 3E    ld      hl,$3e04    ; set up copy job from table in #3E04 = oil can sprite
-1052: 11 FC 69    ld      de,$69fc    ; destination is #69FC = sprite
+1052: 11 FC 69    ld      de,unknown_sprite_69fc    ; destination is #69FC = sprite
 1055: 01 04 00    ld      bc,$0004    ; four bytes to copy
 1058: ED B0       ldir                ; draw oil can
 
 105A: 21 1C 3E    ld      hl,$3e1c    ; load HL with start of table data
-105D: 11 44 69    ld      de,$6944    ; load DE with sprite start for moving ladders
+105D: 11 44 69    ld      de,sprite_start_for_moving_ladders_6944    ; load DE with sprite start for moving ladders
 1060: 01 08 00    ld      bc,$0008    ; set byte counter to 8
 1063: ED B0       ldir                ; draw moving ladders
 
 1065: 21 24 3E    ld      hl,$3e24    ; set source table data
-1068: 11 E4 69    ld      de,$69e4    ; set destination RAM sprites
+1068: 11 E4 69    ld      de,start_of_pulley_sprites_69e4    ; set destination RAM sprites
 106B: 01 18 00    ld      bc,$0018    ; set counter
 106E: ED B0       ldir                ; draw pulleys
 
@@ -3908,24 +3911,24 @@ Init:
 1073: CD A6 11    call    $11a6       ; ???
 
 1076: 21 3C 3E    ld      hl,$3e3c    ; load HL with table data for bonus items on conveyors
-1079: 11 0C 6A    ld      de,$6a0c    ; load DE with sprite destination
+1079: 11 0C 6A    ld      de,start_of_bonus_items_6a0c    ; load DE with sprite destination
 107C: 01 0C 00    ld      bc,$000c    ; 3 items x 4 bytes = 12 bytes (#0C)
 107F: ED B0       ldir                ; draw bonus item sprites
 
 1081: 3E 01       ld      a,$01       ; A := 1
-1083: 32 B9 62    ld      ($62b9),a   ; store into fire release
+1083: 32 B9 62    ld      (fire_release_62b9),a   ; store into fire release
 1086: C9          ret                 ; return
 
 ; arrive here when elevators starts
 
 1087: 21 EC 3D    ld      hl,$3dec    ; load HL with start of table data
-108A: 11 07 64    ld      de,$6407    ; set destination ???
+108A: 11 07 64    ld      de,unknown_6407    ; set destination ???
 108D: 01 1C 05    ld      bc,$051c    ; set counters
 1090: CD 2A 12    call    $122a       ; copy ???
 
 1093: CD 86 11    call    $1186
 
-1096: 21 00 66    ld      hl,$6600    ; load HL with start of elevator sprites ???
+1096: 21 00 66    ld      hl,elevator_array_start_6600    ; load HL with start of elevator sprites ???
 1099: 11 10 00    ld      de,$0010    ; load DE with offset to add
 109C: 3E 01       ld      a,$01       ; A := 1
 109E: 06 06       ld      b,$06       ; for B = 1 to 6
@@ -3937,7 +3940,7 @@ Init:
 10A4: 0E 02       ld      c,$02       ; For C = 1 to 2
 10A6: 3E 08       ld      a,$08       ; A := 8
 10A8: 06 03       ld      b,$03       ; for B = 1 to 3
-10AA: 21 0D 66    ld      hl,$660d    ; load HL with ???
+10AA: 21 0D 66    ld      hl,unknown_660d    ; load HL with ???
 
 10AD: 77          ld      (hl),a      ; write value into memory
 10AE: 19          add     hl,de       ; add offset for next
@@ -3953,29 +3956,29 @@ Init:
 ;       + 3 is the X position, + 5 is the Y position
 
 10B7: 21 64 3E    ld      hl,$3e64    ; start of table data
-10BA: 11 03 66    ld      de,$6603    ; Destination sprite ? X positions ?
+10BA: 11 03 66    ld      de,destination_sprite_?_x_positions_?_6603    ; Destination sprite ? X positions ?
 10BD: 01 0E 06    ld      bc,$060e    ; Counter = #06, offset = #0E
 10C0: CD EC 11    call    $11ec       ; set items from data table
 
 10C3: 21 60 3E    ld      hl,$3e60    ; start of table data
-10C6: 11 07 66    ld      de,$6607    ; Destination sprite ?
+10C6: 11 07 66    ld      de,destination_sprite_?_6607    ; Destination sprite ?
 10C9: 01 0C 06    ld      bc,$060c    ; B = 6 is loop variable, C = offset ?
 10CC: CD 2A 12    call    $122a
 
-10CF: DD 21 00 66 ld      ix,$6600    ; load IX with ???
-10D3: 21 58 69    ld      hl,$6958    ; load HL with elevator sprites start
+10CF: DD 21 00 66 ld      ix,elevator_array_start_6600    ; load IX with ???
+10D3: 21 58 69    ld      hl,elevator_sprites_6958    ; load HL with elevator sprites start
 10D6: 06 06       ld      b,$06       ; B := 6
 10D8: 11 10 00    ld      de,$0010    ; load offset with #10
 10DB: CD D3 11    call    $11d3       ; ???
 
 10DE: 21 48 3E    ld      hl,$3e48    ; source is data table for bonus items on elevators
-10E1: 11 0C 6A    ld      de,$6a0c    ; destination is RAM area for bonus items
+10E1: 11 0C 6A    ld      de,start_of_bonus_items_6a0c    ; destination is RAM area for bonus items
 10E4: 01 0C 00    ld      bc,$000c    ; counter set for #0C bytes
 10E7: ED B0       ldir                ; copy
 
 ; set up the 2 fireballs
 
-10E9: DD 21 00 64 ld      ix,$6400    ; load IX with start of fire #1
+10E9: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load IX with start of fire #1
 10ED: DD 36 00 01 ld      (ix+$00),$01; set fire active
 10F1: DD 36 03 58 ld      (ix+$03),$58; set fire X position
 10F5: DD 36 0E 58 ld      (ix+$0e),$58; set fire X position #2
@@ -3990,7 +3993,7 @@ Init:
 110D: DD 36 25 60 ld      (ix+$25),$60; set fire Y position
 1111: DD 36 2F 60 ld      (ix+$2f),$60; set fire Y position
 
-1115: 11 70 69    ld      de,$6970    ; destination #6970 (sprites used at top and bottom of elevators)
+1115: 11 70 69    ld      de,sprites_used_at_top_and_bottom_of_elevators_6970    ; destination #6970 (sprites used at top and bottom of elevators)
 1118: 21 21 11    ld      hl,$1121    ; source data at table below
 111B: 01 10 00    ld      bc,$0010    ; byte counter at #10
 111E: ED B0       ldir                ; copy
@@ -4006,7 +4009,7 @@ Init:
 ; arrive here when rivets starts from #0FCC
 
 1131: 21 F0 3D    ld      hl,$3df0    ; load HL with start of table data
-1134: 11 07 64    ld      de,$6407    ; load DE with destination ?
+1134: 11 07 64    ld      de,unknown_6407    ; load DE with destination ?
 1137: 01 1C 05    ld      bc,$051c    ; set counters
 
 113A: CD 2A 12    call    $122a       ; copy fire location data to screen?
@@ -4015,27 +4018,27 @@ Init:
 1140: CD A6 11    call    $11a6       ; draw the hammers
 
 1143: 21 54 3E    ld      hl,$3e54    ; load HL with start of bonus items for rivets
-1146: 11 0C 6A    ld      de,$6a0c    ; set destination sprite address
+1146: 11 0C 6A    ld      de,start_of_bonus_items_6a0c    ; set destination sprite address
 1149: 01 0C 00    ld      bc,$000c    ; set counter to #C bytes to copy
 114C: ED B0       ldir                ; draw purse, umbrella, hat to screen
 
 114E: 21 82 11    ld      hl,$1182    ; load HL with start of data table
-1151: 11 A3 64    ld      de,$64a3    ; load DE with destination ?
+1151: 11 A3 64    ld      de,destination_?_64a3    ; load DE with destination ?
 1154: 01 1E 02    ld      bc,$021e    ; set counters
 1157: CD EC 11    call    $11ec       ; copy
 
 ; draws black squares next to kong???
 
 115A: 21 7E 11    ld      hl,$117e    ; load HL with start of data table
-115D: 11 A7 64    ld      de,$64a7    ; set destination sprites
+115D: 11 A7 64    ld      de,set_destination_sprites_64a7    ; set destination sprites
 1160: 01 1C 02    ld      bc,$021c    ; set counters B := 2, C := #1C
 1163: CD 2A 12    call    $122a       ; copy
 
-1166: DD 21 A0 64 ld      ix,$64a0    ; load IX with address of black square sprite start
+1166: DD 21 A0 64 ld      ix,address_of_black_square_sprite_start_64a0    ; load IX with address of black square sprite start
 116A: DD 36 00 01 ld      (ix+$00),$01; store 1 into #64A0 = turn on first sprite
 116E: DD 36 20 01 ld      (ix+$20),$01; store 1 into #64C0 = turn on second sprite
 
-1172: 21 50 69    ld      hl,$6950    ; load HL with ???
+1172: 21 50 69    ld      hl,start_of_hammers_6950    ; load HL with ???
 1175: 06 02       ld      b,$02       ; set counter to 2
 1177: 11 20 00    ld      de,$0020    ; set offset to #20
 117A: CD D3 11    call    $11d3       ; draw items ???
@@ -4050,12 +4053,12 @@ Init:
 ; called from #102B and #1093
 
 1186: 21 A2 11    ld      hl,$11a2    ; load HL with start of data table
-1189: 11 07 65    ld      de,$6507    ; load DE with destination
+1189: 11 07 65    ld      de,destination_6507    ; load DE with destination
 118C: 01 0C 0A    ld      bc,$0a0c    ; set counters
 118F: CD 2A 12    call    $122a       ; copy
 
-1192: DD 21 00 65 ld      ix,$6500    ; load IX with ???
-1196: 21 80 69    ld      hl,$6980    ; load HL with sprite start (???)
+1192: DD 21 00 65 ld      ix,start_of_bouncer_memory_area_6500    ; load IX with ???
+1196: 21 80 69    ld      hl,start_of_sprite_memory_for_bouncers_6980    ; load HL with sprite start (???)
 1199: 06 0A       ld      b,$0a       ; B := #A
 119B: 11 10 00    ld      de,$0010    ; load DE with offset
 119E: CD D3 11    call    $11d3       ; copy
@@ -4068,19 +4071,19 @@ Init:
 
 ; called from 3 locations with HL preloaded with address of locations to draw to
 
-11A6: 11 83 66    ld      de,$6683    ; load DE with sprite destination address ???
+11A6: 11 83 66    ld      de,sprite_destination_address_unknown_6683    ; load DE with sprite destination address ???
 11A9: 01 0E 02    ld      bc,$020e    ; B := 2 for the 2 hammers.  C := #E for ???
 11AC: CD EC 11    call    $11ec
 
 11AF: 21 08 3E    ld      hl,$3e08    ; set source
-11B2: 11 87 66    ld      de,$6687    ; set destination
+11B2: 11 87 66    ld      de,unknown_6687    ; set destination
 11B5: 01 0C 02    ld      bc,$020c    ; set counters
 11B8: CD 2A 12    call    $122a       ; copy table data from #3E08 into #6687 with counters #02 and #0C
 
-11BB: DD 21 80 66 ld      ix,$6680    ; load IX with start of hammer array
+11BB: DD 21 80 66 ld      ix,software_address_of_hammer_sprite_6680    ; load IX with start of hammer array
 11BF: DD 36 00 01 ld      (ix+$00),$01; set hammer 1 active
 11C3: DD 36 10 01 ld      (ix+$10),$01; set hammer 2 active
-11C7: 21 18 6A    ld      hl,$6a18    ; set destination for hammer sprites ?
+11C7: 21 18 6A    ld      hl,hardware_address_of_hammer_sprite_6a18    ; set destination for hammer sprites ?
 11CA: 06 02       ld      b,$02       ; set counter to 2
 11CC: 11 10 00    ld      de,$0010    ; set offset to #10
 11CF: CD D3 11    call    $11d3       ; draw hammers
@@ -4137,8 +4140,8 @@ Init:
 ; 3DFA:  7F 40 01 78 02 00      ; initial data for conveyors to release a fire ?
 ;
 
-11FA: DD 21 A0 66 ld      ix,$66a0    ; load IX with sprite memory array for fire above the barrel
-11FE: 11 28 6A    ld      de,$6a28    ; load DE with hardware sprite memory for same fire
+11FA: DD 21 A0 66 ld      ix,oil_can_address_66a0    ; load IX with sprite memory array for fire above the barrel
+11FE: 11 28 6A    ld      de,hardware_sprite_memory_for_same_fire_6a28    ; load DE with hardware sprite memory for same fire
 1201: DD 36 00 01 ld      (ix+$00),$01; enable the sprite
 1205: 7E          ld      a,(hl)      ; load A with table data
 1206: DD 77 03    ld      (ix+$03),a  ; store into sprite X position
@@ -4195,15 +4198,15 @@ Init:
 ; set initial mario sprite position and draw remaining lives and level
 
 123C: DF          rst     $18         ; count down WaitTimerMSB and only continue when 0
-123D: 3A 27 62    ld      a,($6227)   ; load a with screen number
+123D: 3A 27 62    ld      a,(screen_number_6227)   ; load a with screen number
 1240: fe 03       cp      $03         ; is this the elevators?
 1242: 01 16 E0    ld      bc,$e016    ; B := #E0, C := #16.  used for X,Y coordinates
 1245: cA 4B 12    jp      z,$124b     ; if elevators skip next step
 
 1248: 01 3F F0    ld      bc,$f03f    ; else load alternate coordinates for elevators
 
-124B: DD 21 00 62 ld      ix,$6200    ; set IX to mario sprite array
-124F: 21 4C 69    ld      hl,$694c    ; load HL with address for mario sprite X value
+124B: DD 21 00 62 ld      ix,mario_array_6200    ; set IX to mario sprite array
+124F: 21 4C 69    ld      hl,mario_sprite_x_position_694c    ; load HL with address for mario sprite X value
 1252: DD 36 00 01 ld      (ix+$00),$01; turn on sprite
 1256: DD 71 03    ld      (ix+$03),c  ; store X position
 1259: 71          ld      (hl),c      ; store X position
@@ -4217,7 +4220,7 @@ Init:
 1269: DD 70 05    ld      (ix+$05),b  ; store Y position
 126C: 70          ld      (hl),b      ; store Y position
 126D: DD 36 0F 01 ld      (ix+$0f),$01; turn this on (???)
-1271: 21 0A 60    ld      hl,gamemode2; load HL with game mode2 address
+1271: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2 address
 1274: 34          inc     (hl)        ; increase game mode2 = start game
 1275: 11 01 06    ld      de,$0601    ; set task #6, parameter 1 to draw lives-1 and level
 1278: CD 9F 30    call    $309f       ; insert task
@@ -4227,7 +4230,7 @@ Init:
 ; mario died ?
 
 127C: CD BD 1D    call    $1dbd       ; check for bonus items and jumping scores, rivets
-127F: 3A 9D 63    ld      a,($639d)   ; load A with this normally 0.  1 while mario dying, 2 when dead
+127F: 3A 9D 63    ld      a,(death_indicator_639d)   ; load A with this normally 0.  1 while mario dying, 2 when dead
 1282: EF          rst     $28         ; jump based on A
 
 1283  8B 12                             ; #128B         ; 0 normal
@@ -4236,20 +4239,20 @@ Init:
 1289  00 00                             ; unused ?
 
 128B: DF          rst     $18         ; count down WaitTimerMSB and only continue when 0
-128C: 21 4D 69    ld      hl,$694d    ; load HL with mario sprite value
+128C: 21 4D 69    ld      hl,mario_sprite_value_694d    ; load HL with mario sprite value
 128F: 3E F0       ld      a,$f0       ; A := #F0
 1291: CB 16       rl      (hl)        ; rotate left (HL)
 1293: 1F          rra                 ; rotate right that carry bit into A
 1294: 77          ld      (hl),a      ; store result into mario sprite
-1295: 21 9D 63    ld      hl,$639d    ; load HL with mario death indicator
+1295: 21 9D 63    ld      hl,death_indicator_639d    ; load HL with mario death indicator
 1298: 34          inc     (hl)        ; increase.  mario is now dying
 1299: 3E 0D       ld      a,$0d       ; A := #D (13 decimal)
-129B: 32 9E 63    ld      ($639e),a   ; store into counter for number of times to rotate mario (?)
+129B: 32 9E 63    ld      (load_counter_639e),a   ; store into counter for number of times to rotate mario (?)
 129E: 3E 08       ld      a,$08       ; load A with 8 frames of delay
-12A0: 32 09 60    ld      (waittimermsb),a; store into timer for sound delay
+12A0: 32 09 60    ld      (waittimermsb_6009),a; store into timer for sound delay
 12A3: CD BD 30    call    $30bd       ; clear sprites ?
 12A6: 3E 03       ld      a,$03       ; load A with duration of sound
-12A8: 32 88 60    ld      ($6088),a   ; play death sound
+12A8: 32 88 60    ld      (play_death_sound_6088),a   ; play death sound
 12AB: C9          ret                 ; return
 
 ; arrive here when mario dies
@@ -4257,12 +4260,12 @@ Init:
 
 12AC: DF          rst     $18         ; count down WaitTimerMSB and only continue when 0
 12AD: 3E 08       ld      a,$08       ; load A with 8 frames of delay
-12AF: 32 09 60    ld      (waittimermsb),a; store into timer for sound delays
-12B2: 21 9E 63    ld      hl,$639e    ; load counter
+12AF: 32 09 60    ld      (waittimermsb_6009),a; store into timer for sound delays
+12B2: 21 9E 63    ld      hl,load_counter_639e    ; load counter
 12B5: 35          dec     (hl)        ; decrease.  are we done ?
 12B6: CA CB 12    jp      z,$12cb     ; yes, skip ahead
 
-12B9: 21 4D 69    ld      hl,$694d    ; load HL with mario sprite value
+12B9: 21 4D 69    ld      hl,mario_sprite_value_694d    ; load HL with mario sprite value
 12BC: 7E          ld      a,(hl)      ; get the value
 12BD: 1F          rra                 ; roll right = div 2
 12BE: 3E 02       ld      a,$02       ; load A with 2
@@ -4279,23 +4282,23 @@ Init:
 
 ; mario done rotating after death
 
-12CB: 21 4D 69    ld      hl,$694d    ; load HL with mario sprite value
+12CB: 21 4D 69    ld      hl,mario_sprite_value_694d    ; load HL with mario sprite value
 12CE: 3E F4       ld      a,$f4       ; load A with #F4
 12D0: CB 16       rl      (hl)        ; rotate left HL (goes from F8 to F0)
 12D2: 1F          rra                 ; roll right A.  A becomes FA
 12D3: 77          ld      (hl),a      ; store into sprite value (mario dead)
-12D4: 21 9D 63    ld      hl,$639d    ; load HL with death indicator
+12D4: 21 9D 63    ld      hl,death_indicator_639d    ; load HL with death indicator
 12D7: 34          inc     (hl)        ; increase.  mario now dead
 12D8: 3E 80       ld      a,$80       ; load A with delay of 80
-12DA: 32 09 60    ld      (waittimermsb),a; store into sound delay counter
+12DA: 32 09 60    ld      (waittimermsb_6009),a; store into sound delay counter
 12DD: C9          ret                 ; return
 
 ; mario is completely dead
 
 12DE: DF          rst     $18         ; count down WaitTimerMSB and only continue when 0
 12DF: CD DB 30    call    $30db       ; clear mario and elevator sprites from screen
-12E2: 21 0A 60    ld      hl,gamemode2; set HL to game mode2
-12E5: 3A 0E 60    ld      a,(playerturnb) ; load A with current player
+12E2: 21 0A 60    ld      hl,gamemode2_600a; set HL to game mode2
+12E5: 3A 0E 60    ld      a,(playerturnb_600e) ; load A with current player
 12E8: A7          and     a           ; is this player 1 ?
 12E9: CA ED 12    jp      z,$12ed     ; yes, skip next step
 
@@ -4312,11 +4315,11 @@ Init:
 
 12F2: CD 1C 01    call    $011c       ; clear all sounds
 12F5: AF          xor     a           ; A := 0
-12F6: 32 2C 62    ld      ($622c),a   ; store into game start flag
-12F9: 21 28 62    ld      hl,$6228    ; load HL with address for number of lives remaining
+12F6: 32 2C 62    ld      (game_start_flag_622c),a   ; store into game start flag
+12F9: 21 28 62    ld      hl,number_of_lives_remaining_6228    ; load HL with address for number of lives remaining
 12FC: 35          dec     (hl)        ; one less life
 12FD: 7E          ld      a,(hl)      ; load A with number of lives left
-12FE: 11 40 60    ld      de,p1numlives; set destination address
+12FE: 11 40 60    ld      de,p1numlives_6040; set destination address
 1301: 01 08 00    ld      bc,$0008    ; set counter
 1304: ED B0       ldir                ; copy (#6228) to (#6230) into (P1NumLives) to (P2NumLives).  copies data from player area to storage area for player 1
 1306: A7          and     a           ; number of lives == 0 ?
@@ -4325,10 +4328,10 @@ Init:
 ; game over for this player [?]
 
 130A: 3E 01       ld      a,$01       ; A := 1
-130C: 21 B2 60    ld      hl,$60b2    ; load HL with player 1 score address
+130C: 21 B2 60    ld      hl,player_1_score_address_60b2    ; load HL with player 1 score address
 130F: CD CA 13    call    $13ca       ; check for high score entry ???
 1312: 21 D4 76    ld      hl,$76d4    ; load HL with screen VRAM address ???
-1315: 3A 0F 60    ld      a,(twoplayergame) ; load A with number of players
+1315: 3A 0F 60    ld      a,(twoplayergame_600f) ; load A with number of players
 1318: A7          and     a           ; 1 player game?
 1319: 28 07       jr      z,$1322     ; yes, skip next 3 steps
 
@@ -4339,21 +4342,21 @@ Init:
 1322: CD 26 18    call    $1826       ; clear an area of the screen
 1325: 11 00 03    ld      de,$0300    ; load task data for text #0 "GAME OVER"
 1328: CD 9F 30    call    $309f       ; insert task to draw text
-132B: 21 09 60    ld      hl,waittimermsb; load HL with timer
+132B: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 132E: 36 C0       ld      (hl),$c0    ; set timer to #C0
 1330: 23          inc     hl          ; HL := GameMode2
 1331: 36 10       ld      (hl),$10    ; set game mode2 to #10
 1333: C9          ret                 ; return
 
 1334: 0E 08       ld      c,$08       ; C := 8
-1336: 3A 0F 60    ld      a,(twoplayergame) ; load A with number of players
+1336: 3A 0F 60    ld      a,(twoplayergame_600f) ; load A with number of players
 1339: A7          and     a           ; 1 player game?
 133A: CA 3F 13    jp      z,$133f     ; yes, skip next step
 
 133D: 0E 17       ld      c,$17       ; C := #17
 
 133F: 79          ld      a,c         ; A := C
-1340: 32 0A 60    ld      (gamemode2),a; store into game mode2
+1340: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 1343: C9          ret                 ; return
 
 ; arrive from #0701 when GameMode2 == #F
@@ -4361,11 +4364,11 @@ Init:
 
 1344: CD 1C 01    call    $011c       ; clear all sounds
 1347: AF          xor     a           ; A := 0
-1348: 32 2C 62    ld      ($622c),a   ; store into game start flag
-134B: 21 28 62    ld      hl,$6228    ; load HL with number of lives remaining
+1348: 32 2C 62    ld      (game_start_flag_622c),a   ; store into game start flag
+134B: 21 28 62    ld      hl,number_of_lives_remaining_6228    ; load HL with number of lives remaining
 134E: 35          dec     (hl)        ; decrease
 134F: 7E          ld      a,(hl)      ; load A with the number of lives remaining
-1350: 11 48 60    ld      de,p2numlives; load DE with destination address
+1350: 11 48 60    ld      de,p2numlives_6048; load DE with destination address
 1353: 01 08 00    ld      bc,$0008    ; set counter to 8
 1356: ED B0       ldir                ; copy
 1358: A7          and     a           ; any lives left?
@@ -4374,7 +4377,7 @@ Init:
 ; game over
 
 135C: 3E 03       ld      a,$03       ; A := 3
-135E: 21 B5 60    ld      hl,$60b5    ; load HL with player 2 score address
+135E: 21 B5 60    ld      hl,player_2_score_address_60b5    ; load HL with player 2 score address
 1361: CD CA 13    call    $13ca       ; check for high score entry ???
 1364: 11 03 03    ld      de,$0303    ; load task data for text #3 "PLAYER <II>"
 1367: CD 9F 30    call    $309f       ; insert task to draw text
@@ -4382,21 +4385,21 @@ Init:
 136D: CD 9F 30    call    $309f       ; insert task to draw text
 1370: 21 D3 76    ld      hl,$76d3    ; load HL with screen address ???
 1373: CD 26 18    call    $1826       ; clear an area of the screen
-1376: 21 09 60    ld      hl,waittimermsb; load HL with timer
+1376: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 1379: 36 C0       ld      (hl),$c0    ; set timer to #C0
 137B: 23          inc     hl          ; HL := GameMode2
 137C: 36 11       ld      (hl),$11    ; set game mode2 to #11
 137E: C9          ret                 ; return
 
 137F: 0E 17       ld      c,$17       ; C := #17
-1381: 3A 40 60    ld      a,(p1numlives) ; load A with number of lives left for player 1
+1381: 3A 40 60    ld      a,(p1numlives_6040) ; load A with number of lives left for player 1
 1384: A7          and     a           ; player 1 has lives remaining?
 1385: C2 8A 13    jp      nz,$138a    ; yes, skip next step
 
 1388: 0E 08       ld      c,$08       ; C := 8
 
 138A: 79          ld      a,c         ; A := C
-138B: 32 0A 60    ld      (gamemode2),a; store A into game mode2
+138B: 32 0A 60    ld      (gamemode2_600a),a; store A into game mode2
 138E: C9          ret                 ; return
 
 ; arrive from #0701 when GameMode2 == #10
@@ -4404,7 +4407,7 @@ Init:
 
 138F: DF          rst     $18         ; count down timer and only continue here if zero, else RET
 1390: 0E 17       ld      c,$17       ; C := #17
-1392: 3A 48 60    ld      a,(p2numlives) ; load A with number of lives for player 2
+1392: 3A 48 60    ld      a,(p2numlives_6048) ; load A with number of lives for player 2
 
 1395: 34          inc     (hl)        ; increase timer ??? [EG HL = WaitTimerMSB]
 1396: A7          and     a           ; player has lives remaining ?
@@ -4413,7 +4416,7 @@ Init:
 139A: 0E 14       ld      c,$14       ; else C := #14
 
 139C: 79          ld      a,c         ; A := C
-139D: 32 0A 60    ld      (gamemode2),a; store into game mode2
+139D: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 13A0: C9          ret                 ; return
 
 
@@ -4421,28 +4424,28 @@ Init:
 
 13A1: DF          rst     $18         ; count down timer and only continue here if zero, else RET
 13A2: 0E 17       ld      c,$17       ; C := #17
-13A4: 3A 40 60    ld      a,(p1numlives) ; load A with number of lives remaining for player1
+13A4: 3A 40 60    ld      a,(p1numlives_6040) ; load A with number of lives remaining for player1
 13A7: C3 95 13    jp      $1395       ; jump back, rest of this sub is above
 
 
 ; arrive from #0701 when GameMode2 == 12
 ; flip screen if needed, reset game mode2 to zero, set player 2
 
-13AA: 3A 26 60    ld      a,(uprightcab) ; load A with upright/cocktail
+13AA: 3A 26 60    ld      a,(uprightcab_6026) ; load A with upright/cocktail
 13AD: 32 82 7D    ld      (reg_flipscreen),a; store into hardware screen flip
 13B0: AF          xor     a           ; A := 0
-13B1: 32 0A 60    ld      (gamemode2),a; set game mode2 to 0
+13B1: 32 0A 60    ld      (gamemode2_600a),a; set game mode2 to 0
 13B4: 21 01 01    ld      hl,$0101    ; HL := #101
-13B7: 22 0D 60    ld      (playerturna),hl; store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
+13B7: 22 0D 60    ld      (playerturna_600d),hl; store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
 13BA: C9          ret                 ; return
 
 ; arrive from #0701 when GameMode2 == 13
 ; set player 1, reset game mode2 to zero, set screen flip to not flipped
 
 13BB: AF          xor     a           ; A := 0
-13BC: 32 0D 60    ld      (playerturna),a; set for player 1
-13BF: 32 0E 60    ld      (playerturnb),a; store into current player number 1
-13C2: 32 0A 60    ld      (gamemode2),a; set game mode2 to 0
+13BC: 32 0D 60    ld      (playerturna_600d),a; set for player 1
+13BF: 32 0E 60    ld      (playerturnb_600e),a; store into current player number 1
+13C2: 32 0A 60    ld      (gamemode2_600a),a; set game mode2 to 0
 13C5: 3C          inc     a           ; A := 1
 13C6: 32 82 7D    ld      (reg_flipscreen),a; store into screen flip for no flipping
 13C9: C9          ret                 ; return
@@ -4458,7 +4461,7 @@ Init:
 ; then it sets #61B7 through #61C4 to #10 (???)
 ;
 
-13CA: 11 C6 61    ld      de,$61c6    ; load DE with address for ???
+13CA: 11 C6 61    ld      de,address_for_unknown_61c6    ; load DE with address for ???
 13CD: 12          ld      (de),a      ; store A into it
 13CE: CF          rst     $8          ; continue if there are credits or the game is being played, else RET
 
@@ -4466,7 +4469,7 @@ Init:
 13D0: 01 03 00    ld      bc,$0003    ; set counter to 3
 13D3: ED B0       ldir                ; copy players score into this area
 13D5: 06 03       ld      b,$03       ; for B = 1 to 3
-13D7: 21 B1 61    ld      hl,$61b1    ; load HL with ???
+13D7: 21 B1 61    ld      hl,unknown_61b1    ; load HL with ???
 
 13DA: 1B          dec     de          ; count down DE.  first time it has #61C9 after the DEC
 13DB: 1A          ld      a,(de)      ; load A with this
@@ -4496,8 +4499,8 @@ Init:
 13F2: 36 3F       ld      (hl),$3f    ; store #3F into #61C5 = end code ?
 
 13F4: 06 05       ld      b,$05       ; for B = 1 to 5.  Do for each high score in top 5
-13F6: 21 A5 61    ld      hl,$61a5    ; load HL with lowest high score address
-13F9: 11 C7 61    ld      de,$61c7    ; load DE with copy of player score
+13F6: 21 A5 61    ld      hl,lowest_high_score_address_61a5    ; load HL with lowest high score address
+13F9: 11 C7 61    ld      de,copy_of_player_score_61c7    ; load DE with copy of player score
 
 13FC: 1A          ld      a,(de)      ; load A with a digit of player's score
 13FD: 96          sub     (hl)        ; subtract next lowest high score
@@ -4547,9 +4550,9 @@ Init:
 
 1422: CD 74 08    call    $0874       ; clears the screen and sprites
 1425: 3E 00       ld      a,$00       ; A := 0
-1427: 32 0E 60    ld      (playerturnb),a; set player number 1
-142A: 32 0D 60    ld      (playerturna),a; set player1
-142D: 21 1C 61    ld      hl,$611c    ; load HL with high score entry indicator
+1427: 32 0E 60    ld      (playerturnb_600e),a; set player number 1
+142A: 32 0D 60    ld      (playerturna_600d),a; set player1
+142D: 21 1C 61    ld      hl,address_of_high_score_indicator_611c    ; load HL with high score entry indicator
 1430: 11 22 00    ld      de,$0022    ; offset to add is #22
 1433: 06 05       ld      b,$05       ; for B = 1 to 5
 1435: 3E 01       ld      a,$01       ; A := 1 = code for a new high score for player 1
@@ -4560,7 +4563,7 @@ Init:
 143B: 19          add     hl,de       ; else next HL
 143C: 10 F9       djnz    $1437       ; next B
 
-143E: 21 1C 61    ld      hl,$611c    ; load HL with high score entry indicator
+143E: 21 1C 61    ld      hl,address_of_high_score_indicator_611c    ; load HL with high score entry indicator
 1441: 06 05       ld      b,$05       ; For B = 1 to 5
 1443: 3E 03       ld      a,$03       ; A := 3 = code for a new high score for player 2
 
@@ -4575,16 +4578,16 @@ Init:
 ; high score achieved ?
 
 144F: 3E 01       ld      a,$01       ; A := 1
-1451: 32 0E 60    ld      (playerturnb),a; set player #2
-1454: 32 0D 60    ld      (playerturna),a; set player2
+1451: 32 0E 60    ld      (playerturnb_600e),a; set player #2
+1454: 32 0D 60    ld      (playerturna_600d),a; set player2
 1457: 3E 00       ld      a,$00       ; A := 0
 
-1459: 21 26 60    ld      hl,uprightcab; load HL with address for upright/cocktail
+1459: 21 26 60    ld      hl,uprightcab_6026; load HL with address for upright/cocktail
 145C: B6          or      (hl)        ; mix with A
 145D: 32 82 7D    ld      (reg_flipscreen),a; store A into screen flip setting
 1460: 3E 00       ld      a,$00       ; A := 0
-1462: 32 09 60    ld      (waittimermsb),a; clear timer
-1465: 21 0A 60    ld      hl,gamemode2; load HL with game mode2 address
+1462: 32 09 60    ld      (waittimermsb_6009),a; clear timer
+1465: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2 address
 1468: 34          inc     (hl)        ; increase game mode2 to #15
 1469: 11 0D 03    ld      de,$030d    ; load task data for text #D "NAME REGISTRATION"
 146C: 06 0C       ld      b,$0c       ; set counter for #0C items (12 decimal)
@@ -4599,10 +4602,10 @@ Init:
 
 1475: 3E 01       ld      a,$01       ; A := 1
 1477: 32 82 7D    ld      (reg_flipscreen),a; set screen flip setting
-147A: 32 05 60    ld      (gamemode1),a; store into game mode1
-147D: 32 07 60    ld      (nocredits),a; set indicator for no credits
+147A: 32 05 60    ld      (gamemode1_6005),a; store into game mode1
+147D: 32 07 60    ld      (nocredits_6007),a; set indicator for no credits
 1480: 3E 00       ld      a,$00       ; A := 0
-1482: 32 0A 60    ld      (gamemode2),a; reset game mode2 to 0.  game is now totally over.
+1482: 32 0A 60    ld      (gamemode2_600a),a; reset game mode2 to 0.  game is now totally over.
 1485: C9          ret                 ; return
 
 
@@ -4611,7 +4614,7 @@ Init:
 
 
 1486: CD 16 06    call    $0616       ; draw credits on screen
-1489: 21 09 60    ld      hl,waittimermsb; load HL with timer
+1489: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 148C: 7E          ld      a,(hl)      ; load A with timer value
 148D: A7          and     a           ; == 0 ?
 148E: C2 DC 14    jp      nz,$14dc    ; no, skip ahead
@@ -4619,7 +4622,7 @@ Init:
 1491: 32 86 7D    ld      (reg_palette_a),a; set palette bank selector
 1494: 32 87 7D    ld      (reg_palette_b),a; set palette bank selector
 1497: 36 01       ld      (hl),$01    ; set timer to 1
-1499: 21 30 60    ld      hl,hscursordelay; load HL with HSCursorDelay
+1499: 21 30 60    ld      hl,hscursordelay_6030; load HL with HSCursorDelay
 149C: 36 0A       ld      (hl),$0a
 149E: 23          inc     hl          ; HL := HSBlinkToggle
 149F: 36 00       ld      (hl),$00
@@ -4632,9 +4635,9 @@ Init:
 14AA: 23          inc     hl          ; HL := HSCursorPos
 14AB: 36 00       ld      (hl),$00    ; set high score digit selected
 14AD: 21 E8 75    ld      hl,$75e8    ; load HL with screen position for first player initial
-14B0: 22 36 60    ld      (hsinitialpos),hl; save into this indicator
-14B3: 21 1C 61    ld      hl,$611c    ; load HL with address of high score indicator
-14B6: 3A 0E 60    ld      a,(playerturnb) ; load A with current player number
+14B0: 22 36 60    ld      (hsinitialpos_6036),hl; save into this indicator
+14B3: 21 1C 61    ld      hl,address_of_high_score_indicator_611c    ; load HL with address of high score indicator
+14B6: 3A 0E 60    ld      a,(playerturnb_600e) ; load A with current player number
 14B9: 07          rlca                ; rotate left
 14BA: 3C          inc     a           ; increase
 14BB: 4F          ld      c,a         ; copy to C.  C now has 1 for player 1, 3 for player 2
@@ -4648,16 +4651,16 @@ Init:
 14C6: 19          add     hl,de       ; add offset for next HL
 14C7: 10 F8       djnz    $14c1       ; Next B
 
-14C9: 22 38 60    ld      (unk6038),hl; store HL into Unk6038
+14C9: 22 38 60    ld      (unk6038_6038),hl; store HL into Unk6038
 14CC: 11 F3 FF    ld      de,$fff3    ; load DE with offset of -#13
 14CF: 19          add     hl,de       ; add offset
-14D0: 22 3A 60    ld      ($603a),hl  ; store result into ???
+14D0: 22 3A 60    ld      (unknown_603a),hl  ; store result into ???
 14D3: 06 00       ld      b,$00       ; B := 0
-14D5: 3A 35 60    ld      a,(hscursorpos) ; load A with high score entry digit selected
+14D5: 3A 35 60    ld      a,(hscursorpos_6035) ; load A with high score entry digit selected
 14D8: 4F          ld      c,a         ; copy to C
 14D9: CD FA 15    call    $15fa       ; ???
 
-14DC: 21 34 60    ld      hl,hstimer  ; load HL with outer loop timer
+14DC: 21 34 60    ld      hl,hstimer_6034  ; load HL with outer loop timer
 14DF: 35          dec     (hl)        ; count down timer.  at zero?
 14E0: C2 FC 14    jp      nz,$14fc    ; no, skip ahead
 
@@ -4678,10 +4681,10 @@ Init:
 14F8: 78          ld      a,b         ; A := B = 10's of time left
 14F9: 32 72 75    ld      ($7572),a   ; draw digit to screen
 
-14FC: 21 30 60    ld      hl,hscursordelay; load HL with HSCursorDelay
+14FC: 21 30 60    ld      hl,hscursordelay_6030; load HL with HSCursorDelay
 14FF: 46          ld      b,(hl)      ; load B with the value
 1500: 36 0A       ld      (hl),$0a    ; store #A into it
-1502: 3A 10 60    ld      a,(inputstate) ; load A with input
+1502: 3A 10 60    ld      a,(inputstate_6010) ; load A with input
 1505: CB 7F       bit     7,a         ; is jump button pressed?
 1507: C2 46 15    jp      nz,$1546    ; yes, skip ahead
 
@@ -4704,20 +4707,20 @@ Init:
 151D: CB 4F       bit     1,a         ; is direction == left ?
 151F: C2 39 15    jp      nz,$1539    ; yes, skip ahead
 
-1522: 3A 35 60    ld      a,(hscursorpos) ; load A with high score entry digit selected
+1522: 3A 35 60    ld      a,(hscursorpos_6035) ; load A with high score entry digit selected
 1525: 3C          inc     a           ; increase
 1526: FE 1E       cp      $1e         ; == #1E ?  (have we gone past END ?)
 1528: C2 2D 15    jp      nz,$152d    ; no, skip next step
 
 152B: 3E 00       ld      a,$00       ; A := 0 [why this way and not XOR A ?] - reset this counter to "A" in the table
 
-152D: 32 35 60    ld      (hscursorpos),a; store into high score entry digit selected
+152D: 32 35 60    ld      (hscursorpos_6035),a; store into high score entry digit selected
 1530: 4F          ld      c,a         ; C := A
 1531: 06 00       ld      b,$00       ; B := 0
 1533: CD FA 15    call    $15fa       ; ???
 1536: C3 8A 15    jp      $158a       ; skip ahead
 
-1539: 3A 35 60    ld      a,(hscursorpos) ; load A with high score entry digit selected
+1539: 3A 35 60    ld      a,(hscursorpos_6035) ; load A with high score entry digit selected
 153C: D6 01       sub     $01         ; decrease [why written this way?  DEC A is standard...]
 153E: F2 2D 15    jp      p,$152d     ; if sign positive, loop again
 
@@ -4726,14 +4729,14 @@ Init:
 
 ; jump pressed in high score entry
 
-1546: 3A 35 60    ld      a,(hscursorpos) ; load A with high score entry digit selected
+1546: 3A 35 60    ld      a,(hscursorpos_6035) ; load A with high score entry digit selected
 1549: FE 1C       cp      $1c         ; == #1C ? = code for backspace ?
 154B: CA 6D 15    jp      z,$156d     ; yes, skip ahead to handle
 
 154E: FE 1D       cp      $1d         ; == #1D ? = code for END
 1550: CA C6 15    jp      z,$15c6     ; yes, skip ahead to hanlde
 
-1553: 2A 36 60    ld      hl,(hsinitialpos) ; else load HL with VRAM address of the initial being entered
+1553: 2A 36 60    ld      hl,(hsinitialpos_6036) ; else load HL with VRAM address of the initial being entered
 1556: 01 88 75    ld      bc,$7588    ; load BC with screen address
 1559: A7          and     a           ; clear carry flag
 155A: ED 42       sbc     hl,bc       ; subtract.  equal?
@@ -4745,12 +4748,12 @@ Init:
 1563: 01 E0 FF    ld      bc,$ffe0    ; load BC with offset for next column
 1566: 09          add     hl,bc       ; set HL to next column
 
-1567: 22 36 60    ld      (hsinitialpos),hl; store HL back into VRAM address of the initial being entered
+1567: 22 36 60    ld      (hsinitialpos_6036),hl; store HL back into VRAM address of the initial being entered
 156A: C3 8A 15    jp      $158a       ; skip ahead
 
 ; backspace selected in high score entry
 
-156D: 2A 36 60    ld      hl,(hsinitialpos) ; else load HL with VRAM address of the initial being entered
+156D: 2A 36 60    ld      hl,(hsinitialpos_6036) ; else load HL with VRAM address of the initial being entered
 1570: 01 20 00    ld      bc,$0020    ; load offset of #20
 1573: 09          add     hl,bc       ; add offset
 1574: A7          and     a           ; clear carry flag
@@ -4769,32 +4772,32 @@ Init:
 
 ; jump here from #156A and #155C and #1536 and #151A and #1511
 
-158A: 21 32 60    ld      hl,hsblinktimer; load HL with HSBlinkTimer
+158A: 21 32 60    ld      hl,hsblinktimer_6032; load HL with HSBlinkTimer
 158D: 35          dec     (hl)        ; decrease.  at zero ?
 158E: C2 F9 15    jp      nz,$15f9    ; no, jump to RET. [RET NZ would be faster and more compact]
 
 ; Blink the high score in high score table
-1591: 3A 31 60    ld      a,(hsblinktoggle)
+1591: 3A 31 60    ld      a,(hsblinktoggle_6031)
 1594: A7          and     a           ; Is HSBlinkToggle zero?
 1595: C2 B8 15    jp      nz,$15b8    ; no, skip ahead
 
 1598: 3E 01       ld      a,$01       ; A := 1
-159A: 32 31 60    ld      (hsblinktoggle),a; store into HSBlinkToggle
+159A: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
 159D: 11 BF 01    ld      de,$01bf
 
-15A0: FD 2A 38 60 ld      iy,(unk6038) ; load IY with Unk6038
+15A0: FD 2A 38 60 ld      iy,(unk6038_6038) ; load IY with Unk6038
 15A4: FD 6E 04    ld      l,(iy+$04)
 15A7: FD 66 05    ld      h,(iy+$05)
 15AA: E5          push    hl
 15AB: DD E1       pop     ix          ; load IX with HL
 15AD: CD 7C 05    call    $057c       ; ???
 15B0: 3E 10       ld      a,$10       ; A := #10
-15B2: 32 32 60    ld      (hsblinktimer),a; store into HSBlinkTimer
+15B2: 32 32 60    ld      (hsblinktimer_6032),a; store into HSBlinkTimer
 15B5: C3 F9 15    jp      $15f9       ; jump to RET [RET would be faster and more compact]
 
 15B8: AF          xor     a           ; A := 0
-15B9: 32 31 60    ld      (hsblinktoggle),a; store into HSBlinkToggle
-15BC: ED 5B 38 60 ld      de,(unk6038)
+15B9: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
+15BC: ED 5B 38 60 ld      de,(unk6038_6038)
 15C0: 13          inc     de
 15C1: 13          inc     de
 15C2: 13          inc     de
@@ -4803,16 +4806,16 @@ Init:
 ; arrive here from #14E7
 ; high score entry complete ???
 
-15C6: ED 5B 38 60 ld      de,(unk6038) ; load DE with address of high score entry indicator
+15C6: ED 5B 38 60 ld      de,(unk6038_6038) ; load DE with address of high score entry indicator
 15CA: AF          xor     a           ; A := 0
 15CB: 12          ld      (de),a      ; store.  this clears the high score indicator
-15CC: 21 09 60    ld      hl,waittimermsb; load HL with timer
+15CC: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 15CF: 36 80       ld      (hl),$80    ; set time to #80
 15D1: 23          inc     hl          ; HL := GameMode2
 15D2: 35          dec     (hl)        ; decrease game mode2
 15D3: 06 0C       ld      b,$0c       ; for B = 1 to #C (12 decimal)
 15D5: 21 E8 75    ld      hl,$75e8    ; load HL with screen vram address
-15D8: FD 2A 3A 60 ld      iy,($603a)  ; load IY with ???
+15D8: FD 2A 3A 60 ld      iy,(unknown_603a)  ; load IY with ???
 15DC: 11 E0 FF    ld      de,$ffe0    ; load DE with offset of -#20
 
 15DF: 7E          ld      a,(hl)      ; load A with
@@ -4841,7 +4844,7 @@ Init:
 15FE: 21 0F 36    ld      hl,$360f    ; start of table data
 1601: 09          add     hl,bc
 1602: EB          ex      de,hl
-1603: 21 74 69    ld      hl,$6974
+1603: 21 74 69    ld      hl,unknown_6974
 1606: 1A          ld      a,(de)      ; load A with table data
 1607: 13          inc     de          ; next table entry
 1608: 77          ld      (hl),a      ; store
@@ -4859,13 +4862,13 @@ Init:
 ; arrive when GameMode2 == #16 (level completed).  called from #0701
 
 1615: CD BD 30    call    $30bd       ; clear sprites
-1618: 3A 27 62    ld      a,($6227)   ; load a with screen number
+1618: 3A 27 62    ld      a,(screen_number_6227)   ; load a with screen number
 161B: 0F          rrca                ; roll right with carry.  is this the rivets or the conveyors?
 161C: d2 2f 16    jp      nc,$162f    ; yes, skip ahead to #162F
 
                                         ; handle for girders or elevators, they are same here
 
-161F: 3A 88 63    ld      a,($6388)   ; load A with this counter usually zero, counts from 1 to 5 when the level is complete
+161F: 3A 88 63    ld      a,(end_of_level_counter_6388)   ; load A with this counter usually zero, counts from 1 to 5 when the level is complete
 1622: EF          rst     $28         ; jump based on A
 
 1623  54 16                             ; #1654         ; 0
@@ -4880,7 +4883,7 @@ Init:
 
 ; else the conveyors
 
-1633: 3A 88 63    ld      a,($6388)   ; load A with this usually zero, counts from 1 to 5 when the level is complete
+1633: 3A 88 63    ld      a,(end_of_level_counter_6388)   ; load A with this usually zero, counts from 1 to 5 when the level is complete
 1636: EF          rst     $28         ; jump based on A
 
 1637  A3 16                             ; #16A3         ; 0
@@ -4892,7 +4895,7 @@ Init:
 ; rivets
 
 1641: CD BD 1D    call    $1dbd       ; check for bonus items and jumping scores, rivets
-1644: 3A 88 63    ld      a,($6388)   ; load A with usually zero, counts from 1 to 5 when the level is complete
+1644: 3A 88 63    ld      a,(end_of_level_counter_6388)   ; load A with usually zero, counts from 1 to 5 when the level is complete
 
 1647: EF          rst     $28         ; jump based on A
 
@@ -4909,14 +4912,14 @@ Init:
 1657: 21 5C 38    ld      hl,$385c    ; load HL with start of kong graphic table data
 165A: CD 4E 00    call    $004e       ; update kong's sprites
 165D: 3E 20       ld      a,$20       ; A := #20
-165F: 32 09 60    ld      (waittimermsb),a; set timer to #20
+165F: 32 09 60    ld      (waittimermsb_6009),a; set timer to #20
 
-1662: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1662: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 1665: 34          inc     (hl)        ; increase counter
 1666: 3E 01       ld      a,$01       ; A := 1 = code for girders
 1668: F7          rst     $30         ; if girders, continue below.  else RET
 
-1669: 21 0B 69    ld      hl,$690b    ; load HL with start of kong sprite
+1669: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of kong sprite
 166C: 0E FC       ld      c,$fc       ; set movement for -4 pixels
 166E: FF          rst     $38         ; move kong
 166F: C9          ret                 ; return
@@ -4927,13 +4930,13 @@ Init:
 1671: 21 32 39    ld      hl,$3932    ; load HL with start of kong's sprites table data
 1674: CD 4E 00    call    $004e       ; update kong's sprites
 1677: 3E 20       ld      a,$20       ; A := #20
-1679: 32 09 60    ld      (waittimermsb),a; set timer to #20
-167C: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1679: 32 09 60    ld      (waittimermsb_6009),a; set timer to #20
+167C: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 167F: 34          inc     (hl)        ; increase counter
 1680: 3E 04       ld      a,$04       ; A := 4 = 100 code for elevators
 1682: F7          rst     $30         ; only continue here if elevators, else RET
 
-1683: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+1683: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 1686: 0E 04       ld      c,$04       ; set to move by 4
 1688: FF          rst     $38         ; move kong by +4
 1689: C9          ret                 ; return
@@ -4944,34 +4947,34 @@ Init:
 168B: 21 8C 38    ld      hl,$388c    ; load HL with start of table data for kong
 168E: CD 4E 00    call    $004e       ; update kong's sprites
 1691: 3E 66       ld      a,$66       ; A := #66
-1693: 32 0C 69    ld      ($690c),a   ; store into kong's right arm sprite
+1693: 32 0C 69    ld      (clear_kongs_top_right_sprite_690c),a   ; store into kong's right arm sprite
 1696: AF          xor     a           ; A := 0
-1697: 32 24 69    ld      ($6924),a   ; clear the other side of kongs arm
-169A: 32 2C 69    ld      ($692c),a   ; clear the girl sprite that kong is carrying
-169D: 32 AF 62    ld      ($62af),a   ; clear the kong climbing counter
+1697: 32 24 69    ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a   ; clear the other side of kongs arm
+169A: 32 2C 69    ld      (girl_being_carried_sprite_692c),a   ; clear the girl sprite that kong is carrying
+169D: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; clear the kong climbing counter
 16A0: C3 62 16    jp      $1662       ; jump back
 
 ; jump here from #1622 when conveyors is finished.  step 1 of 5
 
 16A3: CD 08 17    call    $1708       ; clear all sounds, draw heart sprite, redraw girl sprite, clear "help", play end of level sound
-16A6: 3A 10 69    ld      a,($6910)   ; load A with kong's X position
+16A6: 3A 10 69    ld      a,(kongs_x_position_6910)   ; load A with kong's X position
 16A9: D6 3B       sub     $3b         ; subtract #3B
 16AB: 21 5C 38    ld      hl,$385c    ; load HL with kong graphic table data
 16AE: CD 4E 00    call    $004e       ; update kong's sprites to default kong graphic
-16B1: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+16B1: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 16B4: 4F          ld      c,a         ; load C with offset computed above to move kong back where he was
 16B5: FF          rst     $38         ; move Kong
-16B6: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+16B6: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 16B9: 34          inc     (hl)        ; increase counter
 16BA: C9          ret                 ; return
 
 ; jump here from #1622 when conveyors is finished.  step 2 of 5
 
 16BB: AF          xor     a           ; A := 0
-16BC: 32 A0 62    ld      ($62a0),a   ; clear top conveyor counter
-16BF: 3A A3 63    ld      a,($63a3)   ; load A with direction vector for top conveyor
+16BC: 32 A0 62    ld      (top_conveyor_counter_62a0),a   ; clear top conveyor counter
+16BF: 3A A3 63    ld      a,(top_conveyor_direction_vector_63a3)   ; load A with direction vector for top conveyor
 16C2: 4F          ld      c,a         ; copy to C
-16C3: 3A 10 69    ld      a,($6910)   ; load A with kong's X position
+16C3: 3A 10 69    ld      a,(kongs_x_position_6910)   ; load A with kong's X position
 16C6: FE 5A       cp      $5a         ; < #5A ?
 16C8: D2 E1 16    jp      nc,$16e1    ; yes, skip ahead
 
@@ -4979,12 +4982,12 @@ Init:
 16CD: CA D5 16    jp      z,$16d5     ; yes, skip next 2 steps
 
 16D0: 3E 01       ld      a,$01       ; A := 1
-16D2: 32 A0 62    ld      ($62a0),a   ; store into top conveyor counter
+16D2: 32 A0 62    ld      (top_conveyor_counter_62a0),a   ; store into top conveyor counter
 
 16D5: CD 02 26    call    $2602       ; ???
-16D8: 3A A3 63    ld      a,($63a3)   ; load A with direction vector for top conveyor
+16D8: 3A A3 63    ld      a,(top_conveyor_direction_vector_63a3)   ; load A with direction vector for top conveyor
 16DB: 4F          ld      c,a         ; C := 1
-16DC: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+16DC: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 16DF: FF          rst     $38         ; move kong
 16E0: C9          ret                 ; return
 
@@ -4999,12 +5002,12 @@ Init:
 16EE: 21 8C 38    ld      hl,$388c    ; load HL with start of table data for kong
 16F1: CD 4E 00    call    $004e       ; update kong's sprites
 16F4: 3E 66       ld      a,$66       ; A := #66
-16F6: 32 0C 69    ld      ($690c),a   ; store into kong's right arm sprite for climbing
+16F6: 32 0C 69    ld      (clear_kongs_top_right_sprite_690c),a   ; store into kong's right arm sprite for climbing
 16F9: AF          xor     a           ; A := 0
-16FA: 32 24 69    ld      ($6924),a   ; clear kong's arm sprite
-16FD: 32 2C 69    ld      ($692c),a   ; clear girl under kong's arm
-1700: 32 AF 62    ld      ($62af),a   ; clear kong climbing counter
-1703: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+16FA: 32 24 69    ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a   ; clear kong's arm sprite
+16FD: 32 2C 69    ld      (girl_being_carried_sprite_692c),a   ; clear girl under kong's arm
+1700: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; clear kong climbing counter
+1703: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 1706: 34          inc     (hl)        ; increase counter
 1707: C9          ret                 ; return
 
@@ -5012,7 +5015,7 @@ Init:
 ; clears all sounds, draws heart sprite, redraws girl sprite, clear "help", play end of level sound
 
 1708: CD 1C 01    call    $011c       ; clear all sounds
-170B: 21 20 6A    ld      hl,$6a20    ; load HL with heart sprite
+170B: 21 20 6A    ld      hl,heart_sprite_x_position_6a20    ; load HL with heart sprite
 170E: 36 80       ld      (hl),$80    ; set heart sprite X position
 1710: 23          inc     hl          ; next
 1711: 36 76       ld      (hl),$76    ; set heart sprite
@@ -5020,13 +5023,13 @@ Init:
 1714: 36 09       ld      (hl),$09    ; set heart sprite color
 1716: 23          inc     hl          ; next
 1717: 36 20       ld      (hl),$20    ; set heart sprite Y position
-1719: 21 05 69    ld      hl,$6905    ; load HL with girl's sprite
+1719: 21 05 69    ld      hl,girls_sprite_6905    ; load HL with girl's sprite
 171C: 36 13       ld      (hl),$13    ; set girl's sprite
 171E: 21 C4 75    ld      hl,$75c4    ; load HL with VRAM screen address
 1721: 11 20 00    ld      de,$0020    ; DE := #20
 1724: 3E 10       ld      a,$10       ; A := #10
 1726: CD 14 05    call    $0514       ; clear "help" that the girl yells
-1729: 21 8A 60    ld      hl,$608a    ; load sound address
+1729: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load sound address
 172C: 36 07       ld      (hl),$07    ; play sound for end of level
 172E: 23          inc     hl          ; HL now has sound duration
 172F: 36 03       ld      (hl),$03    ; set duration to 3
@@ -5036,23 +5039,23 @@ Init:
 ; jump here from #1622 when conveyors is finished.  step 3 of 5
 
 1732: CD 6F 30    call    $306f       ; animate kong climbing up the ladder with girl under arm
-1735: 3A 13 69    ld      a,($6913)   ; load A with kong sprite Y position
+1735: 3A 13 69    ld      a,(kong_sprite_y_position_6913)   ; load A with kong sprite Y position
 1738: FE 2C       cp      $2c         ; < #2C ? (level of the girl)
 173A: D0          ret     nc          ; yes, return
 
 ; else kong has grabbed the girl on the way out
 
 173B: AF          xor     a           ; A := #00
-173C: 32 00 69    ld      ($6900),a   ; clear girl's head sprite
-173F: 32 04 69    ld      ($6904),a   ; clear girl's body sprite
-1742: 32 0C 69    ld      ($690c),a   ; clear kong's top right sprite
+173C: 32 00 69    ld      (girls_head_sprite_6900),a   ; clear girl's head sprite
+173F: 32 04 69    ld      (girls_body_sprite_6904),a   ; clear girl's body sprite
+1742: 32 0C 69    ld      (clear_kongs_top_right_sprite_690c),a   ; clear kong's top right sprite
 1745: 3E 6B       ld      a,$6b       ; A := #6B = code for sprite with kong's arm out
-1747: 32 24 69    ld      ($6924),a   ; store into kong's right arm sprite for carrying girl
+1747: 32 24 69    ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a   ; store into kong's right arm sprite for carrying girl
 174A: 3D          dec     a           ; A := #6A = code for sprite with girl being carried
-174B: 32 2C 69    ld      ($692c),a   ; store into girl being carried sprite
-174E: 21 21 6A    ld      hl,$6a21    ; load HL with heart sprite
+174B: 32 2C 69    ld      (girl_being_carried_sprite_692c),a   ; store into girl being carried sprite
+174E: 21 21 6A    ld      hl,heart_sprite_6a21    ; load HL with heart sprite
 1751: 34          inc     (hl)        ; change heart to broken
-1752: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1752: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 1755: 34          inc     (hl)        ; increase counter
 1756: C9          ret                 ; return
 
@@ -5065,15 +5068,15 @@ Init:
 175E: 13          inc     de
 175F: CD 83 17    call    $1783       ; ???
 1762: 3E 40       ld      a,$40       ; A := #40
-1764: 32 09 60    ld      (waittimermsb),a; set timer to #40
-1767: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1764: 32 09 60    ld      (waittimermsb_6009),a; set timer to #40
+1767: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 176A: 34          inc     (hl)        ; increase counter
 176B: C9          ret                 ; return
 
 ; called from #175A, above
 
 176C: 11 03 00    ld      de,$0003    ; load DE with offset to subtract
-176F: 21 2F 69    ld      hl,$692f    ; load HL with girl under kong's arm Y position.  counting down, it will go through all of kong's body
+176F: 21 2F 69    ld      hl,girl_under_kongs_arm_y_position_692f    ; load HL with girl under kong's arm Y position.  counting down, it will go through all of kong's body
 1772: 06 0A       ld      b,$0a       ; for B = 1 to #0A
 
 1774: A7          and     a           ; clear carry flag
@@ -5106,7 +5109,7 @@ Init:
 ; jump here from #1622 when conveyors is finished.  step 5 of 5
 
 178E: DF          rst     $18         ; count down timer and only continue here if zero, else RET
-178F: 2A 2A 62    ld      hl,($622a)  ; load HL with address for this screen/level
+178F: 2A 2A 62    ld      hl,(store_622a)  ; load HL with address for this screen/level
 1792: 23          inc     hl          ; next screen
 1793: 7E          ld      a,(hl)      ; load A with the screen for next
 1794: FE 7F       cp      $7f         ; at end ?
@@ -5115,13 +5118,13 @@ Init:
 1799: 21 73 3A    ld      hl,$3a73    ; load HL with table for screens/levels for level 5+
 179C: 7E          ld      a,(hl)      ; load A with the screen
 
-179D: 22 2A 62    ld      ($622a),hl  ; store screen address lookup for next time
-17A0: 32 27 62    ld      ($6227),a   ; store A into screen number
+179D: 22 2A 62    ld      (store_622a),hl  ; store screen address lookup for next time
+17A0: 32 27 62    ld      (screen_number_6227),a   ; store A into screen number
 17A3: 11 00 05    ld      de,$0500    ; load task #5, parameter 0 ; adds bonus to player's score
 17A6: CD 9F 30    call    $309f       ; insert task
 17A9: AF          xor     a           ; A := 0
-17AA: 32 88 63    ld      ($6388),a   ; clear end of level counter
-17AD: 21 09 60    ld      hl,waittimermsb; load HL with timer addr.
+17AA: 32 88 63    ld      (end_of_level_counter_6388),a   ; clear end of level counter
+17AD: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer addr.
 17B0: 36 30       ld      (hl),$30    ; set timer to #30
 17B2: 23          inc     hl          ; HL := GameMode2
 17B3: 36 08       ld      (hl),$08    ; set game mode2 to 8
@@ -5132,7 +5135,7 @@ Init:
 ; arrive when rivets is cleared
 
 17B7: CD 1C 01    call    $011c       ; clear all sounds
-17BA: 21 8A 60    ld      hl,$608a    ; load HL with sound address
+17BA: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with sound address
 17BD: 36 0E       ld      (hl),$0e    ; play sound for rivets falling and kong beating chest
 17BF: 23          inc     hl          ; HL := #608B = sound duration
 17C0: 36 03       ld      (hl),$03    ; set duration to 3
@@ -5160,18 +5163,18 @@ Init:
 1800: CD A7 0D    call    $0da7       ; draw the screen
 1803: 21 5C 38    ld      hl,$385c    ; load HL with start of kong graphic table data
 1806: CD 4E 00    call    $004e       ; update kong's sprites
-1809: 21 08 69    ld      hl,$6908    ; load HL with start of kong sprites
+1809: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of kong sprites
 180C: 0E 44       ld      c,$44       ; load offset of #44
 180E: FF          rst     $38         ; move kong
-180F: 21 05 69    ld      hl,$6905    ; load HL with girl's sprite
+180F: 21 05 69    ld      hl,girls_sprite_6905    ; load HL with girl's sprite
 1812: 36 13       ld      (hl),$13    ; set girl's sprite
 1814: 3E 20       ld      a,$20       ; A := #20
-1816: 32 09 60    ld      (waittimermsb),a; set timer to #20
+1816: 32 09 60    ld      (waittimermsb_6009),a; set timer to #20
 1819: 3E 80       ld      a,$80       ; A := #80
-181B: 32 90 63    ld      ($6390),a   ; store into timer ???
-181E: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+181B: 32 90 63    ld      (timer_unknown_6390),a   ; store into timer ???
+181E: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 1821: 34          inc     (hl)        ; increase counter
-1822: 22 C0 63    ld      ($63c0),hl  ; store into ???
+1822: 22 C0 63    ld      (timer_unknown_63c0),hl  ; store into ???
 1825: C9          ret                 ; return
 
 ; called from several places with HL preloaded with a video RAM address
@@ -5195,7 +5198,7 @@ Init:
 
 ; arrive from #1647 when #6388 == 2
 
-1839: 21 90 63    ld      hl,$6390    ; load HL with timer ???
+1839: 21 90 63    ld      hl,timer_unknown_6390    ; load HL with timer ???
 183C: 34          inc     (hl)        ; increase.  at zero?
 183D: CA 59 18    jp      z,$1859     ; yes, skip ahead
 
@@ -5213,19 +5216,19 @@ Init:
 
 184E: EB          ex      de,hl       ; DE <> HL
 184F: CD 4E 00    call    $004e       ; update kong's sprites
-1852: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+1852: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 1855: 0E 44       ld      c,$44       ; C := #44
 1857: FF          rst     $38         ; move kong
 1858: C9          ret                 ; return
 
 1859: 21 5C 38    ld      hl,$385c    ; load HL with start of kong graphic table data
 185C: CD 4E 00    call    $004e       ; update kong's sprites
-185F: 21 08 69    ld      hl,$6908    ; load HL with start of Kong sprite
+185F: 21 08 69    ld      hl,start_of_kong_sprite_6908    ; load HL with start of Kong sprite
 1862: 0E 44       ld      c,$44       ; C := #44
 1864: FF          rst     $38         ; move kong
 1865: 3E 20       ld      a,$20       ; A := #20
-1867: 32 09 60    ld      (waittimermsb),a; store into timer
-186A: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1867: 32 09 60    ld      (waittimermsb_6009),a; store into timer
+186A: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 186D: 34          inc     (hl)        ; increase counter
 186E: C9          ret                 ; return
 
@@ -5237,23 +5240,23 @@ Init:
 1870: 21 1F 3A    ld      hl,$3a1f    ; start of table data for kong upside down
 1873: CD 4E 00    call    $004e       ; update kong's sprites
 1876: 3E 03       ld      a,$03       ; A := 3
-1878: 32 84 60    ld      ($6084),a   ; play falling sound
-187B: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+1878: 32 84 60    ld      (play_sound_for_falling_bouncer_6084),a   ; play falling sound
+187B: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 187E: 34          inc     (hl)        ; increase
 187F: C9          ret                 ; return
 
 ; arrive from #1647 when #6388 == 4
 
-1880: 21 0B 69    ld      hl,$690b    ; load HL with kong start sprite
+1880: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with kong start sprite
 1883: 0E 01       ld      c,$01       ; load C with 1 pixel to move
 1885: FF          rst     $38         ; move kong
-1886: 3A 1B 69    ld      a,($691b)   ; load A with ???
+1886: 3A 1B 69    ld      a,(unknown_691b)   ; load A with ???
 1889: FE D0       cp      $d0         ; == #D0 ?
 188B: C0          ret     nz          ; no, return
 
 188C: 3E 20       ld      a,$20       ; A := #20
-188E: 32 19 69    ld      ($6919),a   ; store into kong's face sprite - kong is now bigmouthed with crazy eyes
-1891: 21 24 6A    ld      hl,$6a24    ; load HL with sprite address used for kong's aching head lines
+188E: 32 19 69    ld      (unknown_6919),a   ; store into kong's face sprite - kong is now bigmouthed with crazy eyes
+1891: 21 24 6A    ld      hl,sprite_address_used_for_kong_aching_head_lines_6a24    ; load HL with sprite address used for kong's aching head lines
 1894: 36 7F       ld      (hl),$7f    ; set sprite X value
 1896: 2C          inc     l           ; next
 1897: 36 39       ld      (hl),$39    ; set sprite color
@@ -5268,20 +5271,20 @@ Init:
 
 18AB: 11 04 00    ld      de,$0004    ; load counters
 18AE: 01 28 02    ld      bc,$0228    ; load counters
-18B1: 21 03 69    ld      hl,$6903    ; set sprite girl table data Y position
+18B1: 21 03 69    ld      hl,sprite_girl_table_data_y_position_6903    ; set sprite girl table data Y position
 18B4: CD 3D 00    call    $003d       ; move the girl down
 
 18B7: 3E 00       ld      a,$00       ; A := 0 [why written this way?]
-18B9: 32 AF 62    ld      ($62af),a   ; store into kong climbing counter
+18B9: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; store into kong climbing counter
 18BC: 3E 03       ld      a,$03       ; set boom sound duration
-18BE: 32 82 60    ld      ($6082),a   ; play boom sound
-18C1: 21 88 63    ld      hl,$6388    ; load HL with end of level counter
+18BE: 32 82 60    ld      (boom_sound_address_6082),a   ; play boom sound
+18C1: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 18C4: 34          inc     (hl)        ; increase counter
 18C5: C9          ret                 ; return
 
 ; arrive from #1647 when level is complete, last of 5 steps
 
-18C6: 21 AF 62    ld      hl,$62af    ; load HL with kong climbing counter address
+18C6: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter address
 18C9: 35          dec     (hl)        ; decrease.  zero?
 18CA: CA 3D 19    jp      z,$193d     ; yes, skip ahead, handle next level routine
 
@@ -5289,12 +5292,12 @@ Init:
 18CE: E6 07       and     $07         ; mask bits, now between 0 and 7.  zero?
 18D0: C0          ret     nz          ; no , return
 
-18D1: 21 25 6A    ld      hl,$6a25    ; load HL with ???
+18D1: 21 25 6A    ld      hl,unknown_6a25    ; load HL with ???
 18D4: 7E          ld      a,(hl)      ; get value
 18D5: EE 80       xor     $80         ; toggle bit 7
 18D7: 77          ld      (hl),a      ; store result
 
-18D8: 21 19 69    ld      hl,$6919    ; load HL with ???
+18D8: 21 19 69    ld      hl,unknown_6919    ; load HL with ???
 18DB: 46          ld      b,(hl)      ; load B with this value
 18DC: CB A8       res     5,b         ; clear bit 5 of B
 18DE: AF          xor     a           ; A := 0
@@ -5302,34 +5305,34 @@ Init:
 18E2: F6 20       or      $20         ; turn on bit 5
 18E4: 77          ld      (hl),a      ; store result
 
-18E5: 21 AF 62    ld      hl,$62af    ; load HL with kong climbing counter
+18E5: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter
 18E8: 7E          ld      a,(hl)      ; get value
 18E9: FE E0       cp      $e0         ; == #E0 ?
 18EB: C2 10 19    jp      nz,$1910    ; no, skip ahead
 
 18EE: 3E 50       ld      a,$50       ; A := #50
-18F0: 32 4F 69    ld      ($694f),a   ; store into mario sprite Y value
+18F0: 32 4F 69    ld      (mario_sprite_y_value_694f),a   ; store into mario sprite Y value
 18F3: 3E 00       ld      a,$00       ; A := 0
-18F5: 32 4D 69    ld      ($694d),a   ; store into mario sprite value
+18F5: 32 4D 69    ld      (mario_sprite_value_694d),a   ; store into mario sprite value
 18F8: 3E 9F       ld      a,$9f       ; A := #9F
-18FA: 32 4C 69    ld      ($694c),a   ; set mario sprite X value at #9F
-18FD: 3A 03 62    ld      a,($6203)   ; load A with mario X position
+18FA: 32 4C 69    ld      (mario_sprite_x_position_694c),a   ; set mario sprite X value at #9F
+18FD: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario X position
 1900: FE 80       cp      $80         ; < 80 ?
 1902: D2 0F 19    jp      nc,$190f    ; yes, skip next 4 steps
 
 1905: 3E 80       ld      a,$80       ; A := #80
-1907: 32 4D 69    ld      ($694d),a   ; store into mario sprite value
+1907: 32 4D 69    ld      (mario_sprite_value_694d),a   ; store into mario sprite value
 190A: 3E 5F       ld      a,$5f       ; A := #5F
-190C: 32 4C 69    ld      ($694c),a   ; store into mario sprite X value
+190C: 32 4C 69    ld      (mario_sprite_x_position_694c),a   ; store into mario sprite X value
 
 190F: 7E          ld      a,(hl)      ; load A with ???
 
 1910: FE C0       cp      $c0         ; == #C0 ?
 1912: C0          ret     nz          ; no, return
 
-1913: 21 8A 60    ld      hl,$608a    ; load HL with sound address
+1913: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with sound address
 1916: 36 0C       ld      (hl),$0c    ; play sound for rivets cleared
-1918: 3A 29 62    ld      a,($6229)   ; load A with level #
+1918: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
 191B: 0F          rrca                ; roll a right .  is this an odd level ?
 191C: 38 02       jr      c,$1920     ; Yes, skip next step
 
@@ -5337,7 +5340,7 @@ Init:
 
 1920: 23          inc     hl          ; HL := #608B = sound duration
 1921: 36 03       ld      (hl),$03    ; set duration to 3
-1923: 21 23 6A    ld      hl,$6a23    ; load HL with heart sprite
+1923: 21 23 6A    ld      hl,heart_sprite_6a23    ; load HL with heart sprite
 1926: 36 40       ld      (hl),$40    ; set heart sprite Y position
 1928: 2B          dec     hl          ; decrement HL
 1929: 36 09       ld      (hl),$09    ; set heart sprite color
@@ -5345,17 +5348,17 @@ Init:
 192C: 36 76       ld      (hl),$76    ; set heart sprite
 192E: 2B          dec     hl          ; decrement HL
 192f: 36 8f       ld      (hl),$8f    ; set heart sprite X position
-1931: 3A 03 62    ld      a,($6203)   ; load A with mario X position
+1931: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario X position
 1934: fe 80       cp      $80         ; is mario on the left side of the screen?
 1936: d0          ret     nc          ; yes, return
 
 1937: 3E 6f       ld      a,$6f       ; else A := #6F
-1939: 32 20 6A    ld      ($6a20),a   ; store A into heart sprite X position
+1939: 32 20 6A    ld      (heart_sprite_x_position_6a20),a   ; store A into heart sprite X position
 193C: c9          ret                 ; return from sub
 
 ; kong has climbed off the screen at end of level
 
-193D: 2A 2A 62    ld      hl,($622a)  ; load HL with contents of #622A.  this is a pointer to the levels/screens data
+193D: 2A 2A 62    ld      hl,(store_622a)  ; load HL with contents of #622A.  this is a pointer to the levels/screens data
 1940: 23          inc     hl          ; increase HL.  = next level
 1941: 7E          ld      a,(hl)      ; load A with contents of HL = the screen we are going to play next
 1942: fe 7f       cp      $7f         ; is this the end code ?
@@ -5364,16 +5367,16 @@ Init:
 1947: 21 73 3A    ld      hl,$3a73    ; yes, load HL with #3A73 = start of table data for screens/levels for level 5+
 194A: 7E          ld      a,(hl)      ; load A with screen number from table
 
-194B: 22 2A 62    ld      ($622a),hl  ; store
-194E: 32 27 62    ld      ($6227),a   ; store A into screen number
-1951: 21 29 62    ld      hl,$6229    ; load HL with level number address
+194B: 22 2A 62    ld      (store_622a),hl  ; store
+194E: 32 27 62    ld      (screen_number_6227),a   ; store A into screen number
+1951: 21 29 62    ld      hl,else_level_number_6229    ; load HL with level number address
 1954: 34          inc     (hl)        ; increase #6229 by one
 1955: 11 00 05    ld      de,$0500    ; load task #5, parameter 0 ; adds bonus to player's score
 1958: CD 9F 30    call    $309f       ; insert task
 195B: AF          xor     a           ; A := 0
-195C: 32 2E 62    ld      ($622e),a   ; store into number of goofys to draw
-195F: 32 88 63    ld      ($6388),a   ; store into end of level counter
-1962: 21 09 60    ld      hl,waittimermsb; load HL with timer
+195C: 32 2E 62    ld      (number_of_goofys_to_draw_622e),a   ; store into number of goofys to draw
+195F: 32 88 63    ld      (end_of_level_counter_6388),a   ; store into end of level counter
+1962: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
 1965: 36 E0       ld      (hl),$e0    ; set timer to #E0
 1967: 23          inc     hl          ; increase HL to GameMode2
 1968: 36 08       ld      (hl),$08    ; set game mode2 to 8
@@ -5382,9 +5385,9 @@ Init:
 ; arrive from jump table at #0701 when GameMode2 == #17
 
 196B: CD 52 08    call    $0852       ; clear screen and all sprites
-196E: 3A 0E 60    ld      a,(playerturnb) ; load A with current player number.  0 = player 1, 1 = player 2
+196E: 3A 0E 60    ld      a,(playerturnb_600e) ; load A with current player number.  0 = player 1, 1 = player 2
 1971: C6 12       add     a,$12       ; add #12
-1973: 32 0A 60    ld      (gamemode2),a; store into game mode2, now had #12 for player 1 or #13 for player 2
+1973: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2, now had #12 for player 1 or #13 for player 2
 1976: C9          ret                 ; return
 
 ; main routine
@@ -5422,16 +5425,16 @@ Init:
 19C3: 00          nop
 19C4: 00          nop                 ; no operations.  [a deleted call ?]
 
-19C5: 3A 00 62    ld      a,($6200)   ; load A with 0 if mario is dead, 1 if he is alive
+19C5: 3A 00 62    ld      a,(mario_array_6200)   ; load A with 0 if mario is dead, 1 if he is alive
 19C8: A7          and     a           ; is mario alive?
 19C9: C0          ret     nz          ; yes, return to #00D2
 
 ; mario died
 
 19CA: CD 1C 01    call    $011c       ; no, mario died.  clear all sounds
-19CD: 21 82 60    ld      hl,$6082    ; load HL with boom sound address
+19CD: 21 82 60    ld      hl,boom_sound_address_6082    ; load HL with boom sound address
 19D0: 36 03       ld      (hl),$03    ; play boom sound for 3 units
-19D2: 21 0A 60    ld      hl,gamemode2; load HL with game mode2
+19D2: 21 0A 60    ld      hl,gamemode2_600a; load HL with game mode2
 19D5: 34          inc     (hl)        ; increase
 19D6: 2B          dec     hl          ; HL := WaitTimerMSB (timer used for sound effects)
 19D7: 36 40       ld      (hl),$40    ; set timer to wait 40 units
@@ -5440,9 +5443,9 @@ Init:
 ; called from #19AD as part of the main routine
 ; checks for bonus items being picked up
 
-19DA: 3A 03 62    ld      a,($6203)   ; load A with Mario's X position
+19DA: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with Mario's X position
 19DD: 06 03       ld      b,$03       ; for B = 1 to 3
-19DF: 21 0C 6A    ld      hl,$6a0c    ; load HL with X position of first bonus
+19DF: 21 0C 6A    ld      hl,start_of_bonus_items_6a0c    ; load HL with X position of first bonus
 
 19E2: BE          cp      (hl)        ; are they equal?
 19E3: CA ED 19    jp      z,$19ed     ; yes, then test the Y position too
@@ -5455,7 +5458,7 @@ Init:
 
 19EC: C9          ret                 ; return
 
-19ED: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+19ED: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 19F0: 2C          inc     l
 19F1: 2C          inc     l
 19F2: 2C          inc     l           ; get HL to point to Y position of bonus item
@@ -5470,16 +5473,16 @@ Init:
 ; bonus item has been picked up
 
 19FA: 2D          dec     l           ; decrease L.  HL now has the starting address of the sprite that was picked up
-19FB: 22 43 63    ld      ($6343),hl  ; store into this temp memory.  read from at #1E18
+19FB: 22 43 63    ld      (unknown_for_use_later_6343),hl  ; store into this temp memory.  read from at #1E18
 19FE: AF          xor     a           ; A := 0
-19FF: 32 42 63    ld      ($6342),a   ; store into ???.  read from at #1DD6
+19FF: 32 42 63    ld      (scoring_indicator_6342),a   ; store into ???.  read from at #1DD6
 1A02: 3C          inc     a           ; A := 1
-1A03: 32 40 63    ld      ($6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
+1A03: 32 40 63    ld      (bonus_indicator_6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 1A06: C9          ret                 ; return
 
 ; called from main routine at #19BC
 
-1A07: 3A 86 63    ld      a,($6386)   ; load A with the location which tells if the timer has run out yet.
+1A07: 3A 86 63    ld      a,(time_has_run_out_indicator_6386)   ; load A with the location which tells if the timer has run out yet.
 1A0A: EF          rst     $28         ; jump based on A
 
 1A0B  1E 1A                             ; #1A1E if zero return immediately, bonus timer has not run out
@@ -5491,24 +5494,24 @@ Init:
 ; arrive from #1A0A
 
 1A15: AF          xor     a           ; A := 0
-1A16: 32 87 63    ld      ($6387),a   ; clear timer which counts down when the timer runs out
+1A16: 32 87 63    ld      (timer_address_6387),a   ; clear timer which counts down when the timer runs out
 1A19: 3E 02       ld      a,$02       ; A := 2
-1A1B: 32 86 63    ld      ($6386),a   ; store into the location which tells if the timer has run out yet.
+1A1B: 32 86 63    ld      (time_has_run_out_indicator_6386),a   ; store into the location which tells if the timer has run out yet.
 1A1E: C9          ret                 ; return
 
 ; arrive from #1A0A
 
-1A1F: 21 87 63    ld      hl,$6387    ; load HL with timer address
+1A1F: 21 87 63    ld      hl,timer_address_6387    ; load HL with timer address
 1A22: 35          dec     (hl)        ; decreases the timer which counts down after time has run out. time out?
 1A23: C0          ret     nz          ; no, return
 
 1A24: 3E 03       ld      a,$03       ; A := 3
-1A26: 32 86 63    ld      ($6386),a   ; store 3 into #6386 - time is up for mario!
+1A26: 32 86 63    ld      (time_has_run_out_indicator_6386),a   ; store 3 into #6386 - time is up for mario!
 1A29: C9          ret                 ; return
 
 ; we arrive here when the timer runs out
 
-1A2A: 3A 16 62    ld      a,($6216)   ; load A with jump indicator
+1A2A: 3A 16 62    ld      a,(jumping_status_6216)   ; load A with jump indicator
 1A2D: A7          and     a           ; is mario jumping ?
 1A2E: C0          ret     nz          ; yes, return, mario never dies while jumping
 
@@ -5521,25 +5524,25 @@ Init:
 1A33: 3E 08       ld      a,$08       ; A := 8 = 1000 binary = code for rivets
 1A35: F7          rst     $30         ; continue here only on rivets, else RET
 
-1A36: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+1A36: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 1A39: FE 4B       cp      $4b         ; == #4B = the column the left rivets are on ?
 1A3B: CA 4B 1A    jp      z,$1a4b     ; yes, skip ahead and set the indicator
 
 1A3E: FE B3       cp      $b3         ; == #B3 = the column the right rivets are on ?
 1A40: CA 4B 1A    jp      z,$1a4b     ; yes, skip ahead and set the indicator
 
-1A43: 3A 91 62    ld      a,($6291)   ; else load A with rivet column indicator
+1A43: 3A 91 62    ld      a,(column_indicator_6291)   ; else load A with rivet column indicator
 1A46: 3D          dec     a           ; is mario possibly traversing a column?
 1A47: CA 51 1A    jp      z,$1a51     ; yes, skip ahead
 1A4A: C9          ret                 ; else return
 
 1A4B: 3E 01       ld      a,$01       ; A := 1
-1A4D: 32 91 62    ld      ($6291),a   ; store into column indicator
+1A4D: 32 91 62    ld      (column_indicator_6291),a   ; store into column indicator
 1A50: C9          ret                 ; return
 
-1A51: 32 91 62    ld      ($6291),a   ; clear the column indicator
+1A51: 32 91 62    ld      (column_indicator_6291),a   ; clear the column indicator
 1A54: 47          ld      b,a         ; B := 0
-1A55: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+1A55: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 1A58: 3D          dec     a           ; decrement
 1A59: FE D0       cp      $d0         ; compare with #D0.  is mario too low to go over a rivet?
 1A5B: D0          ret     nc          ; yes, return
@@ -5559,12 +5562,12 @@ Init:
 1A6D: C2 72 1A    jp      nz,$1a72    ; no, skip next step
 
 1A70: CB C8       set     1,b         ; else set this bit
-1A72: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+1A72: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 1A75: 07          rlca                ; rotate left
 1A76: D2 7B 1A    jp      nc,$1a7b    ; no carry, skip next step
 
 1A79: CB C0       set     0,b         ; B := B + 1
-1A7B: 21 92 62    ld      hl,$6292    ; load HL with start of array of rivets
+1A7B: 21 92 62    ld      hl,start_of_array_of_rivets_6292    ; load HL with start of array of rivets
 1A7E: 78          ld      a,b         ; A := B
 1A7F: 85          add     a,l         ; add #92
 1A80: 6F          ld      l,a         ; copy to L
@@ -5575,7 +5578,7 @@ Init:
 ; a rivet has been traversed
 
 1A84: 36 00       ld      (hl),$00    ; set this rivet as cleared
-1A86: 21 90 62    ld      hl,$6290    ; load HL with address of number of rivets remaining
+1A86: 21 90 62    ld      hl,number_of_rivets_left_6290    ; load HL with address of number of rivets remaining
 1A89: 35          dec     (hl)        ; decrease number of rivets
 1A8A: 78          ld      a,b         ; A := B
 1A8B: 01 05 00    ld      bc,$0005    ; load BC with offset of 5
@@ -5601,10 +5604,10 @@ Init:
 1AA8: 2C          inc     l           ; next video memory
 1AA9: 77          ld      (hl),a      ; erase underneath the rivet [ not needed , there is nothing there to erase ???]
 1AAA: 3E 01       ld      a,$01       ; A := 1
-1AAC: 32 40 63    ld      ($6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
-1AAF: 32 42 63    ld      ($6342),a   ; store into scoring indicator
-1AB2: 32 25 62    ld      ($6225),a   ; store into bonus sound indicator
-1AB5: 3A 16 62    ld      a,($6216)   ; load A with jump indicator
+1AAC: 32 40 63    ld      (bonus_indicator_6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
+1AAF: 32 42 63    ld      (scoring_indicator_6342),a   ; store into scoring indicator
+1AB2: 32 25 62    ld      (bonus_sound_indicator_6225),a   ; store into bonus sound indicator
+1AB5: 3A 16 62    ld      a,(jumping_status_6216)   ; load A with jump indicator
 1AB8: A7          and     a           ; is mario jumping ?
 1AB9: CC 95 1D    call    z,$1d95     ; no, play the bonus sound
 
@@ -5618,29 +5621,29 @@ Init:
 ; check for jumping and other movements
 ; called from main routine at #1980
 
-1AC3: 3A 16 62    ld      a,($6216)   ; load A with jump indicator
+1AC3: 3A 16 62    ld      a,(jumping_status_6216)   ; load A with jump indicator
 1AC6: 3D          dec     a           ; is mario already jumping?
 1AC7: CA B2 1B    jp      z,$1bb2     ; yes, jump ahead
 
-1ACA: 3A 1E 62    ld      a,($621e)   ; else load A with jump coming down indicator
+1ACA: 3A 1E 62    ld      a,(jump_coming_down_indicator_621e)   ; else load A with jump coming down indicator
 1ACD: A7          and     a           ; is the jump almost done ?
 1ACE: C2 55 1B    jp      nz,$1b55    ; yes, skip way ahead
 
-1AD1: 3A 17 62    ld      a,($6217)   ; load A with hammer check
+1AD1: 3A 17 62    ld      a,(unknown_6217)   ; load A with hammer check
 1AD4: 3D          dec     a           ; is hammer active?
 1AD5: CA E6 1A    jp      z,$1ae6     ; yes, skip ahead
 
-1AD8: 3A 15 62    ld      a,($6215)   ; else load A with ladder check
+1AD8: 3A 15 62    ld      a,(ladder_status_6215)   ; else load A with ladder check
 1ADB: 3D          dec     a           ; is mario on a ladder?
 1ADC: CA 38 1B    jp      z,$1b38     ; yes, skip ahead
 
-1ADF: 3A 10 60    ld      a,(inputstate) ; load A with input
+1ADF: 3A 10 60    ld      a,(inputstate_6010) ; load A with input
 1AE2: 17          rla                 ; is player pressing jump ?
 1AE3: DA 6E 1B    jp      c,$1b6e     ; yes, begin jump subroutine
 
 1AE6: CD 1F 24    call    $241f       ; else call this other sub which loads DE with something depending on mario's position.  ladder check?
 
-1AE9: 3A 10 60    ld      a,(inputstate) ; load A with input
+1AE9: 3A 10 60    ld      a,(inputstate_6010) ; load A with input
 1AEC: 1D          dec     e           ; E == 1 ?
 1AED: CA F5 1A    jp      z,$1af5     ; yes, jump ahead
 
@@ -5653,14 +5656,14 @@ Init:
 1AF9: CB 4F       bit     1,a         ; is player pressing left ?
 1AFB: C2 AB 1C    jp      nz,$1cab    ; yes, skip ahead
 
-1AFE: 3A 17 62    ld      a,($6217)   ; else load A with hammer check
+1AFE: 3A 17 62    ld      a,(unknown_6217)   ; else load A with hammer check
 1B01: 3D          dec     a           ; is the hammer active?
 1B02: C8          ret     z           ; yes, return
 
-1B03: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+1B03: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 1B06: C6 08       add     a,$08       ; Add 8
 1B08: 57          ld      d,a         ; copy into D
-1B09: 3A 03 62    ld      a,($6203)   ; load A with Mario's X position
+1B09: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with Mario's X position
 1B0C: F6 03       or      $03         ; turn on left 2 bits (0 and 1)
 1B0E: CB 97       res     2,a         ; turn off bit 2
 1B10: 01 15 00    ld      bc,$0015    ; load BC with #15 = number of ladders to check
@@ -5669,12 +5672,12 @@ Init:
 ; mario is near a ladder
 
 1B16: F5          push    af          ; save AF for later
-1B17: 21 07 62    ld      hl,$6207    ; load HL with movement indicator
+1B17: 21 07 62    ld      hl,mario_movement_indicator_sprite_value_6207    ; load HL with movement indicator
 1B1A: 7E          ld      a,(hl)      ; load movement
 1B1B: E6 80       and     $80         ; mask bits
 1B1D: F6 06       or      $06         ; mask bits
 1B1F: 77          ld      (hl),a      ; store movement
-1B20: 21 1A 62    ld      hl,$621a    ; load HL with ladder type address
+1B20: 21 1A 62    ld      hl,moving_ladder_indicator_621a    ; load HL with ladder type address
 1B23: 3E 04       ld      a,$04       ; A := 4
 1B25: B9          cp      c           ; compare.  is the ladder broken?
 1B26: 36 01       ld      (hl),$01    ; store 1 into ladder type = broken ladder by default
@@ -5702,15 +5705,15 @@ Init:
 ; if mario is on a ladder
 ; jump here from #1ADC
 
-1B38: 3A 10 60    ld      a,(inputstate) ; load A with input
+1B38: 3A 10 60    ld      a,(inputstate_6010) ; load A with input
 1B3B: CB 5F       bit     3,a         ; is joystick pushed down ?
 1B3D: C2 F2 1C    jp      nz,$1cf2    ; yes, skip ahead to handle
 
-1B40: 3A 15 62    ld      a,($6215)   ; load A with ladder status
+1B40: 3A 15 62    ld      a,(ladder_status_6215)   ; load A with ladder status
 1B43: A7          and     a           ; is mario on a ladder?
 1B44: C8          ret     z           ; no, return
 
-1B45: 3A 10 60    ld      a,(inputstate) ; load A with input
+1B45: 3A 10 60    ld      a,(inputstate_6010) ; load A with input
 1B48: CB 57       bit     2,a         ; is joystick pushed up ?
 1B4A: C2 03 1D    jp      nz,$1d03    ; yes, skip ahead to handle
 
@@ -5724,28 +5727,28 @@ Init:
 1B51: 72          ld      (hl),d      ; store D
 1B52: C3 45 1B    jp      $1b45       ; loop back
 
-1B55: 21 1E 62    ld      hl,$621e    ; load HL with jump coming down indicator
+1B55: 21 1E 62    ld      hl,jump_coming_down_indicator_621e    ; load HL with jump coming down indicator
 1B58: 35          dec     (hl)        ; decrease.  is it zero ?
 1B59: C0          ret     nz          ; no, return
 
 ; arrive here when jump is complete
 
-1B5A: 3A 18 62    ld      a,($6218)   ; load A with hammer grabbing indicator
-1B5D: 32 17 62    ld      ($6217),a   ; store into hammer indicator
-1B60: 21 07 62    ld      hl,$6207    ; load HL with movement indicator address
+1B5A: 3A 18 62    ld      a,(mario_is_grabbing_the_hammer_until_he_lands_6218)   ; load A with hammer grabbing indicator
+1B5D: 32 17 62    ld      (unknown_6217),a   ; store into hammer indicator
+1B60: 21 07 62    ld      hl,mario_movement_indicator_sprite_value_6207    ; load HL with movement indicator address
 1B63: 7E          ld      a,(hl)      ; load A with movement indicator
 1B64: E6 80       and     $80         ; mask bits.  we only care about bit 7, which we leave as is.  all other bits are now zero
 1B66: 77          ld      (hl),a      ; store into movement indicator.  mario is no longer jumping
 1B67: AF          xor     a           ; A := 0
-1B68: 32 02 62    ld      ($6202),a   ; set mario animation state to 0
+1B68: 32 02 62    ld      (put_back_6202),a   ; set mario animation state to 0
 1B6B: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
 ; jump initiated.  arrive from #1AE3 when jump pressed and jump not already underway etc.
 
 1B6E: 3E 01       ld      a,$01       ; A := 1
-1B70: 32 16 62    ld      ($6216),a   ; set jump indicator
-1B73: 21 10 62    ld      hl,$6210    ; load HL with mario's jump direction address
-1B76: 3A 10 60    ld      a,(inputstate) ; load A with copy of input
+1B70: 32 16 62    ld      (jumping_status_6216),a   ; set jump indicator
+1B73: 21 10 62    ld      hl,mario_jump_direction_6210    ; load HL with mario's jump direction address
+1B76: 3A 10 60    ld      a,(inputstate_6010) ; load A with copy of input
 1B79: 01 80 00    ld      bc,$0080    ; B:= 0, C := #80 = codes for jumping right
 1B7C: 1F          rra                 ; rotate input right.  is joystick moved right ?
 1B7D: DA 8A 1B    jp      c,$1b8a     ; yes, skip ahead
@@ -5770,24 +5773,24 @@ Init:
 1B92: 36 48       ld      (hl),$48
 1B94: 2C          inc     l           ; HL := #6214 (jump counter)
 1B95: 77          ld      (hl),a      ; clear jump counter
-1B96: 32 04 62    ld      ($6204),a
-1B99: 32 06 62    ld      ($6206),a
-1B9C: 3A 07 62    ld      a,($6207)   ; load movement indicator
+1B96: 32 04 62    ld      (unknown_6204),a
+1B99: 32 06 62    ld      (unknown_6206),a
+1B9C: 3A 07 62    ld      a,(mario_movement_indicator_sprite_value_6207)   ; load movement indicator
 1B9F: E6 80       and     $80         ; clear right 4 bits and leftmost bit
 1BA1: F6 0E       or      $0e         ; set right bits to E = 1110
-1BA3: 32 07 62    ld      ($6207),a   ; set jumping bits to indicate a jump in progress
-1BA6: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
-1BA9: 32 0E 62    ld      ($620e),a   ; save mario's Y position when jump
-1BAC: 21 81 60    ld      hl,$6081    ; load HL with sound buffer address for jumping
+1BA3: 32 07 62    ld      (mario_movement_indicator_sprite_value_6207),a   ; set jumping bits to indicate a jump in progress
+1BA6: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
+1BA9: 32 0E 62    ld      (unknown_620e),a   ; save mario's Y position when jump
+1BAC: 21 81 60    ld      hl,sound_buffer_address_for_jumping_6081    ; load HL with sound buffer address for jumping
 1BAF: 36 03       ld      (hl),$03    ; load sound buffer jumping sound for 3 units (3 frames?)
 1BB1: C9          ret                 ; return to main routine (#1983)
 
 ; arrive here when mario is already jumping from #1AC7
 
-1BB2: DD 21 00 62 ld      ix,$6200    ; load IX with start of array for mario
-1BB6: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+1BB2: DD 21 00 62 ld      ix,mario_array_6200    ; load IX with start of array for mario
+1BB6: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 1BB9: DD 77 0B    ld      (ix+$0b),a  ; store into +B
-1BBC: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+1BBC: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 1BBF: DD 77 0C    ld      (ix+$0c),a  ; store into +C = #620C = jump height
 1BC2: CD 9C 23    call    $239c       ; handle jump stuff ?
 1BC5: CD 1F 24    call    $241f       ; loads DE with something depending on mario's position
@@ -5800,7 +5803,7 @@ Init:
 1BD0: DD 36 11 80 ld      (ix+$11),$80; set +11 indicator to #80 (???)
 1BD4: DD CB 07 FE set     7,(ix+$07)  ; set bit 7 of +7 = sprite used = make mario face the other way
 
-1BD8: 3A 20 62    ld      a,($6220)   ; load A with falling too far indicator
+1BD8: 3A 20 62    ld      a,(falling_too_far_indicator_6220)   ; load A with falling too far indicator
 1BDB: 3D          dec     a           ; == 1 ? (falling too far?)
 1BDC: CA EC 1B    jp      z,$1bec     ; yes, skip ahead
 
@@ -5826,28 +5829,28 @@ Init:
 1C08: 3D          dec     a           ; decrease A.  mario landing ?
 1C09: CA 3A 1C    jp      z,$1c3a     ; yes, skip ahead to handle
 
-1C0C: 3A 1F 62    ld      a,($621f)   ; else load A with #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
+1C0C: 3A 1F 62    ld      a,(mario_jump_apex_621f)   ; else load A with #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 1C0F: 3D          dec     a           ; decrease A.  at zero ?  is mario at apex or on way down ?
 1C10: CA 76 1C    jp      z,$1c76     ; yes, skip ahead
 
-1C13: 3A 14 62    ld      a,($6214)   ; load A with jump counter
+1C13: 3A 14 62    ld      a,(jump_counter_6214)   ; load A with jump counter
 1C16: D6 14       sub     $14         ; == #14 ? (apex of jump)
 1C18: C2 33 1C    jp      nz,$1c33    ; no, skip ahead
 
 ; mario at apex of jump ?
 
 1C1B: 3E 01       ld      a,$01       ; A := 1
-1C1D: 32 1F 62    ld      ($621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
+1C1D: 32 1F 62    ld      (mario_jump_apex_621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 1C20: CD 53 28    call    $2853       ; check for items under mario
 1C23: A7          and     a           ; was an item jumped?
 1C24: CA A6 1D    jp      z,$1da6     ; no, jump ahead to update mario sprite and RET
 
 ; an item was jumped
 
-1C27: 32 42 63    ld      ($6342),a   ; yes, barrel has been jumped, set for later use
+1C27: 32 42 63    ld      (scoring_indicator_6342),a   ; yes, barrel has been jumped, set for later use
 1C2A: 3E 01       ld      a,$01       ; A := 1
-1C2C: 32 40 63    ld      ($6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
-1C2F: 32 25 62    ld      ($6225),a   ; store into bonus sound indicator
+1C2C: 32 40 63    ld      (bonus_indicator_6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
+1C2F: 32 25 62    ld      (bonus_sound_indicator_6225),a   ; store into bonus sound indicator
 
 1C32: 00          nop                 ; No operation [what was here ???]
 
@@ -5864,9 +5867,9 @@ Init:
 1C3B: CA 4F 1C    jp      z,$1c4f     ; if so, skip ahead
 
 1C3E: 3C          inc     a           ; increase A
-1C3F: 32 1F 62    ld      ($621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
+1C3F: 32 1F 62    ld      (mario_jump_apex_621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 1C42: AF          xor     a           ; A := 0
-1C43: 21 10 62    ld      hl,$6210    ; load HL with jump direction
+1C43: 21 10 62    ld      hl,mario_jump_direction_6210    ; load HL with jump direction
 1C46: 06 05       ld      b,$05       ; for B := 1 to 5
 
 1C48: 77          ld      (hl),a      ; clear this memory (jump direction, etc)
@@ -5877,20 +5880,20 @@ Init:
 
 ; jump almost complete ...
 
-1C4F: 32 16 62    ld      ($6216),a   ; store A into jump indicator
-1C52: 3A 20 62    ld      a,($6220)   ; load A with falling too far indicator
+1C4F: 32 16 62    ld      (jumping_status_6216),a   ; store A into jump indicator
+1C52: 3A 20 62    ld      a,(falling_too_far_indicator_6220)   ; load A with falling too far indicator
 1C55: EE 01       xor     $01         ; toggle rightmost bit [ change to LD A, #01 to enable infinite falling without death]
-1C57: 32 00 62    ld      ($6200),a   ; store into mario life indicator.  if mario fell too far, he will die.
-1C5A: 21 07 62    ld      hl,$6207    ; load HL with address of movement indicator
+1C57: 32 00 62    ld      (mario_array_6200),a   ; store into mario life indicator.  if mario fell too far, he will die.
+1C5A: 21 07 62    ld      hl,mario_movement_indicator_sprite_value_6207    ; load HL with address of movement indicator
 1C5D: 7E          ld      a,(hl)      ; load A with movement indicator
 1C5E: E6 80       and     $80         ; maks bits, leave bit 7 as is.  all other bits are zeroed.
 1C60: F6 0F       or      $0f         ; turn on all 4 low bits
 1C62: 77          ld      (hl),a      ; store result into movement indicator
 1C63: 3E 04       ld      a,$04       ; A := 4
-1C65: 32 1E 62    ld      ($621e),a   ; store into jump coming down indicator
+1C65: 32 1E 62    ld      (jump_coming_down_indicator_621e),a   ; store into jump coming down indicator
 1C68: AF          xor     a           ; A := 0
-1C69: 32 1F 62    ld      ($621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
-1C6C: 3A 25 62    ld      a,($6225)   ; load A with bonus sound indicator
+1C69: 32 1F 62    ld      (mario_jump_apex_621f),a   ; store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
+1C6C: 3A 25 62    ld      a,(bonus_sound_indicator_6225)   ; load A with bonus sound indicator
 1C6F: 3D          dec     a           ; was a bonus awarded?
 1C70: CC 95 1D    call    z,$1d95     ; yes, call this sub to play bonus sound
 
@@ -5898,8 +5901,8 @@ Init:
 
 ; mario is on way down from jump or falling
 
-1C76: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
-1C79: 21 0E 62    ld      hl,$620e    ; load HL with mario original Y position ?
+1C76: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
+1C79: 21 0E 62    ld      hl,unknown_620e    ; load HL with mario original Y position ?
 1C7C: D6 0F       sub     $0f         ; subtract #F
 1C7E: BE          cp      (hl)        ; compare.  is mario falling too far ?
 1C7F: DA A6 1D    jp      c,$1da6     ; no, jump ahead to update mario sprite and RET
@@ -5907,23 +5910,23 @@ Init:
 ; mario falling too far on a jump
 
 1C82: 3E 01       ld      a,$01       ; A := 1
-1C84: 32 20 62    ld      ($6220),a   ; store into falling too far indicator
-1C87: 21 84 60    ld      hl,$6084    ; load HL with address for falling sound
+1C84: 32 20 62    ld      (falling_too_far_indicator_6220),a   ; store into falling too far indicator
+1C87: 21 84 60    ld      hl,play_sound_for_falling_bouncer_6084    ; load HL with address for falling sound
 1C8A: 36 03       ld      (hl),$03    ; play falling sound for 3 units
 1C8C: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
 ; arrive here when joystick is being pressed right
 
 1C8F: 06 01       ld      b,$01       ; B := 1 = movement to right
-1C91: 3A 0F 62    ld      a,($620f)   ; load A with movement indicator
+1C91: 3A 0F 62    ld      a,(address_of_movement_indicator_620f)   ; load A with movement indicator
 1C94: A7          and     a           ; time to move mario ?
 1C95: C2 D2 1C    jp      nz,$1cd2    ; yes, jump ahead
 
-1C98: 3A 02 62    ld      a,($6202)   ; varies from 0, 2, 4, 1 when mario is walking left or right
+1C98: 3A 02 62    ld      a,(put_back_6202)   ; varies from 0, 2, 4, 1 when mario is walking left or right
 1C9B: 47          ld      b,a         ; copy into B. this is used in sub at #3009 called below
 1C9C: 3E 05       ld      a,$05       ; A := 5
 1C9E: CD 09 30    call    $3009       ; ??? change A depending on where mario is?
-1CA1: 32 02 62    ld      ($6202),a   ; put back
+1CA1: 32 02 62    ld      (put_back_6202),a   ; put back
 1CA4: E6 03       and     $03         ; mask bits, now between 0 and 3
 1CA6: F6 80       or      $80         ; turn on bit 7
 1CA8: C3 C2 1C    jp      $1cc2       ; skip ahead
@@ -5931,82 +5934,82 @@ Init:
 ; arrive here when joystick is being pressed left
 
 1CAB: 06 FF       ld      b,$ff       ; B := #FF = -1 (movement to left)
-1CAD: 3A 0F 62    ld      a,($620f)   ; load A with movement indicator
+1CAD: 3A 0F 62    ld      a,(address_of_movement_indicator_620f)   ; load A with movement indicator
 1CB0: A7          and     a           ; time to move mario?
 1CB1: C2 D2 1C    jp      nz,$1cd2    ; yes, skip ahead and move mario
 
-1CB4: 3A 02 62    ld      a,($6202)   ; varies from 0, 2, 4, 1 when mario is walking left or right
+1CB4: 3A 02 62    ld      a,(put_back_6202)   ; varies from 0, 2, 4, 1 when mario is walking left or right
 1CB7: 47          ld      b,a         ; copy to B.  this is used in sub at #3009 called below
 1CB8: 3E 01       ld      a,$01       ; A := 1
 1CBA: CD 09 30    call    $3009       ; ??? change A depending on where mario is?
-1CBD: 32 02 62    ld      ($6202),a   ; put back
+1CBD: 32 02 62    ld      (put_back_6202),a   ; put back
 1CC0: E6 03       and     $03         ; mask bits. now between 0 and 3
 
-1CC2: 21 07 62    ld      hl,$6207    ; load HL with mario movement indicator/sprite value
+1CC2: 21 07 62    ld      hl,mario_movement_indicator_sprite_value_6207    ; load HL with mario movement indicator/sprite value
 1CC5: 77          ld      (hl),a      ; store A into this
 1CC6: 1F          rra                 ; rotate right.  is A odd?
 1CC7: DC 8F 1D    call    c,$1d8f     ; yes , skip ahead to start walking sound and RET
 
 1CCA: 3E 02       ld      a,$02       ; A := 2
-1CCC: 32 0F 62    ld      ($620f),a   ; store into movement indicator (reset)
+1CCC: 32 0F 62    ld      (address_of_movement_indicator_620f),a   ; store into movement indicator (reset)
 1CCF: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
-1CD2: 21 03 62    ld      hl,$6203    ; load HL with mario X position address
+1CD2: 21 03 62    ld      hl,jump_if_bit_7_of_mario_x_position_is_set_6203    ; load HL with mario X position address
 1CD5: 7E          ld      a,(hl)      ; load A with mario X position
 1CD6: 80          add     a,b         ; add movement (either 1 or #FF)
 1CD7: 77          ld      (hl),a      ; store new result
-1Cd8: 3A 27 62    ld      a,($6227)   ; load A with screen number
+1Cd8: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 1Cdb: 3D          dec     a           ; are we on the girders?
 1Cdc: c2 Eb 1C    jp      nz,$1ceb    ; no, skip ahead
 
 1Cdf: 66          ld      h,(hl)      ; else load H with mario X position
-1Ce0: 3A 05 62    ld      a,($6205)   ; load A with mario Y position
+1Ce0: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario Y position
 1Ce3: 6f          ld      l,a         ; copy to L.  HL now has mario X,Y
 1Ce4: cd 33 23    call    $2333       ; check for movement up/down a girder, might also change Y position ?
 1Ce7: 7D          ld      a,l         ; load A with new Y position
-1Ce8: 32 05 62    ld      ($6205),a   ; store into Y position
+1Ce8: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store into Y position
 
-1CEB: 21 0F 62    ld      hl,$620f    ; load HL with address of movement indicator
+1CEB: 21 0F 62    ld      hl,address_of_movement_indicator_620f    ; load HL with address of movement indicator
 1CEE: 35          dec     (hl)        ; decrease movement indicator
 1CEF: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
 ; mario moving down on a ladder
 ; jump here from #1B3D
 
-1CF2: 3A 0F 62    ld      a,($620f)   ; load A with movmement indicator (from 3 to 0)
+1CF2: 3A 0F 62    ld      a,(address_of_movement_indicator_620f)   ; load A with movmement indicator (from 3 to 0)
 1CF5: A7          and     a           ; == 0 ?
 1CF6: C2 8A 1D    jp      nz,$1d8a    ; no, skip ahead, decrease indicator and return
 
 ; ok for mario to move
 
 1CF9: 3E 03       ld      a,$03       ; A := 3
-1CFB: 32 0F 62    ld      ($620f),a   ; reset movement indicator to 3
+1CFB: 32 0F 62    ld      (address_of_movement_indicator_620f),a   ; reset movement indicator to 3
 1CFE: 3E 02       ld      a,$02       ; A := 2 pixels to move down
 1D00: C3 11 1D    jp      $1d11       ; skip ahead
 
 ; mario moving up on a ladder
 ; jump here from #1B4A
 
-1D03: 3A 0F 62    ld      a,($620f)   ; load A with movement indicator (from 4 to 0)
+1D03: 3A 0F 62    ld      a,(address_of_movement_indicator_620f)   ; load A with movement indicator (from 4 to 0)
 1D06: A7          and     a           ; time to move mario ?
 1D07: C2 76 1D    jp      nz,$1d76    ; no, skip ahead
 
 1D0A: 3E 04       ld      a,$04       ; A := 4
-1D0C: 32 0F 62    ld      ($620f),a   ; reset movement indicator to 4 (slower movement going up)
+1D0C: 32 0F 62    ld      (address_of_movement_indicator_620f),a   ; reset movement indicator to 4 (slower movement going up)
 1D0F: 3E FE       ld      a,$fe       ; A := #FE = -2 pixels movement
 
-1D11: 21 05 62    ld      hl,$6205    ; load HL with mario Y position address
+1D11: 21 05 62    ld      hl,return_without_taking_the_ladder_6205    ; load HL with mario Y position address
 1D14: 86          add     a,(hl)      ; add A to Y position
 1D15: 77          ld      (hl),a      ; store result into Y position
 1D16: 47          ld      b,a         ; copy to B
-1D17: 3A 22 62    ld      a,($6222)   ; load A with ladder toggle
+1D17: 3A 22 62    ld      a,(ladder_toggle_6222)   ; load A with ladder toggle
 1D1A: EE 01       xor     $01         ; toggle the bit
-1D1C: 32 22 62    ld      ($6222),a   ; store.  is it zero?
+1D1C: 32 22 62    ld      (ladder_toggle_6222),a   ; store.  is it zero?
 1D1F: C2 51 1D    jp      nz,$1d51    ; no, skip ahead
 
 1D22: 78          ld      a,b         ; A := B =  mario Y position
 1D23: C6 08       add     a,$08       ; add 8 [offset for mario's actual position ???]
-1D25: 21 1C 62    ld      hl,$621c    ; load HL with Y value of top of ladder
+1D25: 21 1C 62    ld      hl,y_value_of_top_of_ladder_621c    ; load HL with Y value of top of ladder
 1D28: BE          cp      (hl)        ; is mario at top of ladder ?
 1D29: CA 67 1D    jp      z,$1d67     ; yes, skip ahead to handle
 
@@ -6025,14 +6028,14 @@ Init:
 1D3E: 05          dec     b           ; B := 3
 
 1D3F: 3E 80       ld      a,$80       ; A := #80
-1D41: 21 07 62    ld      hl,$6207    ; load HL with address of mario movement indicator/sprite value
+1D41: 21 07 62    ld      hl,mario_movement_indicator_sprite_value_6207    ; load HL with address of mario movement indicator/sprite value
 1D44: A6          and     (hl)        ; mask bits with movement
 1D45: EE 80       xor     $80         ; toggle bit 7
 1D47: B0          or      b           ; turn on bits based on ladder position
 1D48: 77          ld      (hl),a      ; store into mario movement indicator/sprite value
 
 1D49: 3E 01       ld      a,$01       ; A := 1
-1D4B: 32 15 62    ld      ($6215),a   ; store into ladder status.  mario is on a ladder now
+1D4B: 32 15 62    ld      (ladder_status_6215),a   ; store into ladder status.  mario is on a ladder now
 1D4E: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
 1D51: 2D          dec     l
@@ -6041,9 +6044,9 @@ Init:
 1D54: F6 03       or      $03         ; turn on bits 0 and 1
 1D56: CB 97       res     2,a         ; clear bit 2
 1D58: 77          ld      (hl),a      ; store into mario sprite
-1D59: 3A 24 62    ld      a,($6224)   ; load A with sound alternator
+1D59: 3A 24 62    ld      a,(store_result_6224)   ; load A with sound alternator
 1D5C: EE 01       xor     $01         ; toggle bit 0
-1D5E: 32 24 62    ld      ($6224),a   ; store result
+1D5E: 32 24 62    ld      (store_result_6224),a   ; store result
 1D61: CC 8F 1D    call    z,$1d8f     ; if zero, play walking sound for moving on ladder
 
 1D64: C3 49 1D    jp      $1d49       ; jump back
@@ -6051,47 +6054,47 @@ Init:
 ; arrive from #1D29 when mario at top or bottom of ladder
 
 1D67: 3E 06       ld      a,$06       ; A := 6
-1D69: 32 07 62    ld      ($6207),a   ; store into mario movement indicator/sprite value
+1D69: 32 07 62    ld      (mario_movement_indicator_sprite_value_6207),a   ; store into mario movement indicator/sprite value
 1D6C: AF          xor     a           ; A := 0
-1D6D: 32 19 62    ld      ($6219),a   ; clear this status indicator
-1D70: 32 15 62    ld      ($6215),a   ; clear ladder status.  mario no longer on ladder
+1D6D: 32 19 62    ld      (store_1_into_status_indicator_6219),a   ; clear this status indicator
+1D70: 32 15 62    ld      (ladder_status_6215),a   ; clear ladder status.  mario no longer on ladder
 1D73: C3 A6 1D    jp      $1da6       ; jump ahead to update mario sprite and RET
 
 ; jump here from #1D07 when going up a ladder but not actually moving
 
-1D76: 3A 1A 62    ld      a,($621a)   ; load A with this indicator.  set when mario is on moving ladder or broken ladder
+1D76: 3A 1A 62    ld      a,(moving_ladder_indicator_621a)   ; load A with this indicator.  set when mario is on moving ladder or broken ladder
 1D79: A7          and     a           ; is mario boarding or on a retracting or broken ladder?
 1D7A: CA 8A 1D    jp      z,$1d8a     ; no, skip ahead
 
 ; mario on or moving onto a rectracting or broken ladder
 
-1D7D: 32 19 62    ld      ($6219),a   ; store 1 into status indicator
-1D80: 3A 1C 62    ld      a,($621c)   ; load A with Y value of top of ladder
+1D7D: 32 19 62    ld      (store_1_into_status_indicator_6219),a   ; store 1 into status indicator
+1D80: 3A 1C 62    ld      a,(y_value_of_top_of_ladder_621c)   ; load A with Y value of top of ladder
 1D83: D6 13       sub     $13         ; subtract #13
-1D85: 21 05 62    ld      hl,$6205    ; load HL with mario Y position address
+1D85: 21 05 62    ld      hl,return_without_taking_the_ladder_6205    ; load HL with mario Y position address
 1D88: BE          cp      (hl)        ; is mario at or above the top of ladder ?
 1D89: D0          ret     nc          ; yes, return without changing movement
 
-1D8A: 21 0F 62    ld      hl,$620f    ; else load HL with address of movement indicator
+1D8A: 21 0F 62    ld      hl,address_of_movement_indicator_620f    ; else load HL with address of movement indicator
 1D8D: 35          dec     (hl)        ; decrease
 1D8E: C9          ret                 ; return
 
 ; mario is walking
 
 1D8F: 3E 03       ld      a,$03       ; load sound duration of 3 for walking
-1D91: 32 80 60    ld      ($6080),a   ; store into walking sound buffer
+1D91: 32 80 60    ld      (walking_sound_buffer_6080),a   ; store into walking sound buffer
 1D94: C9          ret                 ; return
 
 ; arrive here when walking over a rivet, not jumping.  from #1AB9, or from #1C70
 
-1D95: 32 25 62    ld      ($6225),a   ; store A into bonus sound indicator.  A is zero so this clears the indicator
-1D98: 3A 27 62    ld      a,($6227)   ; load A with screen number
+1D95: 32 25 62    ld      (bonus_sound_indicator_6225),a   ; store A into bonus sound indicator.  A is zero so this clears the indicator
+1D98: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 1D9B: 3D          dec     a           ; is this the girders?
 1D9C: C8          ret     z           ; yes , then return, we don't play this sound for the girders
 
 ; play bonus sound
 
-1D9D: 21 8A 60    ld      hl,$608a    ; else load HL with sound address
+1D9D: 21 8A 60    ld      hl,sound_buffer_address_608a    ; else load HL with sound address
 1DA0: 36 0D       ld      (hl),$0d    ; play bonus sound
 1DA2: 2C          inc     l           ; HL := #608B = sound duration
 1DA3: 36 03       ld      (hl),$03    ; set sound duration to 3
@@ -6099,16 +6102,16 @@ Init:
 
 ; update mario sprite
 
-1DA6: 21 4C 69    ld      hl,$694c    ; load HL with mario sprite X position
-1DA9: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+1DA6: 21 4C 69    ld      hl,mario_sprite_x_position_694c    ; load HL with mario sprite X position
+1DA9: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 1DAC: 77          ld      (hl),a      ; store into hardware sprite mario X position
-1DAD: 3A 07 62    ld      a,($6207)   ; load A with movement indicator
+1DAD: 3A 07 62    ld      a,(mario_movement_indicator_sprite_value_6207)   ; load A with movement indicator
 1DB0: 2C          inc     l           ; HL := #694D = hardware mario sprite
 1DB1: 77          ld      (hl),a      ; store into hardware mario sprite value
-1DB2: 3A 08 62    ld      a,($6208)   ; load A with mario color
+1DB2: 3A 08 62    ld      a,(mario_color_6208)   ; load A with mario color
 1DB5: 2C          inc     l           ; HL := #694E = hardware mario sprite color
 1DB6: 77          ld      (hl),a      ; store into mario sprite color
-1DB7: 3A 05 62    ld      a,($6205)   ; load A with mario Y position
+1DB7: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario Y position
 1DBA: 2C          inc     l           ; HL := #694F = mario sprite Y position
 1DBB: 77          ld      (hl),a      ; store into mario sprite Y position
 1DBC: C9          ret                 ; return
@@ -6118,7 +6121,7 @@ Init:
 ; also called from other areas
 
 
-1DBD: 3A 40 63    ld      a,($6340)   ; load A with #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
+1DBD: 3A 40 63    ld      a,(bonus_indicator_6340)   ; load A with #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 1DC0: EF          rst     $28         ; jump based on A
 
 1DC1  49 1E                             ; #1E49 = no item.  returns immediately
@@ -6129,10 +6132,10 @@ Init:
 ; an item was just picked up / jumped over / hit with hammer
 
 1DC9: 3E 40       ld      a,$40       ; A := #40
-1DCB: 32 41 63    ld      ($6341),a   ; store into timer
+1DCB: 32 41 63    ld      (timer_6341),a   ; store into timer
 1DCE: 3E 02       ld      a,$02       ; A := 2
-1DD0: 32 40 63    ld      ($6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
-1DD3: 3A 42 63    ld      a,($6342)   ; load A with scoring indicator
+1DD0: 32 40 63    ld      (bonus_indicator_6340),a   ; store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
+1DD3: 3A 42 63    ld      a,(scoring_indicator_6342)   ; load A with scoring indicator
 1DD6: 1F          rra                 ; roll right.  is this a jumped item?
 1DD7: DA 70 3E    jp      c,$3e70     ; yes, award points for jumping items [ patch ? orig code had JP C,#1E25 ??? ]
 
@@ -6144,9 +6147,9 @@ Init:
 
 ; else it was a bonus item pickup
 
-1DE2: 21 85 60    ld      hl,$6085    ; else load HL with bonus sound address
+1DE2: 21 85 60    ld      hl,play_sound_for_bonus_6085    ; else load HL with bonus sound address
 1DE5: 36 03       ld      (hl),$03    ; play bonus sound for 3 duration
-1DE7: 3A 29 62    ld      a,($6229)   ; load A with level #
+1DE7: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
 1DEA: 3D          dec     a           ; decrease A.  is this level 1 ?
 1DEB: cA 00 1E    jp      z,$1e00     ; yes, jump ahead for 300 pts
 
@@ -6157,7 +6160,7 @@ Init:
 
 ; blue barrel hit with hammer
 
-1DF5: 3A 18 60    ld      a,(rngtimer1) ; load timer, a psuedo random number
+1DF5: 3A 18 60    ld      a,(rngtimer1_6018) ; load timer, a psuedo random number
 1DF8: 1F          rra                 ; roll right = 50% chance of 500 points
 1DF9: DA 08 1E    jp      c,$1e08     ; award 500 points
 
@@ -6185,7 +6188,7 @@ Init:
 
 ; arrive here when bonus item picked up or smashed with hammer
 
-1E18: 2A 43 63    ld      hl,($6343)  ; load HL with contents of #6343 , this gives the address of the sprite location
+1E18: 2A 43 63    ld      hl,(unknown_for_use_later_6343)  ; load HL with contents of #6343 , this gives the address of the sprite location
 1E1B: 7E          ld      a,(hl)      ; load A with the X position of the sprite in question
 1E1C: 36 00       ld      (hl),$00    ; clear the sprite from the screen
 1E1E: 2C          inc     l           ; increase L 3 times
@@ -6221,17 +6224,17 @@ Init:
         3E85  C3281E    JP      #1E28           ; award points
 
 1E28: CD 9F 30    call    $309f       ; insert task to add score
-1E2B: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+1E2B: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 1E2E: C6 14       add     a,$14       ; add #14
 1E30: 4F          ld      c,a         ; store into C
-1E31: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+1E31: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 
 1E34: 00          nop
 1E35: 00          nop                 ; [ what used to be here?  was it LD B,#7B to set sprite for 100 pts? ]
 
 ; draw the bonus score on the screen
 
-1E36: 21 30 6A    ld      hl,$6a30    ; load HL with scoring sprite start
+1E36: 21 30 6A    ld      hl,unknown_6a30    ; load HL with scoring sprite start
 1E39: 77          ld      (hl),a      ; store X position
 1E3A: 2C          inc     l           ; next location
 1E3B: 70          ld      (hl),b      ; store sprite graphic
@@ -6241,43 +6244,43 @@ Init:
 1E40: 71          ld      (hl),c      ; store Y position
 1E41: 3E 05       ld      a,$05       ; A := 5 = binary 0101
 1E43: F7          rst     $30         ; only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
-1E44: 21 85 60    ld      hl,$6085    ; load HL with bonus sound address
+1E44: 21 85 60    ld      hl,play_sound_for_bonus_6085    ; load HL with bonus sound address
 1E47: 36 03       ld      (hl),$03    ; play bonus sound for 3 duration
 1E49: C9          ret                 ; return
 
 ; arrive here from #1DC0 when bonus appears
 
-1E4A: 21 41 63    ld      hl,$6341    ; load HL with timer
+1E4A: 21 41 63    ld      hl,timer_6341    ; load HL with timer
 1E4D: 35          dec     (hl)        ; has it run out yet ?
 1E4E: C0          ret     nz          ; no, return
 
 1E4F: AF          xor     a           ; else A := 0
-1E50: 32 30 6A    ld      ($6a30),a   ; clear this
-1E53: 32 40 63    ld      ($6340),a   ; clear this
+1E50: 32 30 6A    ld      (unknown_6a30),a   ; clear this
+1E53: 32 40 63    ld      (bonus_indicator_6340),a   ; clear this
 1E56: C9          ret                 ; return
 
 ; called from main routine at #19B9
 ; checks for end of level ?
 
-1E57: 3A 27 62    ld      a,($6227)   ; load a with screen number
+1E57: 3A 27 62    ld      a,(screen_number_6227)   ; load a with screen number
 1E5A: cb 57       bit     2,a         ; are we on the rivets?
 1E5C: c2 80 1E    jp      nz,$1e80    ; yes, skip ahead to handle
 
 1E5f: 1F          rra                 ; else rotate right with carry
-1E60: 3A 05 62    ld      a,($6205)   ; load A with y position of mario
+1E60: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with y position of mario
 1E63: dA 7A 1E    jp      c,$1e7a     ; skip ahead on girders and elevators
 
 1E66: fe 51       cp      $51         ; else on the conveyors.  is mario high enough to end level?
 1E68: d0          ret     nc          ; no, return
 
-1E69: 3A 03 62    ld      a,($6203)   ; else load A with mario's X position
+1E69: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; else load A with mario's X position
 1E6C: 17          rla                 ; on left or right side of screen?
 
 1E6D: 3E 00       ld      a,$00       ; load A with #00.  sprite for facing left
 1E6F: DA 74 1E    jp      c,$1e74     ; if on left side, skip next step
 
 1E72: 3E 80       ld      a,$80       ; else load A with sprite facing right
-1E74: 32 4D 69    ld      ($694d),a   ; set mario sprite
+1E74: 32 4D 69    ld      (mario_sprite_value_694d),a   ; set mario sprite
 1E77: C3 85 1E    jp      $1e85       ; jump ahead
 
 ; check for end of level on girders and elevators
@@ -6289,19 +6292,19 @@ Init:
 
 ; arrive here when on rivets
 
-1E80: 3A 90 62    ld      a,($6290)   ; load A with number of rivets left
+1E80: 3A 90 62    ld      a,(number_of_rivets_left_6290)   ; load A with number of rivets left
 1E83: A7          and     a           ; all done with rivets ?
 1E84: C0          ret     nz          ; no, return
 
 1E85: 3E 16       ld      a,$16       ; else A := #16
-1E87: 32 0A 60    ld      (gamemode2),a; store into game mode2
+1E87: 32 0A 60    ld      (gamemode2_600a),a; store into game mode2
 1E8A: E1          pop     hl          ; pop stack to get higher address
 1E8B: C9          ret                 ; return to a higher level [returns to #00D2]
 
 ; called from main routine at #197D
 ; handles items hit with hammer
 
-1E8C: 3A 50 63    ld      a,($6350)   ; load A with hammer hit item indicator
+1E8C: 3A 50 63    ld      a,(item_hit_indicator_unknown_6350)   ; load A with hammer hit item indicator
 1E8F: A7          and     a           ; is an item being smashed ?
 1E90: C8          ret     z           ; no, return
 
@@ -6309,7 +6312,7 @@ Init:
 1E94: E1          pop     hl          ; then return to a higher sub
 1E95: C9          ret                 ; returns to #00D2
 
-1E96: 3A 45 63    ld      a,($6345)   ; load A with this
+1E96: 3A 45 63    ld      a,(item_hit_phase_counter_address_6345)   ; load A with this
 
 ; #6345 - usually 0.  changes to 1, then 2 when items are hit with the hammer
 
@@ -6321,22 +6324,22 @@ Init:
 
 ; arrive right when an item is hit
 
-1EA0: 3A 52 63    ld      a,($6352)   ; load A with ???
+1EA0: 3A 52 63    ld      a,(unknown_6352)   ; load A with ???
 1EA3: FE 65       cp      $65         ; == #65 ?
-1EA5: 21 B8 69    ld      hl,$69b8    ; load HL with sprites for pies
+1EA5: 21 B8 69    ld      hl,start_of_pie_sprites_69b8    ; load HL with sprites for pies
 1EA8: CA B4 1E    jp      z,$1eb4     ; yes, skip next 3 steps
 
-1EAB: 21 D0 69    ld      hl,$69d0    ; load HL with start of fire sprites ???
+1EAB: 21 D0 69    ld      hl,start_of_firefox_sprites_69d0    ; load HL with start of fire sprites ???
 1EAE: DA B4 1E    jp      c,$1eb4     ; if carry, then skip next step
 
-1EB1: 21 80 69    ld      hl,$6980    ; HL is X position of a barrel
+1EB1: 21 80 69    ld      hl,start_of_sprite_memory_for_bouncers_6980    ; HL is X position of a barrel
 
-1EB4: DD 2A 51 63 ld      ix,($6351)  ; load IX with start of item array for the item hit
+1EB4: DD 2A 51 63 ld      ix,(unknown_6351)  ; load IX with start of item array for the item hit
 1EB8: 16 00       ld      d,$00       ; D := 0
-1EBA: 3A 53 63    ld      a,($6353)   ; load A with the offset for each item in the array
+1EBA: 3A 53 63    ld      a,(unknown_6353)   ; load A with the offset for each item in the array
 1EBD: 5F          ld      e,a         ; copy to E.  DE now has the offset
 1EBE: 01 04 00    ld      bc,$0004    ; BC := 4
-1EC1: 3A 54 63    ld      a,($6354)   ; load A with the index of the item hit
+1EC1: 3A 54 63    ld      a,(unknown_6354)   ; load A with the index of the item hit
 1EC4: A7          and     a           ; == 0 ?
 1EC5: CA CF 1E    jp      z,$1ecf     ; yes, skip ahead, we use the default HL and IX
 
@@ -6363,8 +6366,8 @@ Init:
 
 1EDC: 3E 04       ld      a,$04       ; else A := 4, used for random points (blue barrel, sometimes fire, sometimes pie)
 
-1EDE: 32 42 63    ld      ($6342),a   ; store A into scoring indicator
-1EE1: 01 2C 6A    ld      bc,$6a2c    ; load BC with scoring sprite address
+1EDE: 32 42 63    ld      (scoring_indicator_6342),a   ; store A into scoring indicator
+1EE1: 01 2C 6A    ld      bc,location_of_item_hit_6a2c    ; load BC with scoring sprite address
 1EE4: 7E          ld      a,(hl)      ; load A with sprite value ?
 1EE5: 36 00       ld      (hl),$00    ; clear the sprite that was hit
 1EE7: 02          ld      (bc),a      ; store sprite value into the scoring sprite
@@ -6380,7 +6383,7 @@ Init:
 1EF3: 2C          inc     l           ; next
 1EF4: 7E          ld      a,(hl)      ; load A with Y value for sprite hit
 1EF5: 02          ld      (bc),a      ; store into Y value for scoring sprite
-1EF6: 21 45 63    ld      hl,$6345    ; load HL with item hit phase counter address
+1EF6: 21 45 63    ld      hl,item_hit_phase_counter_address_6345    ; load HL with item hit phase counter address
 
 ; #6345 - usually 0.  changes to 1, then 2 when items are hit with the hammer
 ; item has been hit by hammer
@@ -6390,7 +6393,7 @@ Init:
 1EFB: 36 06       ld      (hl),$06    ; set timer to 6
 1EFD: 2C          inc     l           ; HL := #6347 = counter for number of times to change between circle and small circle
 1EFE: 36 05       ld      (hl),$05    ; set to 5
-1F00: 21 8A 60    ld      hl,$608a    ; load HL with sound buffer address
+1F00: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with sound buffer address
 1F03: 36 06       ld      (hl),$06    ; play sound for hammering object
 1F05: 2C          inc     l           ; HL := 608B = sound duration
 1F06: 36 03       ld      (hl),$03    ; set duration to 3
@@ -6398,7 +6401,7 @@ Init:
 
 ; item has been hit by hammer , phase 2 of 3
 
-1F09: 21 46 63    ld      hl,$6346    ; load HL with timer
+1F09: 21 46 63    ld      hl,timer_6346    ; load HL with timer
 1F0C: 35          dec     (hl)        ; count down.  zero ?
 1F0D: C0          ret     nz          ; no, return
 
@@ -6407,7 +6410,7 @@ Init:
 1F11: 35          dec     (hl)        ; decrease counter.  zero?
 1F12: CA 1D 1F    jp      z,$1f1d     ; yes, skip ahead
 
-1F15: 21 2D 6A    ld      hl,$6a2d    ; else load HL with scoring sprite graphic
+1F15: 21 2D 6A    ld      hl,sprite_graphic_6a2d    ; else load HL with scoring sprite graphic
 1F18: 7E          ld      a,(hl)      ; get value
 1F19: EE 01       xor     $01         ; toggle bit 0 = change sprite to small circle or back again
 1F1B: 77          ld      (hl),a      ; store
@@ -6421,7 +6424,7 @@ Init:
 
 ; arrive from jump at #1E99 when an item is hit with hammer (last step of 3)
 
-1F23: 21 46 63    ld      hl,$6346    ; load HL with timer?
+1F23: 21 46 63    ld      hl,timer_6346    ; load HL with timer?
 1F26: 35          dec     (hl)        ; count down.  zero ?
 1F27: C0          ret     nz          ; no, return
 
@@ -6430,7 +6433,7 @@ Init:
 1F2B: 35          dec     (hl)        ; decrease counter.  zero?
 1F2C: CA 34 1F    jp      z,$1f34     ; yes, skip ahead
 
-1F2F: 21 2D 6A    ld      hl,$6a2d    ; no, load HL with sprite graphic
+1F2F: 21 2D 6A    ld      hl,sprite_graphic_6a2d    ; no, load HL with sprite graphic
 1F32: 34          inc     (hl)        ; increase
 1F33: C9          ret                 ; return
 
@@ -6438,49 +6441,49 @@ Init:
 1F35: 2D          dec     l           ; HL := 6345
 1F36: AF          xor     a           ; A := 0
 1F37: 77          ld      (hl),a      ; store into HL.  reset the item being hit with hammer
-1F38: 32 50 63    ld      ($6350),a   ; store into item hit indicator
+1F38: 32 50 63    ld      (item_hit_indicator_unknown_6350),a   ; store into item hit indicator
 1F3B: 3C          inc     a           ; A := 11:18 AM 6/15/2009
-1F3C: 32 40 63    ld      ($6340),a   ; store into bonus indicator
-1F3F: 21 2C 6A    ld      hl,$6a2c    ; load HL with location of item hit
-1F42: 22 43 63    ld      ($6343),hl  ; store into #6343 for use later
+1F3C: 32 40 63    ld      (bonus_indicator_6340),a   ; store into bonus indicator
+1F3F: 21 2C 6A    ld      hl,location_of_item_hit_6a2c    ; load HL with location of item hit
+1F42: 22 43 63    ld      (unknown_for_use_later_6343),hl  ; store into #6343 for use later
 1F45: C9          ret                 ; return
 
 ; called from main routine at #19A4
 
-1F46: 3A 21 62    ld      a,($6221)   ; load A with falling indicator.  also set when mario lands from jumping off elevator
+1F46: 3A 21 62    ld      a,(mario_falling_indicator_6221)   ; load A with falling indicator.  also set when mario lands from jumping off elevator
 1F49: A7          and     a           ; is mario falling?
 1F4A: C8          ret     z           ; no, return
 
 ; mario is falling
 
 1F4B: AF          xor     a           ; A := 0
-1F4C: 32 04 62    ld      ($6204),a
-1F4F: 32 06 62    ld      ($6206),a
-1F52: 32 21 62    ld      ($6221),a   ; clear mario falling indicator
-1F55: 32 10 62    ld      ($6210),a   ; clear jump direction
-1F58: 32 11 62    ld      ($6211),a
-1F5B: 32 12 62    ld      ($6212),a   ; clear this indicator (???)
-1F5E: 32 13 62    ld      ($6213),a
-1F61: 32 14 62    ld      ($6214),a   ; clear jump counter
+1F4C: 32 04 62    ld      (unknown_6204),a
+1F4F: 32 06 62    ld      (unknown_6206),a
+1F52: 32 21 62    ld      (mario_falling_indicator_6221),a   ; clear mario falling indicator
+1F55: 32 10 62    ld      (mario_jump_direction_6210),a   ; clear jump direction
+1F58: 32 11 62    ld      (unknown_6211),a
+1F5B: 32 12 62    ld      (this_indicator_6212),a   ; clear this indicator (???)
+1F5E: 32 13 62    ld      (unknown_6213),a
+1F61: 32 14 62    ld      (jump_counter_6214),a   ; clear jump counter
 1F64: 3C          inc     a           ; A := 1
-1F65: 32 16 62    ld      ($6216),a   ; set jump indicator
-1F68: 32 1F 62    ld      ($621f),a   ; set #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
-1F6B: 3A 05 62    ld      a,($6205)   ; load A with ???
-1F6E: 32 0E 62    ld      ($620e),a   ; store into ???
+1F65: 32 16 62    ld      (jumping_status_6216),a   ; set jump indicator
+1F68: 32 1F 62    ld      (mario_jump_apex_621f),a   ; set #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
+1F6B: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with ???
+1F6E: 32 0E 62    ld      (unknown_620e),a   ; store into ???
 1F71: C9          ret                 ; return
 
 ; called from main routine at #1983
 ; used to roll barrels
 
-1F72: 3A 27 62    ld      a,($6227)   ; load a with screen number
+1F72: 3A 27 62    ld      a,(screen_number_6227)   ; load a with screen number
 1F75: 3D          dec     a           ; is this the girders ?
 1F76: c0          ret     nz          ; no, return
 
 ; yes, we are on girders
 ; this subroutine checks the barrels, if any are rolling it does something, otherwise returns
 
-1F77: DD 21 00 67 ld      ix,$6700    ; load IX with start of barrel array
-1F7B: 21 80 69    ld      hl,$6980    ; load HL with start of sprites used for barrels
+1F77: DD 21 00 67 ld      ix,start_of_barrel_info_table_6700    ; load IX with start of barrel array
+1F7B: 21 80 69    ld      hl,start_of_sprite_memory_for_bouncers_6980    ; load HL with start of sprites used for barrels
 1F7E: 11 20 00    ld      de,$0020    ; load DE with offset of #20.  used for checking next barrel
 1F81: 06 0A       ld      b,$0a       ; for B = 1 to #0A ( do for each barrel)
 
@@ -6678,7 +6681,7 @@ Init:
 
 ; normal barrel traversed edge
 
-20A9: 21 05 62    ld      hl,$6205    ; load HL with mario's Y position address
+20A9: 21 05 62    ld      hl,return_without_taking_the_ladder_6205    ; load HL with mario's Y position address
 20AC: DD 7E 05    ld      a,(ix+$05)  ; load A with +5 = barrel's Y position
 20AF: D6 16       sub     $16         ; subtract #16
 20B1: BE          cp      (hl)        ; compare to mario Y position.  is the barrel below mario?
@@ -6792,31 +6795,31 @@ Init:
 2172: 78          ld      a,b         ; yes, load A with B which has the value of the ladder from the check ??
 2173: D6 05       sub     $05         ; subtract 5
 2175: DD 77 17    ld      (ix+$17),a  ; store into +17 to indicate which ladder we might be going down ???
-2178: 3A 48 63    ld      a,($6348)   ; get status of the oil can fire
+2178: 3A 48 63    ld      a,(the_oil_can_is_on_fire_6348)   ; get status of the oil can fire
 217B: A7          and     a           ; is the fire lit ?
 217C: CA B2 21    jp      z,$21b2     ; no, always take ladders before oil is lit
 
-217F: 3A 05 62    ld      a,($6205)   ; else load A with mario's Y position + 5
+217F: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; else load A with mario's Y position + 5
 2182: D6 04       sub     $04         ; subtract 4
 2184: BA          cp      d           ; is the barrel already below mario  ?
 2185: D8          ret     c           ; yes, return without taking ladder
 
-2186: 3A 80 63    ld      a,($6380)   ; else load A with difficulty from 1 to 5.  usually the level but increases during play
+2186: 3A 80 63    ld      a,(unknown_6380)   ; else load A with difficulty from 1 to 5.  usually the level but increases during play
 2189: 1F          rra                 ; roll right (div 2) .  now can be 0, 1, or 2
 218A: 3C          inc     a           ; increment.  result is now 1, 2, or 3 based on skill level
 218B: 47          ld      b,a         ; store into B
-218C: 3A 18 60    ld      a,(rngtimer1) ; load A with random timer ?
+218C: 3A 18 60    ld      a,(rngtimer1_6018) ; load A with random timer ?
 218F: 4F          ld      c,a         ; store into C for later use ?
 2190: E6 03       and     $03         ; mask bits.   result now random number between 0 and 3
 2192: B8          cp      b           ; compare with value computed above based on skill
 2193: D0          ret     nc          ; return if greater.  on highest skill this works 75% of time, only returns on 3
 
-2194: 21 10 60    ld      hl,inputstate; load HL with player input.
+2194: 21 10 60    ld      hl,inputstate_6010; load HL with player input.
 
 ; InputState - copy of RawInput, except when jump is pressed, bit 7 is set momentarily
 ; RawInput - right sets bit 0, left sets bit 1, up sets bit 2, down sets bit 3, jump sets bit 4
 
-2197: 3A 03 62    ld      a,($6203)   ; load A with mario's x position
+2197: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's x position
 219A: BB          cp      e           ; compare with barrel's x position
 219B: CA B2 21    jp      z,$21b2     ; if equal, then go down ladder
 
@@ -6878,13 +6881,13 @@ Init:
 ; called during attract mode only from #1977
 
 21EE: 11 D1 21    ld      de,$21d1    ; load DE with start of table data
-21F1: 21 CC 63    ld      hl,$63cc    ; load HL with state of attract mode
+21F1: 21 CC 63    ld      hl,state_of_attract_mode_63cc    ; load HL with state of attract mode
 21F4: 7E          ld      a,(hl)      ; load A with state
 21F5: 07          rlca                ; rotate left (x2)
 21F6: 83          add     a,e         ; add to E to get the movement
 21F7: 5F          ld      e,a         ; put back
 21F8: 1A          ld      a,(de)      ; load A with data from table
-21F9: 32 10 60    ld      (inputstate),a; store into copy of input
+21F9: 32 10 60    ld      (inputstate_6010),a; store into copy of input
 21FC: 2C          inc     l           ; HL := #63CD (timer)
 21FD: 7E          ld      a,(hl)      ; load timer
 21FE: 35          dec     (hl)        ; decrement
@@ -6903,13 +6906,13 @@ Init:
 2207: 3E 02       ld      a,$02       ; load A with 2 = 0010 binary
 2209: F7          rst     $30         ; only continues here on conveyors, else returns from subroutine
 
-220A: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+220A: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 220D: 1F          rra                 ; time to do this ?
-220E: 21 80 62    ld      hl,$6280    ; load HL with left side rectractable ladder
+220E: 21 80 62    ld      hl,left_side_rectractable_ladder_6280    ; load HL with left side rectractable ladder
 2211: 7E          ld      a,(hl)      ; load A with ladder status
 2212: DA 19 22    jp      c,$2219     ; if clock is odd, skip next 2 steps
 
-2215: 21 88 62    ld      hl,$6288    ; load HL with right side retractable ladder
+2215: 21 88 62    ld      hl,right_side_retractable_ladder_6288    ; load HL with right side retractable ladder
 2218: 7E          ld      a,(hl)      ; load A with ladder status
 
 2219: E5          push    hl          ; save HL
@@ -6935,29 +6938,29 @@ Init:
 2231: CD 43 22    call    $2243       ; only continue below if mario is on the ladder
 
 2234: 3E 01       ld      a,$01       ; A := 1
-2236: 32 1A 62    ld      ($621a),a   ; store into moving ladder indicator
+2236: 32 1A 62    ld      (moving_ladder_indicator_621a),a   ; store into moving ladder indicator
 2239: C9          ret                 ; return
 
 223A: 2C          inc     l           ; HL := #628A or #6282
 223B: CD 43 22    call    $2243       ; only continue below if mario is on the ladder, else RET
 
 223E: AF          xor     a           ; A := 0
-223F: 32 1A 62    ld      ($621a),a   ; store into moving ladder indicator
+223F: 32 1A 62    ld      (moving_ladder_indicator_621a),a   ; store into moving ladder indicator
 2242: C9          ret                 ; return
 
 ; called from #2231 above with HL = #628A
 ; called from #223B above with HL = #628A
 ; called from #2276 below
 
-2243: 3A 05 62    ld      a,($6205)   ; load mario's Y position
+2243: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load mario's Y position
 2246: FE 7A       cp      $7a         ; is mario on the top pie tray level or above?
 2248: D2 57 22    jp      nc,$2257    ; no, skip ahead and return to higher sub
 
-224B: 3A 16 62    ld      a,($6216)   ; yes, check for a jump in progress ?
+224B: 3A 16 62    ld      a,(jumping_status_6216)   ; yes, check for a jump in progress ?
 224E: A7          and     a           ; is mario jumping ?
 224F: C2 57 22    jp      nz,$2257    ; yes, jump ahead and return to higher sub
 
-2252: 3A 03 62    ld      a,($6203)   ; else load A with mario's X position
+2252: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; else load A with mario's X position
 2255: BE          cp      (hl)        ; is mario on the ladder? (or exactly lined up on it)
 2256: C8          ret     z           ; yes, return
 
@@ -6996,11 +6999,11 @@ Init:
 
 ; ladder is moving down and mario is on it
 
-2279: 3A 05 62    ld      a,($6205)   ; load A with mario Y position
+2279: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario Y position
 227C: FE 68       cp      $68         ; is mario already at the low point of the ladder ?
 227E: D2 8A 22    jp      nc,$228a    ; yes, skip ahead
 
-2281: 21 05 62    ld      hl,$6205    ; else load HL with Mario's Y position
+2281: 21 05 62    ld      hl,return_without_taking_the_ladder_6205    ; else load HL with Mario's Y position
 2284: 34          inc     (hl)        ; increase (move mario down one pixel)
 2285: CD C0 3F    call    $3fc0       ; sets mario sprite to on ladder with left hand up and HL to #694F (mario's sprite Y position) [this line seems like a patch ??? orig could be  LD HL,#694F ]
 2288: 34          inc     (hl)        ; increase sprite (move mario down one pixel in the hardware .  immediate update)
@@ -7014,13 +7017,13 @@ Init:
 2291: DA 95 22    jp      c,$2295     ; yes, skip next step
 
 2294: AF          xor     a           ; A := 0
-2295: 32 22 62    ld      ($6222),a   ; store into ladder toggle
+2295: 32 22 62    ld      (ladder_toggle_6222),a   ; store into ladder toggle
 2298: C9          ret                 ; return
 
 ; arrive from #221A when ladder is all the way down
 
 2299: E1          pop     hl          ; restore HL
-229A: 3A 18 60    ld      a,(rngtimer1) ; load A with random timer
+229A: 3A 18 60    ld      a,(rngtimer1_6018) ; load A with random timer
 229D: E6 3C       and     $3c         ; mask bits.  result zero?
 229F: C0          ret     nz          ; no, return
 
@@ -7063,10 +7066,10 @@ Init:
 
 22BD: 7E          ld      a,(hl)      ; load A with ladder Y value
 22BE: CB 5D       bit     3,l         ; test bit 3 of L
-22C0: 11 4B 69    ld      de,$694b    ; load DE with ladder sprite Y value
+22C0: 11 4B 69    ld      de,ladder_sprite_y_value_694b    ; load DE with ladder sprite Y value
 22C3: C2 C9 22    jp      nz,$22c9    ; if other ladder, skip next step
 
-22C6: 11 47 69    ld      de,$6947    ; load DE with other ladder sprite Y value
+22C6: 11 47 69    ld      de,other_ladder_sprite_y_value_6947    ; load DE with other ladder sprite Y value
 22C9: 12          ld      (de),a      ; update the sprite Y value
 22CA: C9          ret                 ; return
 
@@ -7074,11 +7077,11 @@ Init:
 ; called when barrel deployed or hits a girder on the way down
 ; called from #2149
 
-22CB: 3A 48 63    ld      a,($6348)   ; load A with oil can status
+22CB: 3A 48 63    ld      a,(the_oil_can_is_on_fire_6348)   ; load A with oil can status
 22CE: A7          and     a           ; is the oil can lit ?
 22CF: CA E1 22    jp      z,$22e1     ; no , jump ahead
 
-22D2: 3A 80 63    ld      a,($6380)   ; else load A with difficulty
+22D2: 3A 80 63    ld      a,(unknown_6380)   ; else load A with difficulty
 22D5: 3D          dec     a           ; decrement.  will be between 0 and 4
 22D6: EF          rst     $28         ; jump based on A
 
@@ -7091,7 +7094,7 @@ Init:
 ; arrive here when oil can is not yet lit
 ; used for initial crazy barrel
 
-22E1: 3A 29 62    ld      a,($6229)   ; load A with level #
+22E1: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
 22E4: 47          ld      b,a         ; store into B
 22E5: 05          dec     b           ; decrement B
 22E6: 3E 01       ld      a,$01       ; load A with 1
@@ -7106,7 +7109,7 @@ Init:
 
 ; check for use with crazy barrels when difficulty is 1 or 2
 
-22F6: 3A 18 60    ld      a,(rngtimer1) ; load A with random timer value
+22F6: 3A 18 60    ld      a,(rngtimer1_6018) ; load A with random timer value
 
 22F9: DD 77 11    ld      (ix+$11),a  ; store into +11
 22FC: E6 01       and     $01         ; mask bits, makes into #00 or #01
@@ -7116,9 +7119,9 @@ Init:
 
 ; check for use with crazy barrels when difficulty is 3 or 4
 
-2303: 3A 18 60    ld      a,(rngtimer1) ; load A with random timer value
+2303: 3A 18 60    ld      a,(rngtimer1_6018) ; load A with random timer value
 2306: DD 77 11    ld      (ix+$11),a  ; store into +11
-2309: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2309: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 230C: DD BE 03    cp      (ix+$03)    ; compare barrel's X position
 230F: 3E 01       ld      a,$01       ; load A with 1
 2311: D2 16 23    jp      nc,$2316    ; if greater then skip ahead
@@ -7131,7 +7134,7 @@ Init:
 
 ; check for use with crazy barrels when difficulty is 5
 
-231A: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+231A: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 231D: DD 96 03    sub     (ix+$03)    ; subtract the barrel's X position
 2320: 0E FF       ld      c,$ff       ; load C with #FF
 2322: DA 26 23    jp      c,$2326     ; if barrel is to left of mario, then jump ahead
@@ -7204,7 +7207,7 @@ Init:
 ; called when firefoxs are moving to check for ladders
 ; if no ladder is nearby , it RETs to a higher subroutine
 
-236E: 21 00 63    ld      hl,$6300    ; load HL with start of table data that has positions of ladders
+236E: 21 00 63    ld      hl,ladder_positions_6300    ; load HL with start of table data that has positions of ladders
 2371: ED B1       cpir                ; check for ladders ???
 
 CPIR - The contents of the memory location addressed by the HL register pair is
@@ -7349,7 +7352,7 @@ through 64 Kbytes if no match is found.
 ; called from #2B09
 
 241F: 11 00 01    ld      de,$0100    ; DE:= #0100
-2422: 3A 03 62    ld      a,($6203)   ; load A with Mario's X position
+2422: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with Mario's X position
 2425: FE 16       cp      $16         ; is this greater than #16 ?
 2427: D8          ret     c           ; yes, return
 
@@ -7359,15 +7362,15 @@ through 64 Kbytes if no match is found.
 242C: D0          ret     nc          ; yes, return
 
 242D: 1D          dec     e           ; no, DE:= #0000
-242E: 3A 27 62    ld      a,($6227)   ; load A with screen number (01, 10, 11 or 100)
+242E: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number (01, 10, 11 or 100)
 2431: 0F          rrca                ; rotate right with carry.  is this the girders or elevators?
 2432: d0          ret     nc          ; no, return
 
-2433: 3A 05 62    ld      a,($6205)   ; otherwise load A with mario's Y position
+2433: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; otherwise load A with mario's Y position
 2436: fe 58       cp      $58         ; is this > #58 ?
 2438: d0          ret     nc          ; Yes, return
 
-2439: 3A 03 62    ld      a,($6203)   ; else load A with mario's X position
+2439: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; else load A with mario's X position
 243C: FE 6C       cp      $6c         ; is this > #6C ?
 243E: D0          ret     nc          ; Yes, return
 
@@ -7393,13 +7396,13 @@ through 64 Kbytes if no match is found.
 2449: 23          inc     hl          ; next letter
 244A: 10 FC       djnz    $2448       ; loop until done
 
-244C: FD 21 10 63 ld      iy,$6310
+244C: FD 21 10 63 ld      iy,unknown_6310
 2450: A7          and     a           ; A == 0 ? checksum OK ?
 2451: CA 56 24    jp      z,$2456     ; yes, skip next step
 
 2454: FD 23       inc     iy          ; running this step will break the game ?  loops at #2371 forever
 
-2456: 3A 27 62    ld      a,($6227)   ; load A with screen number
+2456: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 2459: 3D          dec     a           ; is this the girders?
 245A: 21 E4 3A    ld      hl,$3ae4    ; load HL with start of table data for girders
 245D: CA 71 24    jp      z,$2471     ; if girders, skip ahead
@@ -7414,7 +7417,7 @@ through 64 Kbytes if no match is found.
 
 246E: 21 8B 3C    ld      hl,$3c8b    ; otherwise we're on rivets.  load HL with table data for rivets
 
-2471: DD 21 00 63 ld      ix,$6300    ; #6300 is used for ladder positions?
+2471: DD 21 00 63 ld      ix,ladder_positions_6300    ; #6300 is used for ladder positions?
 2475: 11 05 00    ld      de,$0005    ; DE := 5 = offset
 
 2478: 7E          ld      a,(hl)      ; load A with the next item of data
@@ -7482,20 +7485,20 @@ through 64 Kbytes if no match is found.
 24C7: CA D0 24    jp      z,$24d0     ; yes, jump ahead
 
 24CA: 3E 03       ld      a,$03       ; else blue barrel, A := 3
-24CC: 32 B9 62    ld      ($62b9),a   ; store into #62B9 - used for releasing fires ?
+24CC: 32 B9 62    ld      (fire_release_62b9),a   ; store into #62B9 - used for releasing fires ?
 24CF: AF          xor     a           ; A := #00
 
 24D0: DD 77 00    ld      (ix+$00),a  ; clear out the barrel active indicator
 24D3: DD 77 03    ld      (ix+$03),a  ; clear out the barrel X position
-24D6: 21 82 60    ld      hl,$6082    ; load HL with boom sound address
+24D6: 21 82 60    ld      hl,boom_sound_address_6082    ; load HL with boom sound address
 24D9: 36 03       ld      (hl),$03    ; play boom sound for 3 units
 24DB: E1          pop     hl          ; get HL from stack
-24DC: 3A 48 63    ld      a,($6348)   ; turns to 1 when the oil can is on fire
+24DC: 3A 48 63    ld      a,(the_oil_can_is_on_fire_6348)   ; turns to 1 when the oil can is on fire
 24DF: A7          and     a           ; is oil can already on fire ?
 24E0: C2 BA 21    jp      nz,$21ba    ; yes, jump back, we are done
 
 24E3: 3C          inc     a           ; else A := 1
-24E4: 32 48 63    ld      ($6348),a   ; set the oil can is on fire
+24E4: 32 48 63    ld      (the_oil_can_is_on_fire_6348),a   ; set the oil can is on fire
 24E7: C3 BA 21    jp      $21ba       ; jump back , we are done.
 
 ; called from main routine at #1992
@@ -7505,9 +7508,9 @@ through 64 Kbytes if no match is found.
 24EC: F7          rst     $30         ; if not conveyors, RET, else continue
 24ED: CD 23 25    call    $2523       ; check for deployment of new pies
 24F0: CD 91 25    call    $2591       ; update all pies positions based on direction of trays, remove pies in fire or off edge
-24F3: DD 21 A0 65 ld      ix,$65a0    ; load IX with start of pies
+24F3: DD 21 A0 65 ld      ix,start_of_pies_65a0    ; load IX with start of pies
 24F7: 06 06       ld      b,$06       ; for B = 1 to 6 pies
-24F9: 21 B8 69    ld      hl,$69b8    ; load HL with hardware address for pies
+24F9: 21 B8 69    ld      hl,start_of_pie_sprites_69b8    ; load HL with hardware address for pies
 
 24FC: DD 7E 00    ld      a,(ix+$00)  ; load A with sprite status
 24FF: A7          and     a           ; is this sprite active ?
@@ -7538,12 +7541,12 @@ through 64 Kbytes if no match is found.
 
 ; called from #24ED above
 
-2523: 21 9B 63    ld      hl,$639b    ; load HL with pie timer
+2523: 21 9B 63    ld      hl,pie_timer_for_next_pie_deployment_639b    ; load HL with pie timer
 2526: 7E          ld      a,(hl)      ; get timer value
 2527: A7          and     a           ; time to release a pie ?
 2528: C2 8F 25    jp      nz,$258f    ; no, decrease counter and return
 
-252B: 3A 9A 63    ld      a,($639a)   ; load A with fire deployment indicator ???
+252B: 3A 9A 63    ld      a,(deployment_indicator_639a)   ; load A with fire deployment indicator ???
 252E: A7          and     a           ; == 0 ? (are there no fires???)
 252F: C8          ret     z           ; yes, return, no pies until fires are released
 
@@ -7551,7 +7554,7 @@ through 64 Kbytes if no match is found.
 
 2530: 06 06       ld      b,$06       ; for B = 1 to 6 pies
 2532: 11 10 00    ld      de,$0010    ; load DE with offset of #10 (16 decimal)
-2535: DD 21 A0 65 ld      ix,$65a0    ; load IX with start of pie sprites table
+2535: DD 21 A0 65 ld      ix,start_of_pies_65a0    ; load IX with start of pie sprites table
 
 2539: DD CB 00 46 bit     0,(ix+$00)  ; is this pie already onscreen?
 253D: CA 45 25    jp      z,$2545     ; no, jump ahead and deploy this pie
@@ -7568,12 +7571,12 @@ through 64 Kbytes if no match is found.
 254A: DD 36 05 7C ld      (ix+$05),$7c; store #7C into pie's Y position
 254E: DA 58 25    jp      c,$2558     ; yes, skip next 3 steps
 
-2551: 3A A3 62    ld      a,($62a3)   ; load A with master direction for middle conveyor
+2551: 3A A3 62    ld      a,(master_direction_vector_for_upper_left_62a3)   ; load A with master direction for middle conveyor
 2554: 3D          dec     a           ; is this tray moving outwards ?
 2555: C2 6E 25    jp      nz,$256e    ; no, skip ahead
 
 2558: DD 36 05 CC ld      (ix+$05),$cc; store #CC into pie's Y position
-255C: 3A A6 62    ld      a,($62a6)   ; load A with master direction vector for lower conveyor
+255C: 3A A6 62    ld      a,(master_direction_vector_for_lower_level_62a6)   ; load A with master direction vector for lower conveyor
 255F: 07          rlca                ; is this tray moving to the right ?
 
 2560: DD 36 03 07 ld      (ix+$03),$07; set pie X position to 7
@@ -7591,9 +7594,9 @@ through 64 Kbytes if no match is found.
 257E: DD 36 09 08 ld      (ix+$09),$08; set pie size??? (width?)
 2582: DD 36 0A 03 ld      (ix+$0a),$03; set pie size??? (height?)
 2586: 3E 7C       ld      a,$7c       ; A := #7C
-2588: 32 9B 63    ld      ($639b),a   ; store into pie timer for next pie deployment
+2588: 32 9B 63    ld      (pie_timer_for_next_pie_deployment_639b),a   ; store into pie timer for next pie deployment
 258B: AF          xor     a           ; A := 0
-258C: 32 9A 63    ld      ($639a),a   ; store into ???
+258C: 32 9A 63    ld      (deployment_indicator_639a),a   ; store into ???
 
 258F: 35          dec     (hl)        ; decrease pie timer
 2590: C9          ret                 ; return
@@ -7601,7 +7604,7 @@ through 64 Kbytes if no match is found.
 ; called from #24F0 above
 ; updates all pies
 
-2591: DD 21 A0 65 ld      ix,$65a0    ; load IX with pie sprite buffer
+2591: DD 21 A0 65 ld      ix,start_of_pies_65a0    ; load IX with pie sprite buffer
 2595: 11 10 00    ld      de,$0010    ; load DE with offset
 2598: 06 06       ld      b,$06       ; for B = 1 to 6
 
@@ -7618,7 +7621,7 @@ through 64 Kbytes if no match is found.
 25AF: FE 7C       cp      $7c         ; is this the top level pie?
 25B1: CA C0 25    jp      z,$25c0     ; yes, skip ahead
 
-25B4: 3A A6 63    ld      a,($63a6)   ; load A with pie direction vector for lower pie level
+25B4: 3A A6 63    ld      a,(pie_direction_lower_level_63a6)   ; load A with pie direction vector for lower pie level
 25B7: 84          add     a,h         ; add vector to original position
 25B8: DD 77 03    ld      (ix+$03),a  ; store into pie X position
 
@@ -7631,10 +7634,10 @@ through 64 Kbytes if no match is found.
 25C1: FE 80       cp      $80         ; is the pie in the center fire?
 25C3: CA D6 25    jp      z,$25d6     ; yes, skip ahead
 
-25C6: 3A A5 63    ld      a,($63a5)   ; load A with direction for upper left pie tray
+25C6: 3A A5 63    ld      a,(upper_right_pie_tray_vector_63a5)   ; load A with direction for upper left pie tray
 25C9: D2 CF 25    jp      nc,$25cf    ; if pie < #80, use this address and skip next step
 
-25CC: 3A A4 63    ld      a,($63a4)   ; else load A with direction for upper right tray
+25CC: 3A A4 63    ld      a,(upper_left_pie_tray_vector_63a4)   ; else load A with direction for upper right tray
 
 25CF: 84          add     a,h         ; add vector to pie position
 25D0: DD 77 03    ld      (ix+$03),a  ; store into pie X position
@@ -7642,7 +7645,7 @@ through 64 Kbytes if no match is found.
 
 ; pie in center fire or reached edge
 
-25D6: 21 B8 69    ld      hl,$69b8    ; load HL with start of pie sprites
+25D6: 21 B8 69    ld      hl,start_of_pie_sprites_69b8    ; load HL with start of pie sprites
 25D9: 3E 06       ld      a,$06       ; A := 6
 25DB: 90          sub     b           ; subtract the pie number that is removed.  zero ?
 25DC: CA E7 25    jp      z,$25e7     ; yes, skip ahead
@@ -7673,11 +7676,11 @@ through 64 Kbytes if no match is found.
 
 ; called from #16D5, #25F5
 
-2602: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2602: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 2605: 0F          rrca                ; is the counter odd?
 2606: DA 16 26    jp      c,$2616     ; yes, skip ahead
 
-2609: 21 A0 62    ld      hl,$62a0    ; load HL with top conveyor counter
+2609: 21 A0 62    ld      hl,top_conveyor_counter_62a0    ; load HL with top conveyor counter
 260C: 35          dec     (hl)        ; decrease.  time to reverse?
 260D: C2 16 26    jp      nz,$2616    ; no, skip next 3 steps
 
@@ -7685,27 +7688,27 @@ through 64 Kbytes if no match is found.
 2612: 2C          inc     l           ; HL := #62A1 = master direction vector for top tray
 2613: CD DE 26    call    $26de       ; reverse the direction of this tray
 
-2616: 21 A1 62    ld      hl,$62a1    ; load HL with master direction vector for top conveyor
+2616: 21 A1 62    ld      hl,master_direction_vector_for_top_conveyor_62a1    ; load HL with master direction vector for top conveyor
 2619: CD E9 26    call    $26e9       ; load A with direction vector for this frame
-261C: 32 A3 63    ld      ($63a3),a   ; store A into direction vector for top conveyor
-261F: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+261C: 32 A3 63    ld      (top_conveyor_direction_vector_63a3),a   ; store A into direction vector for top conveyor
+261F: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 2622: E6 1F       and     $1f         ; mask bits
 2624: FE 01       cp      $01         ; == 1 ?
 2626: C0          ret     nz          ; no, return
 
-2627: 11 E4 69    ld      de,$69e4    ; else load DE with start of pulley sprites
+2627: 11 E4 69    ld      de,start_of_pulley_sprites_69e4    ; else load DE with start of pulley sprites
 262A: EB          ex      de,hl       ; DE <> HL
 262B: CD A6 26    call    $26a6       ; animate the pulleys
 262E: C9          ret                 ; return
 
 ; called from #25F8 above
 
-262F: 21 A3 62    ld      hl,$62a3    ; load HL with address of master direction vector for middle conveyor
-2632: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+262F: 21 A3 62    ld      hl,master_direction_vector_for_upper_left_62a3    ; load HL with address of master direction vector for middle conveyor
+2632: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 2635: FE C0       cp      $c0         ; is mario slightly above the lower conveyor?
 2637: DA 6F 26    jp      c,$266f     ; yes, skip ahead.  in this case the upper trays don't vary
 
-263A: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+263A: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 263D: 0F          rrca                ; roll right, is there a carry bit?
 263E: DA 4C 26    jp      c,$264c     ; yes, skip ahead
 
@@ -7717,21 +7720,21 @@ through 64 Kbytes if no match is found.
 2648: 2C          inc     l           ; HL := #62A3 = master direction vector for middle conveyor
 2649: CD DE 26    call    $26de       ; reverse the direction of this tray
 
-264C: 21 A3 62    ld      hl,$62a3    ; load HL with master direction vector for upper left
+264C: 21 A3 62    ld      hl,master_direction_vector_for_upper_left_62a3    ; load HL with master direction vector for upper left
 264F: CD E9 26    call    $26e9       ; load A with direction vector for this frame
-2652: 32 A5 63    ld      ($63a5),a   ; store into pie tray vector (upper right)
+2652: 32 A5 63    ld      (upper_right_pie_tray_vector_63a5),a   ; store into pie tray vector (upper right)
 2655: ED 44       neg                 ; negate.  upper two pie trays move opposite directions
-2657: 32 A4 63    ld      ($63a4),a   ; store into pie tray vector (upper left)
-265A: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2657: 32 A4 63    ld      (upper_left_pie_tray_vector_63a4),a   ; store into pie tray vector (upper left)
+265A: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 265D: E6 1F       and     $1f         ; mask bits, now between 0 and #1F.  zero?
 265F: C0          ret     nz          ; no, return
 
 2660: 2D          dec     l           ; HL := #62A2 = middle conveyor counter
-2661: 11 EC 69    ld      de,$69ec    ; load DE with middle pulley sprites
+2661: 11 EC 69    ld      de,middle_pulley_sprites_69ec    ; load DE with middle pulley sprites
 2664: EB          ex      de,hl       ; DE <> HL
 2665: CD A6 26    call    $26a6       ; animate the pulleys
 2668: E6 7F       and     $7f         ; mask bits, A now betwen #7F and 0 (turns off bit 7)
-266A: 21 ED 69    ld      hl,$69ed    ; load HL with ???
+266A: 21 ED 69    ld      hl,unknown_69ed    ; load HL with ???
 266D: 77          ld      (hl),a      ; store A
 266E: C9          ret                 ; return
 
@@ -7743,11 +7746,11 @@ through 64 Kbytes if no match is found.
 
 ; called from #25FB
 
-2679: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2679: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 267C: 0F          rrca                ; rotate right.  is there a carry?
 267D: DA 8D 26    jp      c,$268d     ; yes, skip ahead
 
-2680: 21 A5 62    ld      hl,$62a5    ; no, load HL with this counter
+2680: 21 A5 62    ld      hl,this_counter_62a5    ; no, load HL with this counter
 2683: 35          dec     (hl)        ; count it down.  zero?
 2684: C2 8D 26    jp      nz,$268d    ; no, skip ahead
 
@@ -7755,15 +7758,15 @@ through 64 Kbytes if no match is found.
 2689: 2C          inc     l           ; HL := #62A6 = master direction vector for lower level
 268A: CD DE 26    call    $26de       ; reverse direction of this tray
 
-268D: 21 A6 62    ld      hl,$62a6    ; load HL with master direction vector for lower level
+268D: 21 A6 62    ld      hl,master_direction_vector_for_lower_level_62a6    ; load HL with master direction vector for lower level
 2690: CD E9 26    call    $26e9       ; load A with direction vector for this frame
-2693: 32 A6 63    ld      ($63a6),a   ; store A into pie direction for lower level
-2696: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2693: 32 A6 63    ld      (pie_direction_lower_level_63a6),a   ; store A into pie direction for lower level
+2696: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 2699: E6 1F       and     $1f         ; mask bits.  now between 0 and #1F
 269B: FE 02       cp      $02         ; == 2 ? (1/32 chance?)
 269D: C0          ret     nz          ; no, return
 
-269E: 11 F4 69    ld      de,$69f4    ; load DE with pulley sprite start
+269E: 11 F4 69    ld      de,pulley_sprite_start_69f4    ; load DE with pulley sprite start
 26A1: EB          ex      de,hl       ; DE <> HL
 26A2: CD A6 26    call    $26a6       ; call sub below to animate the pulleys [why?  it should just continue here]
 26A5: C9          ret                 ; return
@@ -7834,7 +7837,7 @@ through 64 Kbytes if no match is found.
 ; called when deciding which way to switch the pie tray direction vectors
 ; HL is preloaded with the master direction vector for the tray
 
-26E9: 3A 1A 60    ld      a,(framecounter) ; load with clock counts down from #FF to 00 over and over...
+26E9: 3A 1A 60    ld      a,(framecounter_601a) ; load with clock counts down from #FF to 00 over and over...
 26EC: E6 01       and     $01         ; mask bits.  now either 0 or 1.  zero?
 26EE: C8          ret     z           ; yes, return.  every other frame the pie tray is stationary
 
@@ -7853,13 +7856,13 @@ through 64 Kbytes if no match is found.
 
 ; elevators only
 
-26FD: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+26FD: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 2700: FE F0       cp      $f0         ; is mario too low ?
 2702: D2 7F 27    jp      nc,$277f    ; yes, then mario dead
 
-2705: 3A 29 62    ld      a,($6229)   ; else load A with level number
+2705: 3A 29 62    ld      a,(else_level_number_6229)   ; else load A with level number
 2708: 3D          dec     a           ; decrement and check for zero
-2709: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2709: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 270C: C2 1A 27    jp      nz,$271a    ; if level <> 1 then jump ahead
 
 ; slow elevators for level 1, japanese rom only?
@@ -7882,8 +7885,8 @@ through 64 Kbytes if no match is found.
 2725: CD DA 27    call    $27da       ; check for and set elevators that have reset
 2728: 06 06       ld      b,$06       ; For B = 1 to 6
 272A: 11 10 00    ld      de,$0010    ; load offset
-272D: 21 58 69    ld      hl,$6958    ; load starting value for elevator sprites
-2730: DD 21 00 66 ld      ix,$6600    ; memory where elevator values are stored
+272D: 21 58 69    ld      hl,elevator_sprites_6958    ; load starting value for elevator sprites
+2730: DD 21 00 66 ld      ix,elevator_array_start_6600    ; memory where elevator values are stored
 
 ; update elevator sprites
 
@@ -7902,17 +7905,17 @@ through 64 Kbytes if no match is found.
 
 ; called from #271E
 
-2745: 3A 98 63    ld      a,($6398)   ; load A with elevator riding indicator
+2745: 3A 98 63    ld      a,(elevator_status_6398)   ; load A with elevator riding indicator
 2748: A7          and     a           ; is mario riding an elevator?
 2749: C8          ret     z           ; no, return
 
-274A: 3A 16 62    ld      a,($6216)   ; load A with jumping status
+274A: 3A 16 62    ld      a,(jumping_status_6216)   ; load A with jumping status
 274D: A7          and     a           ; is mario jumping ?
 274E: C0          ret     nz          ; yes, return
 
 ; arrive here when mario riding on either elevator
 
-274F: 3A 03 62    ld      a,($6203)   ; load A with mario's X position. eg 37 for first, 75 for second
+274F: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position. eg 37 for first, 75 for second
 2752: FE 2C       cp      $2c         ; position < left edge of first elevator ?
 2754: DA 66 27    jp      c,$2766     ; yes, jump ahead
 
@@ -7928,36 +7931,36 @@ through 64 Kbytes if no match is found.
 ; arrive here when mario jumps off of an elevator ?
 
 2766: AF          xor     a           ; A := 0
-2767: 32 98 63    ld      ($6398),a   ; clear elevator riding indicator
+2767: 32 98 63    ld      (elevator_status_6398),a   ; clear elevator riding indicator
 276A: 3C          inc     a           ; A := 1
-276B: 32 21 62    ld      ($6221),a   ; store into mario falling indicator ?
+276B: 32 21 62    ld      (mario_falling_indicator_6221),a   ; store into mario falling indicator ?
 276E: C9          ret                 ; return
 
 ; arrive here when mario riding on first elevator
 
-276F: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+276F: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 2772: FE 71       cp      $71         ; top of elevator ? (death)
 2774: DA 7F 27    jp      c,$277f     ; yes, die
 
 2777: 3D          dec     a           ; else decrement (move mario up)
-2778: 32 05 62    ld      ($6205),a   ; store into Mario's Y position
-277B: 32 4F 69    ld      ($694f),a   ; store into mario sprite Y value
+2778: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store into Mario's Y position
+277B: 32 4F 69    ld      (mario_sprite_y_value_694f),a   ; store into mario sprite Y value
 277E: C9          ret                 ; return
 
 277F: AF          xor     a           ; A := 0
-2780: 32 00 62    ld      ($6200),a   ; Make mario dead
-2783: 32 98 63    ld      ($6398),a   ; clear elevator riding indicator
+2780: 32 00 62    ld      (mario_array_6200),a   ; Make mario dead
+2783: 32 98 63    ld      (elevator_status_6398),a   ; clear elevator riding indicator
 2786: C9          ret                 ; return
 
 ; riding on second elevator
 
-2787: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2787: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 278A: FE E8       cp      $e8         ; at bottom of elevator ? (death)
 278C: D2 7F 27    jp      nc,$277f    ; yes, set death and return
 
 278F: 3C          inc     a           ; else increment (move mario down)
-2790: 32 05 62    ld      ($6205),a   ; store back into mario's Y position
-2793: 32 4F 69    ld      ($694f),a   ; store into mario sprite Y value
+2790: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store back into mario's Y position
+2793: 32 4F 69    ld      (mario_sprite_y_value_694f),a   ; store into mario sprite Y value
 2796: C9          ret                 ; return
 
 ; called from #2722
@@ -7965,7 +7968,7 @@ through 64 Kbytes if no match is found.
 
 2797: 06 06       ld      b,$06       ; for B = 1 to 6 (for each elevator)
 2799: 11 10 00    ld      de,$0010    ; load DE with offset
-279C: DD 21 00 66 ld      ix,$6600    ; load IX with start of sprite addr. for elevators
+279C: DD 21 00 66 ld      ix,elevator_array_start_6600    ; load IX with start of sprite addr. for elevators
 
 27A0: DD CB 00 46 bit     0,(ix+$00)  ; is this elevator active?
 27A4: CA C2 27    jp      z,$27c2     ; no, skip ahead and loop for next
@@ -8003,13 +8006,13 @@ through 64 Kbytes if no match is found.
 
 ; [IF elevator_counter <> 0 THEN ( elevator_counter--  ; RETURN ) ELSE (
 
-27DA: 21 A7 62    ld      hl,$62a7    ; load HL with elevator counter address
+27DA: 21 A7 62    ld      hl,elevator_counter_address_62a7    ; load HL with elevator counter address
 27DD: 7E          ld      a,(hl)      ; load A with elevator counter
 27DE: A7          and     a           ; == 0 ?
 27DF: C2 06 28    jp      nz,$2806    ; no, skip ahead, decrease counter and return
 
 27E2: 06 06       ld      b,$06       ; for B = 1 to 6 elevators
-27E4: DD 21 00 66 ld      ix,$6600    ; load IX with sprite addr. for elevators
+27E4: DD 21 00 66 ld      ix,elevator_array_start_6600    ; load IX with sprite addr. for elevators
 
 27E8: DD CB 00 46 bit     0,(ix+$00)  ; is this elevator active ?
 27EC: CA F4 27    jp      z,$27f4     ; no, skip ahead and reset
@@ -8030,8 +8033,8 @@ through 64 Kbytes if no match is found.
 ; called from main routine at #19B3
 ; checks for collisions with hostiles sprites
 
-2808: FD 21 00 62 ld      iy,$6200    ; load IY with start of mario sprite
-280C: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2808: FD 21 00 62 ld      iy,mario_array_6200    ; load IY with start of mario sprite
+280C: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 280F: 4F          ld      c,a         ; copy to C
 2810: 21 07 04    ld      hl,$0407    ; H := 4, L := 7
 2813: CD 6F 28    call    $286f       ; checks for collisions based on the screen.  A := 1 if collision, otherwise zero
@@ -8041,14 +8044,14 @@ through 64 Kbytes if no match is found.
 ; mario collided with hostile sprite
 
 2818: 3D          dec     a           ; else A := 0
-2819: 32 00 62    ld      ($6200),a   ; store into mario life indicator, mario is dead
+2819: 32 00 62    ld      (mario_array_6200),a   ; store into mario life indicator, mario is dead
 281C: C9          ret                 ; return
 
 ; called from main routine at #19B6
 
 281D: 06 02       ld      b,$02       ; for B = 1 to 2 hammers
 281F: 11 10 00    ld      de,$0010    ; load DE with counter offset
-2822: FD 21 80 66 ld      iy,$6680    ; load IY with sprite address start ?
+2822: FD 21 80 66 ld      iy,software_address_of_hammer_sprite_6680    ; load IY with sprite address start ?
 
 2826: FD CB 01 46 bit     0,(iy+$01)  ; is the hammer being used ?
 282A: C2 32 28    jp      nz,$2832    ; yes, then do stuff ahead
@@ -8069,24 +8072,24 @@ through 64 Kbytes if no match is found.
 
 ; hammer hit something
 
-2840: 32 50 63    ld      ($6350),a   ; store A into item hit indicator ???
-2843: 3A B9 63    ld      a,($63b9)   ; load A with the number of total items checked for collision?
+2840: 32 50 63    ld      (item_hit_indicator_unknown_6350),a   ; store A into item hit indicator ???
+2843: 3A B9 63    ld      a,(counter_for_use_later_63b9)   ; load A with the number of total items checked for collision?
 2846: 90          sub     b           ; subract the number of item hit ?
-2847: 32 54 63    ld      ($6354),a   ; store into ???
+2847: 32 54 63    ld      (unknown_6354),a   ; store into ???
 284A: 7B          ld      a,e         ; load A with offset for each item
-284B: 32 53 63    ld      ($6353),a   ; store into ???
-284E: DD 22 51 63 ld      ($6351),ix  ; store IX into ???
+284B: 32 53 63    ld      (unknown_6353),a   ; store into ???
+284E: DD 22 51 63 ld      (unknown_6351),ix  ; store IX into ???
 2852: C9          ret                 ; return
 
 ; called when mario jumping, checks for items being jumped over
 ; arrive at apex of jump
 ; called from #1C20
 
-2853: FD 21 00 62 ld      iy,$6200    ; load IY with start of mario array
-2857: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+2853: FD 21 00 62 ld      iy,mario_array_6200    ; load IY with start of mario array
+2857: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 285A: C6 0C       add     a,$0c       ; add #0C (12 decimal)
 285C: 4F          ld      c,a         ; copy to C
-285D: 3A 10 60    ld      a,(inputstate) ; load A with copy of input (see RawInput). except when jump pressed, bit 7 is set momentarily.
+285D: 3A 10 60    ld      a,(inputstate_6010) ; load A with copy of input (see RawInput). except when jump pressed, bit 7 is set momentarily.
 2860: E6 03       and     $03         ; mask bits, now between 0 and 3
 2862: 21 08 05    ld      hl,$0508    ; H := #05, L := #08.  [H is the left-right window for jumping items, L is the up-down window?]
 2865: CA 6B 28    jp      z,$286b     ; if masked input was zero, skip next step
@@ -8116,7 +8119,7 @@ through 64 Kbytes if no match is found.
 ; called when hammer active from #283B - check for hammer collision with enemy sprites
 
 
-286F: 3A 27 62    ld      a,($6227)   ; load A with screen number
+286F: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 2872: E5          push    hl          ; save HL
 
 2873: EF          rst     $28         ; jump to address below depending on screen:
@@ -8133,21 +8136,21 @@ through 64 Kbytes if no match is found.
 2880: E1          pop     hl          ; restore HL
 2881: 06 0A       ld      b,$0a       ; B := #0A (10 decimal).  one for each barrel
 2883: 78          ld      a,b         ; A := #0A
-2884: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+2884: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 2887: 11 20 00    ld      de,$0020    ; load DE with offset of #20
-288A: DD 21 00 67 ld      ix,$6700    ; load IX with start of barrels
+288A: DD 21 00 67 ld      ix,start_of_barrel_info_table_6700    ; load IX with start of barrels
 288E: CD 13 29    call    $2913       ; check for collisions with barrels
 2891: 06 05       ld      b,$05       ; B := 5
 2893: 78          ld      a,b         ; A := 5
-2894: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+2894: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 2897: 1E 20       ld      e,$20       ; E := #20
-2899: DD 21 00 64 ld      ix,$6400    ; load IX with start of fires
+2899: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load IX with start of fires
 289D: CD 13 29    call    $2913       ; check for collisions with fires
 28A0: 06 01       ld      b,$01       ; B := 1
 28A2: 78          ld      a,b         ; A := 1
-28A3: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28A3: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28A6: 1E 00       ld      e,$00       ; E := #00
-28A8: DD 21 A0 66 ld      ix,$66a0    ; load IX with oil can fire location
+28A8: DD 21 A0 66 ld      ix,oil_can_address_66a0    ; load IX with oil can fire location
 28AC: CD 13 29    call    $2913       ; check for collision with oil can fire
 28AF: C9          ret                 ; return
 
@@ -8156,21 +8159,21 @@ through 64 Kbytes if no match is found.
 28B0: E1          pop     hl          ; restore HL
 28B1: 06 05       ld      b,$05       ; B := 5 fires
 28B3: 78          ld      a,b         ; A := 5 fires
-28B4: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28B4: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28B7: 11 20 00    ld      de,$0020    ; load DE with offset
-28BA: DD 21 00 64 ld      ix,$6400    ; load IX with start of fires
+28BA: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load IX with start of fires
 28BE: CD 13 29    call    $2913       ; check for collisions with fires
 28C1: 06 06       ld      b,$06       ; B := 6
 28C3: 78          ld      a,b         ; A := 6
-28C4: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28C4: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28C7: 1E 10       ld      e,$10       ; E := #10
-28C9: DD 21 A0 65 ld      ix,$65a0    ; load IX with start of pies
+28C9: DD 21 A0 65 ld      ix,start_of_pies_65a0    ; load IX with start of pies
 28CD: CD 13 29    call    $2913       ; check for collisions with pies
 28D0: 06 01       ld      b,$01       ; B := 1
 28D2: 78          ld      a,b         ; A := 1
-28D3: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28D3: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28D6: 1E 00       ld      e,$00       ; E := 0
-28D8: DD 21 A0 66 ld      ix,$66a0    ; load IX with oil can address
+28D8: DD 21 A0 66 ld      ix,oil_can_address_66a0    ; load IX with oil can address
 28DC: CD 13 29    call    $2913       ; check for collision with oil can fire
 28DF: C9          ret                 ; return
 
@@ -8179,15 +8182,15 @@ through 64 Kbytes if no match is found.
 28E0: E1          pop     hl          ; restore HL
 28E1: 06 05       ld      b,$05       ; B := 5
 28E3: 78          ld      a,b         ; A := 5
-28E4: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28E4: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28E7: 11 20 00    ld      de,$0020    ; load offset
-28EA: DD 21 00 64 ld      ix,$6400    ; load start of addresses for fires
+28EA: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load start of addresses for fires
 28EE: CD 13 29    call    $2913       ; check for collisions with fires
 28F1: 06 0A       ld      b,$0a       ; B := #0A
 28F3: 78          ld      a,b         ; A := #0A
-28F4: 32 B9 63    ld      ($63b9),a   ; store counter for use later
+28F4: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store counter for use later
 28F7: 1E 10       ld      e,$10       ; E := #10
-28F9: DD 21 00 65 ld      ix,$6500    ; load IX with start of addresses for springs
+28F9: DD 21 00 65 ld      ix,start_of_bouncer_memory_area_6500    ; load IX with start of addresses for springs
 28FD: CD 13 29    call    $2913       ; check for collisions with springs
 2900: C9          ret                 ; return
 
@@ -8197,9 +8200,9 @@ through 64 Kbytes if no match is found.
 2901: E1          pop     hl          ; restore HL
 2902: 06 07       ld      b,$07       ; B := 7
 2904: 78          ld      a,b         ; A := 7
-2905: 32 B9 63    ld      ($63b9),a   ; store 7 into counter for use later
+2905: 32 B9 63    ld      (counter_for_use_later_63b9),a   ; store 7 into counter for use later
 2908: 11 20 00    ld      de,$0020    ; load DE with offset
-290B: DD 21 00 64 ld      ix,$6400    ; load IX with start of firefox arrays
+290B: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load IX with start of firefox arrays
 290F: CD 13 29    call    $2913       ; check for collisions with firefoxes/squares
 2912: C9          ret                 ; return
 
@@ -8264,10 +8267,10 @@ through 64 Kbytes if no match is found.
 2954: 3E 0B       ld      a,$0b       ; A := #0B = 1011 binary
 2956: F7          rst     $30         ; if level is elevators RET from this sub now.  no hammers on elevators.
 2957: CD 74 29    call    $2974       ; load A with 1 if hammer is grabbed, 0 if no grab
-295A: 32 18 62    ld      ($6218),a   ; store into hammer grabbing indicator
+295A: 32 18 62    ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a   ; store into hammer grabbing indicator
 295D: 0F          rrca
 295E: 0F          rrca                ; rotate right twice.  if hammer grabbed, A is now #40
-295F: 32 85 60    ld      ($6085),a   ; play sound for bonus
+295F: 32 85 60    ld      (play_sound_for_bonus_6085),a   ; play sound for bonus
 2962: 78          ld      a,b         ; A := B .  this indicates which hammer was grabbed if any
 2963: A7          and     a           ; was a hammer grabbed?
 2964: C8          ret     z           ; no, return
@@ -8284,13 +8287,13 @@ through 64 Kbytes if no match is found.
 ; called from #2957 above
 ; check for hammer grab ?
 
-2974: FD 21 00 62 ld      iy,$6200    ; load IY with start of mario sprite values
-2978: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2974: FD 21 00 62 ld      iy,mario_array_6200    ; load IY with start of mario sprite values
+2978: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 297B: 4F          ld      c,a         ; copy to C
 297C: 21 08 04    ld      hl,$0408    ; H := 4, L := 8
 297F: 06 02       ld      b,$02       ; B := 2 for the 2 hammers (?)
 2981: 11 10 00    ld      de,$0010    ; offset for each hammer
-2984: DD 21 80 66 ld      ix,$6680    ; load IX with start of hammer sprites ?
+2984: DD 21 80 66 ld      ix,software_address_of_hammer_sprite_6680    ; load IX with start of hammer sprites ?
 2988: CD 13 29    call    $2913       ; check for collision with hammer
 298B: C9          ret                 ; return
 
@@ -8299,7 +8302,7 @@ through 64 Kbytes if no match is found.
 ; sets A := 0 if fire is free to move
 ; sets A := 1 if fire is next to edge of girder
 
-298C: 2A C8 63    ld      hl,($63c8)  ; load HL with address of this fire
+298C: 2A C8 63    ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)  ; load HL with address of this fire
 298F: 7D          ld      a,l         ; A := L
 2990: C6 0E       add     a,$0e       ; add #E
 2992: 6F          ld      l,a         ; store result.  HL now has the fire's X position
@@ -8329,8 +8332,8 @@ through 64 Kbytes if no match is found.
 29AF: 3E 04       ld      a,$04       ; A := 4 = 0100
 29B1: F7          rst     $30         ; only continue here if we are on the elevators, else RET
 
-29B2: FD 21 00 62 ld      iy,$6200    ; load IY with mario's array
-29B6: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+29B2: FD 21 00 62 ld      iy,mario_array_6200    ; load IY with mario's array
+29B6: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 29B9: 4F          ld      c,a         ; copy to C
 29BA: 21 08 04    ld      hl,$0408    ; H := 4, L := 8
 29BD: CD 22 2A    call    $2a22       ; check for collision with elevators
@@ -8353,29 +8356,29 @@ through 64 Kbytes if no match is found.
 29D0: DD 7E 05    ld      a,(ix+$05)  ; load A with elevator's height Y position
 29D3: D6 04       sub     $04         ; subtract 4
 29D5: 57          ld      d,a         ; copy to D
-29D6: 3A 0C 62    ld      a,($620c)   ; load A with mario's jump height ?
+29D6: 3A 0C 62    ld      a,(mario_jump_height_620c)   ; load A with mario's jump height ?
 29D9: C6 05       add     a,$05       ; add 5
 29DB: BA          cp      d           ; compare.  is mario high enough to land ?
 29DC: D2 EE 29    jp      nc,$29ee    ; no, skip ahead
 
 29DF: 7A          ld      a,d         ; load A with elevator's height - 4
 29E0: D6 08       sub     $08         ; subtract 8
-29E2: 32 05 62    ld      ($6205),a   ; store A into Mario's Y position
+29E2: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store A into Mario's Y position
 29E5: 3E 01       ld      a,$01       ; A := 1
 29E7: 47          ld      b,a         ; B := 1
-29E8: 32 98 63    ld      ($6398),a   ; set elevator riding indicator ?
+29E8: 32 98 63    ld      (elevator_status_6398),a   ; set elevator riding indicator ?
 29EB: 33          inc     sp
 29EC: 33          inc     sp          ; increase SP twice so the RET skips one level
 29ED: C9          ret                 ; returns to higher subroutine (#1C08)
 
-29EE: 3A 0C 62    ld      a,($620c)   ; load A with mario's jump height
+29EE: 3A 0C 62    ld      a,(mario_jump_height_620c)   ; load A with mario's jump height
 29F1: D6 0E       sub     $0e         ; subtract #0E (14 decimal)
 29F3: BA          cp      d           ; compare to elevator height - 4. is mario hitting his head on the bottom of the elevator ?
 29F4: D2 1B 2A    jp      nc,$2a1b    ; if so, mario is dead.  set dead and return.
 
-29F7: 3A 10 62    ld      a,($6210)   ; load A with mario's jump direction.
+29F7: 3A 10 62    ld      a,(mario_jump_direction_6210)   ; load A with mario's jump direction.
 29FA: A7          and     a           ; == 0 ?  Is mario jumping to the right ?
-29FB: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+29FB: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 29FE: CA 08 2A    jp      z,$2a08     ; if jumping to the right then skip ahead
 
 2A01: F6 07       or      $07         ; else mask bits, turn on all 3 lower bits
@@ -8388,8 +8391,8 @@ through 64 Kbytes if no match is found.
 
 ; used when riding an elevator
 
-2A0E: 32 03 62    ld      ($6203),a   ; set mario's X position
-2A11: 32 4C 69    ld      ($694c),a   ; set mario's sprite X position
+2A0E: 32 03 62    ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a   ; set mario's X position
+2A11: 32 4C 69    ld      (mario_sprite_x_position_694c),a   ; set mario's sprite X position
 2A14: 3E 01       ld      a,$01       ; A := 1
 2A16: 06 00       ld      b,$00       ; B := 0
 2A18: 33          inc     sp
@@ -8399,7 +8402,7 @@ through 64 Kbytes if no match is found.
 ; arrive from #29F4 when mario dies trying to jump onto elevator
 
 2A1B: AF          xor     a           ; A := 0
-2A1C: 32 00 62    ld      ($6200),a   ; set mario dead
+2A1C: 32 00 62    ld      (mario_array_6200),a   ; set mario dead
 2A1F: C9          ret                 ; return
 
 ; arrive from #29C1
@@ -8411,7 +8414,7 @@ through 64 Kbytes if no match is found.
 
 2A22: 06 06       ld      b,$06       ; B := 6
 2A24: 11 10 00    ld      de,$0010    ; load DE with offset
-2A27: DD 21 00 66 ld      ix,$6600    ; load IX with elevator array start
+2A27: DD 21 00 66 ld      ix,elevator_array_start_6600    ; load IX with elevator array start
 2A2B: CD 13 29    call    $2913       ; check for collision with elevators
 2A2E: C9          ret                 ; return
 
@@ -8512,22 +8515,22 @@ FF = Extra Mario Icon
 
 ; called from main routine at #19A1
 
-2A85: 3A 15 62    ld      a,($6215)   ; load ladder status
+2A85: 3A 15 62    ld      a,(ladder_status_6215)   ; load ladder status
 2A88: A7          and     a           ; is mario on a ladder ?
 2A89: C0          ret     nz          ; yes, return
 
-2A8A: 3A 16 62    ld      a,($6216)   ; load jumping status
+2A8A: 3A 16 62    ld      a,(jumping_status_6216)   ; load jumping status
 2A8D: A7          and     a           ; is mario jumping ?
 2A8E: C0          ret     nz          ; yes, return
 
-2A8F: 3A 98 63    ld      a,($6398)   ; load A with elevator status
+2A8F: 3A 98 63    ld      a,(elevator_status_6398)   ; load A with elevator status
 2A92: FE 01       cp      $01         ; is mario riding an elevator?
 2A94: C8          ret     z           ; yes, return
 
-2A95: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2A95: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 2A98: D6 03       sub     $03         ; subtract 3
 2A9A: 67          ld      h,a         ; store into H
-2A9B: 3A 05 62    ld      a,($6205)   ; load A with Mario's Y position
+2A9B: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
 2A9E: C6 0C       add     a,$0c       ; add #0C = 13 decimal
 2AA0: 6F          ld      l,a         ; store into L
 2AA1: E5          push    hl          ; save to stack
@@ -8563,14 +8566,14 @@ FF = Extra Mario Icon
 ; mario is falling
 
 2ACD: 3E 01       ld      a,$01       ; A := 1
-2ACF: 32 21 62    ld      ($6221),a   ; store into mario falling indicator
+2ACF: 32 21 62    ld      (mario_falling_indicator_6221),a   ; store into mario falling indicator
 2AD2: C9          ret                 ; return
 
 ; called from #25FE
 
-2AD3: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2AD3: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 2AD6: 47          ld      b,a         ; copy to B
-2AD7: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2AD7: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 2ADA: FE 50       cp      $50         ; is mario on upper level ?
 2ADC: CA EA 2A    jp      z,$2aea     ; yes, skip ahead
 
@@ -8582,24 +8585,24 @@ FF = Extra Mario Icon
 
 2AE9: C9          ret                 ; else return
 
-2AEA: 3A A3 63    ld      a,($63a3)   ; load A with top conveyor direction vector [why?  level complete here?]
+2AEA: 3A A3 63    ld      a,(top_conveyor_direction_vector_63a3)   ; load A with top conveyor direction vector [why?  level complete here?]
 2AED: C3 02 2B    jp      $2b02       ; skip ahead
 
-2AF0: 3A A6 63    ld      a,($63a6)   ; load A with pie direction lower level
+2AF0: 3A A6 63    ld      a,(pie_direction_lower_level_63a6)   ; load A with pie direction lower level
 2AF3: C3 02 2B    jp      $2b02       ; skip ahead
 
 2AF6: 78          ld      a,b         ; load A with mario X position
 2AF7: FE 80       cp      $80         ; is mario on the left side of the fire?
-2AF9: 3A A5 63    ld      a,($63a5)   ; load A with upper right pie tray vector
+2AF9: 3A A5 63    ld      a,(upper_right_pie_tray_vector_63a5)   ; load A with upper right pie tray vector
 2AFC: D2 02 2B    jp      nc,$2b02    ; no, skip next step
 
-2AFF: 3A A4 63    ld      a,($63a4)   ; else load A with upper left pie tray vector
+2AFF: 3A A4 63    ld      a,(upper_left_pie_tray_vector_63a4)   ; else load A with upper left pie tray vector
 
 2B02: 80          add     a,b         ; add vector to mario's X position
-2B03: 32 03 62    ld      ($6203),a   ; set mario's X position
-2B06: 32 4C 69    ld      ($694c),a   ; set mario's sprite X position
+2B03: 32 03 62    ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a   ; set mario's X position
+2B06: 32 4C 69    ld      (mario_sprite_x_position_694c),a   ; set mario's sprite X position
 2B09: CD 1F 24    call    $241f       ; loads DE with something depending on mario's position
-2B0C: 21 03 62    ld      hl,$6203    ; load HL with mario's X position
+2B0C: 21 03 62    ld      hl,jump_if_bit_7_of_mario_x_position_is_set_6203    ; load HL with mario's X position
 2B0F: 1D          dec     e           ; E == 1 ?
 2B10: CA 18 2B    jp      z,$2b18     ; yes, skip ahead
 
@@ -8615,7 +8618,7 @@ FF = Extra Mario Icon
 
 ; called from #1C05
 
-2B1C: DD 21 00 62 ld      ix,$6200    ; set IX for mario's array
+2B1C: DD 21 00 62 ld      ix,mario_array_6200    ; set IX for mario's array
 2B20: CD 29 2B    call    $2b29       ; do stuff for jumping.  certain crieria will set A and B and return without the rest of this sub.
 2B23: CD AF 29    call    $29af       ; handle jump stuff for elevators
 2B26: AF          xor     a           ; A := 0
@@ -8625,15 +8628,15 @@ FF = Extra Mario Icon
 ; arrive here when a jump is in progress
 ; called from #2B20 above
 
-2B29: 3A 27 62    ld      a,($6227)   ; load A with screen number
+2B29: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 2B2C: 3D          dec     a           ; are we on the girders?
 2B2D: C2 53 2B    jp      nz,$2b53    ; No, skip ahead
 
 ; jump on girders
 
-2B30: 3A 03 62    ld      a,($6203)   ; load A with mario's x position
+2B30: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's x position
 2B33: 67          ld      h,a         ; copy to H
-2B34: 3A 05 62    ld      a,($6205)   ; load A with mario's y position
+2B34: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's y position
 2B37: C6 07       add     a,$07       ; add 7 to y position
 2B39: 6F          ld      l,a         ; copy to L
 2B3A: CD 9B 2B    call    $2b9b       ; check for ???
@@ -8647,7 +8650,7 @@ FF = Extra Mario Icon
 
 2B48: 79          ld      a,c         ; A := C
 2B49: D6 07       sub     $07         ; subtract 7
-2B4B: 32 05 62    ld      ($6205),a   ; store A into mario's Y position
+2B4B: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store A into mario's Y position
 2B4E: 3E 01       ld      a,$01       ; A : = 1
 2B50: 47          ld      b,a         ; B := 1
 
@@ -8656,10 +8659,10 @@ FF = Extra Mario Icon
 
 ; arrive from #2B2D when jumping, not on girders, via call from #2B20
 
-2B53: 3A 03 62    ld      a,($6203)   ; load A with mario X position
+2B53: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario X position
 2B56: D6 03       sub     $03         ; subtract 3
 2B58: 67          ld      h,a         ; store into H
-2B59: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2B59: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 2B5C: C6 07       add     a,$07       ; add 7
 2B5E: 6F          ld      l,a         ; store into L
 2B5F: CD 9B 2B    call    $2b9b       ; check for ???
@@ -8681,9 +8684,9 @@ FF = Extra Mario Icon
 2B78: E1          pop     hl          ; move stack pointer to return to higher sub
 2B79: C9          ret                 ; return
 
-2B7A: 3A 10 62    ld      a,($6210)   ; load A with mario's jump direction
+2B7A: 3A 10 62    ld      a,(mario_jump_direction_6210)   ; load A with mario's jump direction
 2B7D: A7          and     a           ; jumping to the right ?
-2B7E: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2B7E: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 2B81: CA 8B 2B    jp      z,$2b8b     ; if jumping right then skip next 3 steps
 
 2B84: F6 07       or      $07         ; mask bits, turn on lower 3 bits
@@ -8694,8 +8697,8 @@ FF = Extra Mario Icon
 2B8D: F6 07       or      $07         ; mask bits, turn on lower 3 bits
 2B8F: C6 04       add     a,$04       ; add 4
 
-2B91: 32 03 62    ld      ($6203),a   ; set mario's X position
-2B94: 32 4C 69    ld      ($694c),a   ; set mario's sprite X position
+2B91: 32 03 62    ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a   ; set mario's X position
+2B94: 32 4C 69    ld      (mario_sprite_x_position_694c),a   ; set mario's sprite X position
 2B97: 3E 01       ld      a,$01       ; A := 1
 2B99: E1          pop     hl          ; move stack pointer to return to higher sub
 2B9A: C9          ret                 ; return
@@ -8762,7 +8765,7 @@ FF = Extra Mario Icon
 
 ; mario landing or his head passing through girder above
 
-2BE1: 3A 0C 62    ld      a,($620c)   ; load A with mario's jump height
+2BE1: 3A 0C 62    ld      a,(mario_jump_height_620c)   ; load A with mario's jump height
 2BE4: DD 96 05    sub     (ix+$05)    ; subtract the item's Y position (???) [EG IX = #6200 , so this is mario's Y position)
 2BE7: 83          add     a,e         ; add E (original Y position)
 2BE8: B9          cp      c           ; == C ?
@@ -8776,7 +8779,7 @@ FF = Extra Mario Icon
 
 2BEF: 79          ld      a,c         ; A := C = original location masked
 2BF0: D6 07       sub     $07         ; subtract 7 to adjust for mario' height
-2BF2: 32 05 62    ld      ($6205),a   ; store A into mario's Y position
+2BF2: 32 05 62    ld      (return_without_taking_the_ladder_6205),a   ; store A into mario's Y position
 2BF5: C3 FD 2B    jp      $2bfd       ; skip next 3 steps
 
 ; arrive when mario has his head passing through girder above
@@ -8799,27 +8802,27 @@ FF = Extra Mario Icon
 2C05: F7          rst     $30         ; /
 2C06: D7          rst     $10         ; Return if Mario is not alive
 
-2C07: 3A 93 63    ld      a,($6393)   ; \  Return if we are already in the process of deploying a barrel, no need to deploy another one
+2C07: 3A 93 63    ld      a,(barrel_deployment_indicator_6393)   ; \  Return if we are already in the process of deploying a barrel, no need to deploy another one
 2C0A: 0F          rrca                ;  |
 2C0B: D8          ret     c           ; /
 
-2C0C: 3A B1 62    ld      a,($62b1)   ; \  Return if bonus timer is 0, no more barrels are deployed at this time
+2C0C: 3A B1 62    ld      a,(bonus_timer_62b1)   ; \  Return if bonus timer is 0, no more barrels are deployed at this time
 2C0F: A7          and     a           ;  |
 2C10: C8          ret     z           ; /
 
 2C11: 4f          ld      c,a         ; otherwise load C with current timer value
-2C12: 3A b0 62    ld      a,($62b0)   ; load a with initial clock value
+2C12: 3A b0 62    ld      a,(initial_clock_value_62b0)   ; load a with initial clock value
 2C15: d6 02       sub     $02         ; subtract 2
 2C17: b9          cp      c           ; compare with C = current timer
 2C18: dA 7b 2C    jp      c,$2c7b     ; if carry, jump ahead - we are within first 2 clicks of the round - special barrels for this.
 
-2C1B: 3A 82 63    ld      a,($6382)   ; else load A with crazy / blue barrel indicator
+2C1B: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; else load A with crazy / blue barrel indicator
 2C1E: cb 4f       bit     1,a         ; test bit 1 - is this the second barrel after the first crazy ?
 2C20: c2 86 2C    jp      nz,$2c86    ; if it is, then deploy normal barrel; this barrel is never crazy.
 
-2C23: 3A 80 63    ld      a,($6380)   ; if not, then load A with difficulty from 1 to 5
+2C23: 3A 80 63    ld      a,(unknown_6380)   ; if not, then load A with difficulty from 1 to 5
 2C26: 47          ld      b,a         ; For B = 1 to difficulty
-2C27: 3A 1A 60    ld      a,(framecounter) ; load A with timer value.  this clock counts down from #FF to 00 over and over...
+2C27: 3A 1A 60    ld      a,(framecounter_601a) ; load A with timer value.  this clock counts down from #FF to 00 over and over...
 2C2A: E6 1F       and     $1f         ; zero out left 3 bits.  the result is between 0 and #1F
 
 2C2C: B8          cp      b           ; compare with Loop counter B (between 1 and 5) ... is higher as time decreases
@@ -8831,12 +8834,12 @@ FF = Extra Mario Icon
 
 ; chances of arriving here depend on difficulty D/32 chance .  high levels this is 5/32 = 16%
 
-2C33: 3A B0 62    ld      a,($62b0)   ; load A with initial clock value
+2C33: 3A B0 62    ld      a,(initial_clock_value_62b0)   ; load A with initial clock value
 2C36: CB 3F       srl     a           ; Shift Right (div 2)
 2C38: B9          cp      c           ; is the current timer value < 1/2 initial clock value ?
 2C39: DA 41 2C    jp      c,$2c41     ; NO, skip next 3 steps
 
-2C3C: 3A 19 60    ld      a,(rngtimer2) ; Yes, Load A with this timer value (random)
+2C3C: 3A 19 60    ld      a,(rngtimer2_6019) ; Yes, Load A with this timer value (random)
 2C3F: 0F          rrca                ; Test Bit 1 of this
 2C40: D0          ret     nc          ; If bit 1 is not set, return . this gives 50% extra chance of no crazy barrel when clock is getting low
 
@@ -8861,20 +8864,20 @@ FF = Extra Mario Icon
 
 ; arrive here from second barrel that is not crazy.  A is preloaded with 2.  From #2C83
 
-2C4B: 32 82 63    ld      ($6382),a   ; set a barrel in motion for next barrel, bit 1=crazy, 2 = second barrel which is always normal, 0 for normal barrel
+2C4B: 32 82 63    ld      (crazy_blue_barrel_indicator_6382),a   ; set a barrel in motion for next barrel, bit 1=crazy, 2 = second barrel which is always normal, 0 for normal barrel
 2C4E: 3C          inc     a           ; Increment A for the deployment
 
-2C4F: 32 8F 63    ld      ($638f),a   ; store A into the state of the barrel deployment between 3 and 0
+2C4F: 32 8F 63    ld      (deployment_indicator_638f),a   ; store A into the state of the barrel deployment between 3 and 0
 2C52: 3E 01       ld      a,$01       ; A := 1
-2C54: 32 92 63    ld      ($6392),a   ; set barrel deployment indicator
-2C57: 3A b2 62    ld      a,($62b2)   ; load A with blue barrel counter
+2C54: 32 92 63    ld      (barrel_deployment_indicator_6392),a   ; set barrel deployment indicator
+2C57: 3A b2 62    ld      a,(blue_barrel_counter_62b2)   ; load A with blue barrel counter
 2C5A: B9          cp      c           ; compare with current timer
 2C5B: C0          ret     nz          ; return if not equal
 
 2C5C: D6 08       sub     $08         ; if equal then this will be a blue barrel.  decrement A by 8
-2C5E: 32 B2 62    ld      ($62b2),a   ; put back into blue barrel counter
+2C5E: 32 B2 62    ld      (blue_barrel_counter_62b2),a   ; put back into blue barrel counter
 2C61: 11 20 00    ld      de,$0020    ; now check if all 5 fires are out
-2C64: 21 00 64    ld      hl,$6400    ; #6400 by 20's contian 1 if these fires exist
+2C64: 21 00 64    ld      hl,start_of_fires_table_6400    ; #6400 by 20's contian 1 if these fires exist
 
 2C67: 06 05       ld      b,$05       ; FOR B = 1 to 5
 
@@ -8887,9 +8890,9 @@ FF = Extra Mario Icon
 
 2C71: C9          ret                 ; not a blue barrel, return
 
-2C72: 3A 82 63    ld      a,($6382)   ; load A with crazy/blue barrel indicator
+2C72: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 2C75: f6 80       or      $80         ; or with #80  - set leftmost bit on to indicate blue barrel is next
-2C77: 32 82 63    ld      ($6382),a   ; store into crazy/blue barrel indicator
+2C77: 32 82 63    ld      (crazy_blue_barrel_indicator_6382),a   ; store into crazy/blue barrel indicator
 2C7A: c9          ret                 ; return with blue barrel
 
 ; we arrive here if timer is within first 2 clicks when deploying a barrel from #2C18
@@ -8905,7 +8908,7 @@ FF = Extra Mario Icon
 ; from #2C20
 
 2C86: AF          xor     a           ; A := 0
-2C87: 32 82 63    ld      ($6382),a   ; barrel indicator to 0 == normal barrel
+2C87: 32 82 63    ld      (crazy_blue_barrel_indicator_6382),a   ; barrel indicator to 0 == normal barrel
 2C8A: 3E 03       ld      a,$03       ; A := 3 -- use for upcoming deployement indicator == position #3
 2C8C: C3 4F 2C    jp      $2c4f       ; Jump back
 
@@ -8914,17 +8917,17 @@ FF = Extra Mario Icon
 2C8F: 3E 01       ld      a,$01       ; A := 1 = code for girders
 2C91: F7          rst     $30         ; if screen is girders, continue.  else RET
 2C92: D7          rst     $10         ; if mario is alive, continue.  else RET
-2C93: 3A 93 63    ld      a,($6393)   ; load A with barrel deployment indicator
+2C93: 3A 93 63    ld      a,(barrel_deployment_indicator_6393)   ; load A with barrel deployment indicator
 2C96: 0F          rrca                ; is a barrel being deployed ?
 2C97: DA 15 2D    jp      c,$2d15     ; yes, skip ahead
 
-2C9A: 3A 92 63    ld      a,($6392)   ; else load A with other barrel deployment indicator
+2C9A: 3A 92 63    ld      a,(barrel_deployment_indicator_6392)   ; else load A with other barrel deployment indicator
 2C9D: 0F          rrca                ; deployed ?
 2C9E: D0          ret     nc          ; no, return
 
 ; else a barrel is being deployed
 
-2C9F: DD 21 00 67 ld      ix,$6700    ; load IX with start of barrel memory
+2C9F: DD 21 00 67 ld      ix,start_of_barrel_info_table_6700    ; load IX with start of barrel memory
 2CA3: 11 20 00    ld      de,$0020    ; incrementer gets #20
 2CA6: 06 0A       ld      b,$0a       ; For B = 1 to #0A (all 10 barrels)
 
@@ -8942,7 +8945,7 @@ FF = Extra Mario Icon
 
 ; arrive here when a barrel is being deployed
 
-2CB8: DD 22 AA 62 ld      ($62aa),ix  ; save this barrel indicator into #62AA.  it is recalled at #2D55
+2CB8: DD 22 AA 62 ld      (barrel_start_address_62aa),ix  ; save this barrel indicator into #62AA.  it is recalled at #2D55
 2CBC: DD 36 00 02 ld      (ix+$00),$02; set deployement indicator
 2CC0: 16 00       ld      d,$00       ; D := 0
 2CC2: 3E 0A       ld      a,$0a       ; A := #0A
@@ -8950,25 +8953,25 @@ FF = Extra Mario Icon
 2CC5: 87          add     a,a         ; A = A * 2
 2CC6: 87          add     a,a         ; A = A * 2 (A is now 4 times what it was)
 2CC7: 5F          ld      e,a         ; copy this to E
-2CC8: 21 80 69    ld      hl,$6980    ; load HL with starting sprite address for the barrels
+2CC8: 21 80 69    ld      hl,start_of_sprite_memory_for_bouncers_6980    ; load HL with starting sprite address for the barrels
 2CCB: 19          add     hl,de       ; Now add in offset depending on the barrel number ( will vary from 0 to #28 by 4's)
-2CCC: 22 AC 62    ld      ($62ac),hl  ; store this info in #62AC. will vary from #80 to #A8
+2CCC: 22 AC 62    ld      (sprite_variable_start_62ac),hl  ; store this info in #62AC. will vary from #80 to #A8
 2CCF: 3E 01       ld      a,$01       ; A := 1
-2CD1: 32 93 63    ld      ($6393),a   ; set barrel deployment indicator
+2CD1: 32 93 63    ld      (barrel_deployment_indicator_6393),a   ; set barrel deployment indicator
 2CD4: 11 01 05    ld      de,$0501    ; load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 2CD7: CD 9F 30    call    $309f       ; insert task
-2CDA: 21 B1 62    ld      hl,$62b1    ; load bonus counter into HL
+2CDA: 21 B1 62    ld      hl,bonus_timer_62b1    ; load bonus counter into HL
 2CDD: 35          dec     (hl)        ; decrement bonus counter.  Is it zero?
 2CDE: c2 E6 2C    jp      nz,$2ce6    ; no, skip next 2 steps
 
 2CE1: 3E 01       ld      a,$01       ; A := 1
-2CE3: 32 86 63    ld      ($6386),a   ; store into bonus timer out indicator
+2CE3: 32 86 63    ld      (time_has_run_out_indicator_6386),a   ; store into bonus timer out indicator
 
 2CE6: 7E          ld      a,(hl)      ; load A with bonus counter
 2CE7: FE 04       cp      $04         ; bonus <= 400 ?
 2CE9: D2 f6 2C    jp      nc,$2cf6    ; no, skip ahead
 
-2CEC: 21 A8 69    ld      hl,$69a8    ; else load HL with extra barrels sprites
+2CEC: 21 A8 69    ld      hl,extra_barrels_sprites_69a8    ; else load HL with extra barrels sprites
 2CEF: 87          add     a,a
 2CF0: 87          add     a,a         ; A := A * 4
 2CF1: 5F          ld      e,a         ; copy to E
@@ -8982,7 +8985,7 @@ FF = Extra Mario Icon
 2CF6: DD 36 07 15 ld      (ix+$07),$15; set barrel sprite value to #15
 2CFA: DD 36 08 0B ld      (ix+$08),$0b; set barrel color to #0B
 2CFE: DD 36 15 00 ld      (ix+$15),$00; set +15 indicator to 0 = normal barrel,  [1 = blue barrel]
-2D02: 3A 82 63    ld      a,($6382)   ; load A with Crazy/Blue barrel indicator
+2D02: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with Crazy/Blue barrel indicator
 2D05: 07          rlca                ; is this a blue barrel ?
 2D06: D2 15 2D    jp      nc,$2d15    ; No blue barrel, then skip next 3 steps
 
@@ -8992,18 +8995,18 @@ FF = Extra Mario Icon
 2D0D: DD 36 08 0C ld      (ix+$08),$0c; set sprite color to blue
 2D11: DD 36 15 01 ld      (ix+$15),$01; set blue barrel indicator
 
-2D15: 21 AF 62    ld      hl,$62af    ; load HL with deployment timer
+2D15: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with deployment timer
 2D18: 35          dec     (hl)        ; count it down.  is the timer expired?
 2D19: C0          ret     nz          ; no, return
 
 2D1A: 36 18       ld      (hl),$18    ; else reset the counter back to #18
-2D1C: 3A 8F 63    ld      a,($638f)   ; load A with the deployment indiacator.  2 = kong grabbing, 1 = kong holding, 0 = deploying, 3 = kong empty
+2D1C: 3A 8F 63    ld      a,(deployment_indicator_638f)   ; load A with the deployment indiacator.  2 = kong grabbing, 1 = kong holding, 0 = deploying, 3 = kong empty
 2D1F: A7          and     a           ; is a barrel being deployed right now?
 2D20: CA 51 2D    jp      z,$2d51     ; yes, jump ahead
 
 2D23: 4F          ld      c,a         ; else copy A to C
 2D24: 21 32 39    ld      hl,$3932    ; load HL with table data start
-2D27: 3A 82 63    ld      a,($6382)   ; load A with crazy/blue barrel indicator
+2D27: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 2D2A: 0F          rrca                ; Is this a crazy barrel?
 2D2B: DA 2F 2D    jp      c,$2d2f     ; yes, skip next step
 
@@ -9021,21 +9024,21 @@ FF = Extra Mario Icon
 2D38: 16 00       ld      d,$00       ; D: = 0
 2D3A: 19          add     hl,de       ; HL becomes #3982 when barrel is crazy, 395A when normal, 3932 when deploying all the way.  this will skip the final animation when dropping crazy barrel (?)
 2D3B: CD 4E 00    call    $004e       ; update kong's sprites
-2D3E: 21 8F 63    ld      hl,$638f    ; load HL with deployment indicator
+2D3E: 21 8F 63    ld      hl,deployment_indicator_638f    ; load HL with deployment indicator
 2D41: 35          dec     (hl)        ; Decrease indicator
 2D42: C2 51 2D    jp      nz,$2d51    ; if indicator is not zero then jump ahead
 
 2D45: 3E 01       ld      a,$01       ; else A := 1
-2D47: 32 AF 62    ld      ($62af),a   ; Store into ???
-2D4A: 3A 82 63    ld      a,($6382)   ; load A with crazy/blue barrel indicator
+2D47: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; Store into ???
+2D4A: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 2D4D: 0F          rrca                ; Is this a crazy barrel?
 2D4E: DA 83 2D    jp      c,$2d83     ; yes, jump ahead and load HL with #39CC and store into #62A8 and #62A9 and resume on #2D54
 
-2D51: 2A A8 62    ld      hl,($62a8)  ; else load HL with (???)
+2D51: 2A A8 62    ld      hl,(unknown_62a8)  ; else load HL with (???)
 
 2D54: 7E          ld      a,(hl)      ; load A with value in HL.  crazy barrel this value is #BB
-2D55: DD 2A AA 62 ld      ix,($62aa)  ; load IX with Barrel start address saved above
-2D59: ED 5B AC 62 ld      de,($62ac)  ; load DE with sprite variable start  EG #6980.  set in #2CCC
+2D55: DD 2A AA 62 ld      ix,(barrel_start_address_62aa)  ; load IX with Barrel start address saved above
+2D59: ED 5B AC 62 ld      de,(sprite_variable_start_62ac)  ; load DE with sprite variable start  EG #6980.  set in #2CCC
 2D5D: FE 7F       cp      $7f         ; A == #7F ? (time to deploy out of kong's hands ?)
 2D5F: CA 8C 2D    jp      z,$2d8c     ; yes, jump ahead
 
@@ -9059,7 +9062,7 @@ FF = Extra Mario Icon
 2D7C: 13          inc     de          ; DE now has Y position
 2D7D: 12          ld      (de),a      ; store into sprite Y position
 2D7E: 23          inc     hl          ; increase HL .  EG #39CE for crazy barrel
-2D7F: 22 A8 62    ld      ($62a8),hl  ; store into 62A8.  EG 62A8 = CE, 62A9 = 39
+2D7F: 22 A8 62    ld      (unknown_62a8),hl  ; store into 62A8.  EG 62A8 = CE, 62A9 = 39
 2D82: C9          ret                 ; return
 
 ; arrive here because this barrel is crazy from #2D4E
@@ -9069,16 +9072,16 @@ FF = Extra Mario Icon
         ; 39CC  BB
         ; 39CD  4D
 
-2D86: 22 A8 62    ld      ($62a8),hl  ; Load #62A8 and #62A9 with #39 and #CC
+2D86: 22 A8 62    ld      (unknown_62a8),hl  ; Load #62A8 and #62A9 with #39 and #CC
 2D89: C3 54 2D    jp      $2d54       ; jump back
 
 ; jump here from #2D5F
 ; kong is releasing a barrel (?)
 
 2D8C: 21 C3 39    ld      hl,$39c3    ; load HL with start of table data address
-2D8F: 22 A8 62    ld      ($62a8),hl  ; store into ???
+2D8F: 22 A8 62    ld      (unknown_62a8),hl  ; store into ???
 2D92: DD 36 01 01 ld      (ix+$01),$01; set crazy barrel indicator
-2D96: 3A 82 63    ld      a,($6382)   ; load A with crazy/blue barrel indicator
+2D96: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 
 2D99: 0F          rrca                ; roll right.  is this a crazy barrel?
 2D9A: DA A5 2D    jp      c,$2da5     ; yes, skip next 2 steps
@@ -9094,8 +9097,8 @@ FF = Extra Mario Icon
 2DB4: DD 77 12    ld      (ix+$12),a
 2DB7: DD 77 13    ld      (ix+$13),a
 2DBA: DD 77 14    ld      (ix+$14),a
-2DBD: 32 93 63    ld      ($6393),a   ; clear barrel deployment indicator
-2DC0: 32 92 63    ld      ($6392),a   ; clear barrel deployment indicator
+2DBD: 32 93 63    ld      (barrel_deployment_indicator_6393),a   ; clear barrel deployment indicator
+2DC0: 32 92 63    ld      (barrel_deployment_indicator_6392),a   ; clear barrel deployment indicator
 2DC3: 1A          ld      a,(de)      ; load A with kong hand sprite X position
 2DC4: DD 77 03    ld      (ix+$03),a  ; store in barrel's X position
 2DC7: 13          inc     de
@@ -9105,7 +9108,7 @@ FF = Extra Mario Icon
 2DCB: DD 77 05    ld      (ix+$05),a  ; store in barrel's Y position
 2DCE: 21 5C 38    ld      hl,$385c    ; load HL with table data start
 2DD1: CD 4E 00    call    $004e       ; update kong's sprites
-2DD4: 21 0B 69    ld      hl,$690b    ; load HL with start of Kong sprite
+2DD4: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with start of Kong sprite
 2DD7: 0E FC       ld      c,$fc       ; load c with offset of -4
 2DD9: FF          rst     $38         ; move kong
 2DDA: C9          ret                 ; return
@@ -9117,12 +9120,12 @@ FF = Extra Mario Icon
 2DDD: F7          rst     $30         ; returns immediately on girders and elevators, else continue
 
 2DDE: D7          rst     $10         ; only continue if mario alive
-2DDF: 3A 80 63    ld      a,($6380)   ; \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
+2DDF: 3A 80 63    ld      a,(unknown_6380)   ; \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
 2DE2: 3C          inc     a           ;  |
 2DE3: A7          and     a           ;  | clear carry flag
 2DE4: 1F          rra                 ;  |
 2DE5: 47          ld      b,a         ; /
-2De6: 3A 27 62    ld      a,($6227)   ; \  Increment B by 1 if we are on conveyors (to get value between 2 and 4)
+2De6: 3A 27 62    ld      a,(screen_number_6227)   ; \  Increment B by 1 if we are on conveyors (to get value between 2 and 4)
 2De9: fe 02       cp      $02         ;  |
 2Deb: 20 01       jr      nz,$2dee    ;  |
 2Ded: 04          inc     b           ; /
@@ -9134,13 +9137,13 @@ FF = Extra Mario Icon
 2DF3: 10 FC       djnz    $2df1       ; /
 
 2DF5: 47          ld      b,a         ; \  The result of the above indicates the interval in frames between deploying successive fires.
-2DF6: 3A 1A 60    ld      a,(framecounter) ;  | On rivets we proceed every 256 frames for internal difficulty 1 and 2, 128 frames for internal difficulty
+2DF6: 3A 1A 60    ld      a,(framecounter_601a) ;  | On rivets we proceed every 256 frames for internal difficulty 1 and 2, 128 frames for internal difficulty
 2DF9: A0          and     b           ;  | 3 and 4 and 64 frames for internal difficulty 5. On conveyors these values are cut in half.
 2DFA: C0          ret     nz          ; /
 
 2DFB: 3E 01       ld      a,$01       ; Time to deploy a fire. Load A with 1
-2DFD: 32 A0 63    ld      ($63a0),a   ; deploy a firefox/fireball
-2E00: 32 9A 63    ld      ($639a),a   ; set deployment indicator ?
+2DFD: 32 A0 63    ld      (unknown_63a0),a   ; deploy a firefox/fireball
+2E00: 32 9A 63    ld      (deployment_indicator_639a),a   ; set deployment indicator ?
 2E03: C9          ret                 ; return
 
 ; called from main routine at #198F
@@ -9151,15 +9154,15 @@ FF = Extra Mario Icon
 
 2E07: D7          rst     $10         ; if mario is alive, continue, else RET
 
-2E08: DD 21 00 65 ld      ix,$6500    ; load IX with start of bouncer memory area
-2E0C: FD 21 80 69 ld      iy,$6980    ; start of sprite memory for bouncers
+2E08: DD 21 00 65 ld      ix,start_of_bouncer_memory_area_6500    ; load IX with start of bouncer memory area
+2E0C: FD 21 80 69 ld      iy,start_of_sprite_memory_for_bouncers_6980    ; start of sprite memory for bouncers
 2E10: 06 0A       ld      b,$0a       ; for B = 1 to #0A (ten) .  do for all ten sprites
 
 2E12: DD 7E 00    ld      a,(ix+$00)  ; load A with sprite status
 2E15: 0F          rrca                ; is the sprite active ?
 2E16: D2 A7 2E    jp      nc,$2ea7    ; no, jump ahead and check to deploy a new one
 
-2E19: 3A 1A 60    ld      a,(framecounter) ; else load A with timer
+2E19: 3A 1A 60    ld      a,(framecounter_601a) ; else load A with timer
 
 ; FrameCounter - Timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
 ; result is that each of the boucners have their sprites changed once every 16 clicks, or every 1/16 of sec.?
@@ -9200,9 +9203,9 @@ FF = Extra Mario Icon
 
 2E5F: DD 36 0D 04 ld      (ix+$0d),$04; set +D to 4 (???)
 2E63: AF          xor     a           ; A := 0
-2E64: 32 83 60    ld      ($6083),a   ; clear sound of bouncer
+2E64: 32 83 60    ld      (play_sound_for_bouncer_6083),a   ; clear sound of bouncer
 2E67: 3E 03       ld      a,$03       ; load sound duration of 3
-2E69: 32 84 60    ld      ($6084),a   ; play sound for falling bouncer
+2E69: 32 84 60    ld      (play_sound_for_falling_bouncer_6084),a   ; play sound for falling bouncer
 
 2E6C: DD 7E 03    ld      a,(ix+$03)  ; load A with X position
 2E6F: FD 77 00    ld      (iy+$00),a  ; store into sprite
@@ -9234,19 +9237,19 @@ FF = Extra Mario Icon
 
 2E9C: 21 AA 39    ld      hl,$39aa    ; load HL with start of table data
 2E9F: 3E 03       ld      a,$03       ; load sound duration of 3
-2EA1: 32 83 60    ld      ($6083),a   ; play sound for bouncer
+2EA1: 32 83 60    ld      (play_sound_for_bouncer_6083),a   ; play sound for bouncer
 2EA4: C3 4B 2E    jp      $2e4b       ; jump back
 
 ; jump here from #2E16
 
-2EA7: 3A 96 63    ld      a,($6396)   ; load A with bouncer release flag
+2EA7: 3A 96 63    ld      a,(bouncer_release_6396)   ; load A with bouncer release flag
 2EAA: 0F          rrca                ; time to deploy a bouncer?
 2EAB: D2 78 2E    jp      nc,$2e78    ; no, jump back
 
 ; deploy new bouncer
 
 2EAE: AF          xor     a           ; A := 0
-2EAF: 32 96 63    ld      ($6396),a   ; reset bouncer release flag
+2EAF: 32 96 63    ld      (bouncer_release_6396),a   ; reset bouncer release flag
 2EB2: DD 36 05 50 ld      (ix+$05),$50; set bouncer's Y position to #50
 2EB6: DD 36 0D 01 ld      (ix+$0d),$01; set value to sprite bouncing across, not down
 2EBA: CD 57 00    call    $0057       ; load A with random number
@@ -9266,29 +9269,29 @@ FF = Extra Mario Icon
 2ED6: F7          rst     $30         ; continue here on girders, conveyors, rivets only.  elevators RET from this sub, it has no hammers.
 2ED7: D7          rst     $10         ; continue here only if mario is alive, otherwise RET from this sub
 
-2ED8: 11 18 6A    ld      de,$6a18    ; load DE with hardware address of hammer sprite
-2EDB: DD 21 80 66 ld      ix,$6680    ; load IX with software address of hammer sprite
+2ED8: 11 18 6A    ld      de,hardware_address_of_hammer_sprite_6a18    ; load DE with hardware address of hammer sprite
+2EDB: DD 21 80 66 ld      ix,software_address_of_hammer_sprite_6680    ; load IX with software address of hammer sprite
 2EDF: DD 7E 01    ld      a,(ix+$01)  ; load A with 1st hammer active indicator
 2EE2: 0F          rrca                ; rotate right.  carry set?  (is this hammer active?)
 2EE3: DA ED 2E    jp      c,$2eed     ; yes, skip next 2 steps
 
-2EE6: 11 1C 6A    ld      de,$6a1c    ; else load DE with hardware address of 2nd hammer sprite
-2EE9: DD 21 90 66 ld      ix,$6690    ; load IX with 2nd hammer sprite
+2EE6: 11 1C 6A    ld      de,hardware_address_of_2nd_hammer_sprite_6a1c    ; else load DE with hardware address of 2nd hammer sprite
+2EE9: DD 21 90 66 ld      ix,second_hammer_sprite_6690    ; load IX with 2nd hammer sprite
 
 2EED: DD 36 0E 00 ld      (ix+$0e),$00; store 0 into +#E == ???
 2EF1: DD 36 0F F0 ld      (ix+$0f),$f0; store #F0 into +#F (???)
-2EF5: 3A 17 62    ld      a,($6217)   ; load A with hammer indicator
+2EF5: 3A 17 62    ld      a,(unknown_6217)   ; load A with hammer indicator
 2EF8: 0F          rrca                ; is the hammer already active?
 2EF9: D2 97 2F    jp      nc,$2f97    ; no, skip ahead and check for new hammer grab
 
 2EFC: AF          xor     a           ; A := 0
-2EFD: 32 18 62    ld      ($6218),a   ; store into grabbing the hammer indicator. the grab is complete.
-2F00: 21 89 60    ld      hl,$6089    ; load HL with music address
+2EFD: 32 18 62    ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a   ; store into grabbing the hammer indicator. the grab is complete.
+2F00: 21 89 60    ld      hl,background_music_value_6089    ; load HL with music address
 2F03: 36 04       ld      (hl),$04    ; set music for hammer
 2F05: DD 36 09 06 ld      (ix+$09),$06; set width ?
 2F09: DD 36 0A 03 ld      (ix+$0a),$03; set height ?
 2F0D: 06 1E       ld      b,$1e       ; B := #1E
-2F0F: 3A 07 62    ld      a,($6207)   ; load A with mario movement indicator/sprite value
+2F0F: 3A 07 62    ld      a,(mario_movement_indicator_sprite_value_6207)   ; load A with mario movement indicator/sprite value
 2F12: CB 27       sla     a           ; shift left.  is bit 7 on?
 2F14: D2 1B 2F    jp      nc,$2f1b    ; no, skip next 2 steps
 
@@ -9297,7 +9300,7 @@ FF = Extra Mario Icon
 
 2F1B: F6 08       or      $08         ; turn on bit 3 in A
 2F1D: 4F          ld      c,a         ; copy to C
-2F1E: 3A 94 63    ld      a,($6394)   ; load A with hammer timer
+2F1E: 3A 94 63    ld      a,(hammer_timer_6394)   ; load A with hammer timer
 2F21: CB 5F       bit     3,a         ; is bit 3 on in A?
 2F23: CA 43 2F    jp      z,$2f43     ; no, skip ahead
 
@@ -9315,15 +9318,15 @@ FF = Extra Mario Icon
 2F3F: DD 36 0E 10 ld      (ix+$0e),$10; set offset for right side of mario
 
 2F43: 79          ld      a,c         ; A := C
-2F44: 32 4D 69    ld      ($694d),a   ; store into mario sprite value
+2F44: 32 4D 69    ld      (mario_sprite_value_694d),a   ; store into mario sprite value
 2F47: 0E 07       ld      c,$07       ; C := 7
-2F49: 21 94 63    ld      hl,$6394    ; load HL with hammer timer
+2F49: 21 94 63    ld      hl,hammer_timer_6394    ; load HL with hammer timer
 2F4C: 34          inc     (hl)        ; increase.  at zero?
 2F4D: C2 B7 2F    jp      nz,$2fb7    ; no skip ahead
 
 ; hammer is changing or ending
 
-2F50: 21 95 63    ld      hl,$6395    ; load HL with hammer length.
+2F50: 21 95 63    ld      hl,hammer_length_6395    ; load HL with hammer length.
 2F53: 34          inc     (hl)        ; increase
 2F54: 7E          ld      a,(hl)      ; get the value
 2F55: FE 02       cp      $02         ; is the hammer all used up?
@@ -9332,22 +9335,22 @@ FF = Extra Mario Icon
 ; arrive here when hammer runs out
 
 2F5A: AF          xor     a           ; A := 0
-2F5B: 32 95 63    ld      ($6395),a   ; clear hammer length
-2F5E: 32 17 62    ld      ($6217),a   ; store into hammer indicator
+2F5B: 32 95 63    ld      (hammer_length_6395),a   ; clear hammer length
+2F5E: 32 17 62    ld      (unknown_6217),a   ; store into hammer indicator
 2F61: DD 77 01    ld      (ix+$01),a  ; clear hammer active indicator
-2F64: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2F64: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 2F67: ED 44       neg                 ; take negative
 2F69: DD 77 0E    ld      (ix+$0e),a  ; store into +E
-2F6C: 3A 07 62    ld      a,($6207)   ; load A with mario movement indicator/sprite value
-2F6F: 32 4D 69    ld      ($694d),a   ; store into mario sprite value
+2F6C: 3A 07 62    ld      a,(mario_movement_indicator_sprite_value_6207)   ; load A with mario movement indicator/sprite value
+2F6F: 32 4D 69    ld      (mario_sprite_value_694d),a   ; store into mario sprite value
 2F72: DD 36 00 00 ld      (ix+$00),$00; clear hammer active bit
-2F76: 3A 89 63    ld      a,($6389)   ; load A with previous background music
-2F79: 32 89 60    ld      ($6089),a   ; set music with what it was before the hammer was grabbed
+2F76: 3A 89 63    ld      a,(restored_when_hammer_runs_out_6389)   ; load A with previous background music
+2F79: 32 89 60    ld      (background_music_value_6089),a   ; set music with what it was before the hammer was grabbed
 
 ;
 
 2F7C: EB          ex      de,hl       ; DE <> HL
-2F7D: 3A 03 62    ld      a,($6203)   ; load A with mario's X position
+2F7D: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; load A with mario's X position
 2F80: DD 86 0E    add     a,(ix+$0e)  ; add hammer offset
 2F83: 77          ld      (hl),a      ; store into Hammer X position
 2F84: DD 77 03    ld      (ix+$03),a  ; store into hammer X position
@@ -9356,7 +9359,7 @@ FF = Extra Mario Icon
 2F89: 23          inc     hl          ; next
 2F8A: 71          ld      (hl),c      ; store into hammer color
 2F8B: 23          inc     hl          ; next
-2F8C: 3A 05 62    ld      a,($6205)   ; load A with mario's Y position
+2F8C: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with mario's Y position
 2F8F: DD 86 0F    add     a,(ix+$0f)  ; add hammer offset
 2F92: 77          ld      (hl),a      ; store into hammer Y position
 2F93: DD 77 05    ld      (ix+$05),a  ; store into hammer Y position
@@ -9364,7 +9367,7 @@ FF = Extra Mario Icon
 
 ; arrive from #2EF9, check for grabbing hammer ?
 
-2F97: 3A 18 62    ld      a,($6218)   ; load A with 0, turns to 1 while mario is grabbing the hammer until he lands
+2F97: 3A 18 62    ld      a,(mario_is_grabbing_the_hammer_until_he_lands_6218)   ; load A with 0, turns to 1 while mario is grabbing the hammer until he lands
 2F9A: 0F          rrca                ; is mario grabbing the hammer?
 2F9B: D0          ret     nc          ; no, return
 
@@ -9372,26 +9375,26 @@ FF = Extra Mario Icon
 
 2F9C: DD 36 09 06 ld      (ix+$09),$06; set width ?
 2FA0: DD 36 0A 03 ld      (ix+$0a),$03; set height ?
-2FA4: 3A 07 62    ld      a,($6207)   ; load A with mario movement indicator/sprite value
+2FA4: 3A 07 62    ld      a,(mario_movement_indicator_sprite_value_6207)   ; load A with mario movement indicator/sprite value
 2FA7: 07          rlca                ; rotate left the high bit into carry flag
 2FA8: 3E 3C       ld      a,$3c       ; A := #3C
 2FAA: 1F          rra                 ; rotate right the carry bit back in
 2FAB: 47          ld      b,a         ; copy to B
 2FAC: 0E 07       ld      c,$07       ; C := 7
-2FAE: 3A 89 60    ld      a,($6089)   ; load A with background music value
-2FB1: 32 89 63    ld      ($6389),a   ; save so it can be restored when hammer runs out.  see #2F76
+2FAE: 3A 89 60    ld      a,(background_music_value_6089)   ; load A with background music value
+2FB1: 32 89 63    ld      (restored_when_hammer_runs_out_6389),a   ; save so it can be restored when hammer runs out.  see #2F76
 2FB4: C3 7C 2F    jp      $2f7c       ; return to program
 
 ; arrive from #2F4D
 
-2FB7: 3A 95 63    ld      a,($6395)   ; load A with hammer length
+2FB7: 3A 95 63    ld      a,(hammer_length_6395)   ; load A with hammer length
 2FBA: A7          and     a           ; == 0 ?  (full strength)
 2FBB: CA 7C 2F    jp      z,$2f7c     ; yes, jump back now
 
 ; change hammer color ?
 ; hammer is half strength
 
-2FBE: 3A 1A 60    ld      a,(framecounter) ; load A with this clock counts down from #FF to 00 over and over...
+2FBE: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 2FC1: CB 5F       bit     3,a         ; check bit 3 (?).  zero ?  will do this every 8 frames
 2FC3: CA 7C 2F    jp      z,$2f7c     ; yes, jump back now
 
@@ -9411,23 +9414,23 @@ FF = Extra Mario Icon
 2FCB: 3E 0E       ld      a,$0e       ; A := #E = 1110 binary
 2FCD: F7          rst     $30         ; is this the girders?  if so, return immediately
 
-2FCE: 21 B4 62    ld      hl,$62b4    ; else load HL with timer
+2FCE: 21 B4 62    ld      hl,timer_62b4    ; else load HL with timer
 2FD1: 35          dec     (hl)        ; count down timer.  at zero?
 2FD2: C0          ret     nz          ; no, return
 
 2FD3: 3E 03       ld      a,$03       ; else A := 3
-2FD5: 32 B9 62    ld      ($62b9),a   ; store into fire release - a new fire can be released
-2FD8: 32 96 63    ld      ($6396),a   ; store into bouncer release - a new bouncer can be deployed
+2FD5: 32 B9 62    ld      (fire_release_62b9),a   ; store into fire release - a new fire can be released
+2FD8: 32 96 63    ld      (bouncer_release_6396),a   ; store into bouncer release - a new bouncer can be deployed
 2FDB: 11 01 05    ld      de,$0501    ; load task #5, parameter #1 = update onscreen bonus timer and play sound & change to red if below 1000
 2FDE: CD 9F 30    call    $309f       ; insert task
-2FE1: 3A B3 62    ld      a,($62b3)   ; load A with intial timer value.
+2FE1: 3A B3 62    ld      a,(intial_timer_value_62b3)   ; load A with intial timer value.
 2FE4: 77          ld      (hl),a      ; reset the timer
-2fe5: 21 B1 62    ld      hl,$62b1    ; load HL with bonus timer
+2fe5: 21 B1 62    ld      hl,bonus_timer_62b1    ; load HL with bonus timer
 2fe8: 35          dec     (hl)        ; Decrement.  is the bonus timer zero?
 2fe9: c0          ret     nz          ; no, return
 
 2fea: 3E 01       ld      a,$01       ; else time has run out.  A := 1
-2fec: 32 86 63    ld      ($6386),a   ; set time has run out indicator
+2fec: 32 86 63    ld      (time_has_run_out_indicator_6386),a   ; set time has run out indicator
 2fef: c9          ret                 ; return
 
 ; called during a barrel roll
@@ -9527,14 +9530,14 @@ FF = Extra Mario Icon
 ; rolls up kong's ladder during intro
 
 304A: 11 E0 FF    ld      de,$ffe0    ; load DE with offset
-304D: 3A 8E 63    ld      a,($638e)   ; load A with kong ladder climb counter
+304D: 3A 8E 63    ld      a,(kong_ladder_climb_counter_638e)   ; load A with kong ladder climb counter
 3050: 4F          ld      c,a         ; copy to C
 3051: 06 00       ld      b,$00       ; B := 0
 3053: 21 00 76    ld      hl,$7600    ; load HL with screen RAM address
 3056: CD 64 30    call    $3064       ; roll up left ladder
 3059: 21 C0 75    ld      hl,$75c0    ; load HL with screen RAM address
 305C: CD 64 30    call    $3064       ; roll up right ladder
-305F: 21 8E 63    ld      hl,$638e    ; load HL with kong ladder climb counter
+305F: 21 8E 63    ld      hl,kong_ladder_climb_counter_638e    ; load HL with kong ladder climb counter
 3062: 35          dec     (hl)        ; decrease
 3063: C9          ret                 ; return
 
@@ -9549,13 +9552,13 @@ FF = Extra Mario Icon
 ; arrive from #0A79 when intro screen indicator == 3 or 5
 
 3069: DF          rst     $18         ; count down timer and only continue here if zero, else RET
-306A: 2A C0 63    ld      hl,($63c0)  ; load HL with timer ???
+306A: 2A C0 63    ld      hl,(timer_unknown_63c0)  ; load HL with timer ???
 306D: 34          inc     (hl)        ; increase
 306E: C9          ret                 ; return
 
 ; called from 3 locations
 
-306F: 21 AF 62    ld      hl,$62af    ; load HL with kong climbing counter
+306F: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter
 3072: 34          inc     (hl)        ; increase
 3073: 7E          ld      a,(hl)      ; load A with the counter
 3074: E6 07       and     $07         ; mask bits.  now between 0 and 7.  zero?
@@ -9563,17 +9566,17 @@ FF = Extra Mario Icon
 
 ; animate kong climbing up the ladder
 
-3077: 21 0B 69    ld      hl,$690b    ; load HL with kong sprite array
+3077: 21 0B 69    ld      hl,kong_sprite_array_690b    ; load HL with kong sprite array
 307A: 0E FC       ld      c,$fc       ; C := -4
 307C: FF          rst     $38         ; move kong
 307D: 0E 81       ld      c,$81       ; C := #81
-307F: 21 09 69    ld      hl,$6909    ; load HL with kong's right leg address sprite
+307F: 21 09 69    ld      hl,kongs_right_leg_address_sprite_6909    ; load HL with kong's right leg address sprite
 3082: CD 96 30    call    $3096       ; animate kong sprite
-3085: 21 1D 69    ld      hl,$691d    ; load HL with kong's right arm address sprite
+3085: 21 1D 69    ld      hl,kongs_right_arm_address_sprite_691d    ; load HL with kong's right arm address sprite
 3088: CD 96 30    call    $3096       ; animate kong sprite
 308B: CD 57 00    call    $0057       ; load A with random number
 308E: E6 80       and     $80         ; mask bits, now either 0 or #80
-3090: 21 2D 69    ld      hl,$692d    ; load HL with sprite of girl under kong's arms
+3090: 21 2D 69    ld      hl,sprite_of_girl_under_kongs_arms_692d    ; load HL with sprite of girl under kong's arms
 3093: AE          xor     (hl)        ; toggle the sprite
 3094: 77          ld      (hl),a      ; store result - toggles the girl to make her wiggle randomly
 3095: C9          ret                 ; return
@@ -9596,8 +9599,8 @@ FF = Extra Mario Icon
 ; tasks are pushed into #60C0 through #60FF
 
 309F: E5          push    hl          ; save HL
-30A0: 21 C0 60    ld      hl,$60c0    ; load HL with start of task list [why?  L is set later, only H needs to be loaded here]
-30A3: 3A B0 60    ld      a,($60b0)   ; load A with task pointer
+30A0: 21 C0 60    ld      hl,start_of_task_list_60c0    ; load HL with start of task list [why?  L is set later, only H needs to be loaded here]
+30A3: 3A B0 60    ld      a,(task_list_pointer_60b0)   ; load A with task pointer
 30A6: 6F          ld      l,a         ; HL now has task pointer full address
 30A7: CB 7E       bit     7,(hl)      ; test high bit 7 of the task at this address.  zero?
 30A9: CA BB 30    jp      z,$30bb     ; yes, skip ahead, restore HL and return. [when would this happen??? if task list is full???]
@@ -9612,7 +9615,7 @@ FF = Extra Mario Icon
 
 30B6: 3E C0       ld      a,$c0       ; yes, reset A to #C0 for start of task list
 
-30B8: 32 B0 60    ld      ($60b0),a   ; store A into task list pointer
+30B8: 32 B0 60    ld      (task_list_pointer_60b0),a   ; store A into task list pointer
 
 30BB: E1          pop     hl          ; restore HL
 30BC: C9          ret                 ; return to program
@@ -9620,7 +9623,7 @@ FF = Extra Mario Icon
 ; arrive here from #1615 when rivets cleared
 ; clears all sprites for firefoxes, hammers and bonus items
 
-30BD: 21 50 69    ld      hl,$6950    ; load HL with start of hammers
+30BD: 21 50 69    ld      hl,start_of_hammers_6950    ; load HL with start of hammers
 30C0: 06 02       ld      b,$02       ; B := 2
 30C2: CD E4 30    call    $30e4       ; clear hammers ?
 30C5: 2E 80       ld      l,$80       ; L := #80
@@ -9629,14 +9632,14 @@ FF = Extra Mario Icon
 30CC: 2E B8       ld      l,$b8       ; L := #B8
 30CE: 06 0B       ld      b,$0b       ; B := #B
 30D0: CD E4 30    call    $30e4       ; clear firefoxes ?
-30D3: 21 0C 6A    ld      hl,$6a0c    ; load HL with start of bonus items
+30D3: 21 0C 6A    ld      hl,start_of_bonus_items_6a0c    ; load HL with start of bonus items
 30D6: 06 05       ld      b,$05       ; B := 5
 30D8: C3 E4 30    jp      $30e4       ; clear bonus items
 
 ; called from #12DF
 ; clears mario and elevators from the screen
 
-30DB: 21 4C 69    ld      hl,$694c    ; load address for mario sprite X position
+30DB: 21 4C 69    ld      hl,mario_sprite_x_position_694c    ; load address for mario sprite X position
 30DE: 36 00       ld      (hl),$00    ; clear this memory = move mario off screen
 30E0: 2E 58       ld      l,$58       ; HL := #6958 = elevator sprite start
 30E2: 06 06       ld      b,$06       ; for B = 1 to 6
@@ -9663,7 +9666,7 @@ FF = Extra Mario Icon
 ; short-circuits back to the main routine, the faster they will move.
 ; called from #30ED ABOVE
 
-30FA: 3A 80 63    ld      a,($6380)   ; \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
+30FA: 3A 80 63    ld      a,(unknown_6380)   ; \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
 30FD: FE 06       cp      $06         ;  |
 30FF: 38 02       jr      c,$3103     ; /
 
@@ -9691,7 +9694,7 @@ FF = Extra Mario Icon
 
 ; internal difficulty == 2. Here the fireball movement routine is executed for 5 consecutive frames out of every 8 frames.
 
-311B: 3A 1A 60    ld      a,(framecounter) ; \  If the lowest 3 bits of timer are less than 5 (equal to 0, 1, 2, 3, or 4) then return and continue as
+311B: 3A 1A 60    ld      a,(framecounter_601a) ; \  If the lowest 3 bits of timer are less than 5 (equal to 0, 1, 2, 3, or 4) then return and continue as
 311E: E6 07       and     $07         ;  | normal
 3120: FE 05       cp      $05         ;  |
 3122: F8          ret     m           ; /
@@ -9702,7 +9705,7 @@ FF = Extra Mario Icon
 
 ; difficulty == 3 or 4. Here the fireball movement routine is executed for 3 out of every 4 frames.
 
-3126: 3A 1A 60    ld      a,(framecounter) ; \  If the lowest 2 bits of the timer are not 11 then return and continue as normal
+3126: 3A 1A 60    ld      a,(framecounter_601a) ; \  If the lowest 2 bits of the timer are not 11 then return and continue as normal
 3129: E6 03       and     $03         ;  |
 312B: FE 03       cp      $03         ;  |
 312D: F8          ret     m           ; /
@@ -9713,7 +9716,7 @@ FF = Extra Mario Icon
 
 ; difficulty == 5. Here the fireball movement routine is executed for 7 out of every 8 frames.
 
-3131: 3A 1A 60    ld      a,(framecounter) ; \  If the lowest 3 bits of the timer are not 111 then return and continue as normal
+3131: 3A 1A 60    ld      a,(framecounter_601a) ; \  If the lowest 3 bits of the timer are not 111 then return and continue as normal
 3134: E6 07       and     $07         ;  |
 3136: FE 07       cp      $07         ;  |
 3138: F8          ret     m           ; /
@@ -9726,9 +9729,9 @@ FF = Extra Mario Icon
 ; updated count of the number of fireballs on screen and sets the color of fireballs based on the hammer status.
 ; called from #30F0
 
-313C: DD 21 00 64 ld      ix,$6400    ; load IX with start of fire address
+313C: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; load IX with start of fire address
 3140: AF          xor     a           ; \ Reset # of fires onscreen to 0, this routine will count them.
-3141: 32 A1 63    ld      ($63a1),a   ; /
+3141: 32 A1 63    ld      (unknown_63a1),a   ; /
 3144: 06 05       ld      b,$05       ; For B = 1 to 5 firefoxes
 3146: 11 20 00    ld      de,$0020    ; load DE with offset to add for next firefox
 
@@ -9736,12 +9739,12 @@ FF = Extra Mario Icon
 314C: FE 00       cp      $00         ;  |
 314E: CA 7C 31    jp      z,$317c     ; /
 
-3151: 3A A1 63    ld      a,($63a1)   ; \  This fire slot is active. Increment count for # of fires onscreen
+3151: 3A A1 63    ld      a,(unknown_63a1)   ; \  This fire slot is active. Increment count for # of fires onscreen
 3154: 3C          inc     a           ;  |
-3155: 32 A1 63    ld      ($63a1),a   ; /
+3155: 32 A1 63    ld      (unknown_63a1),a   ; /
 3158: 3E 01       ld      a,$01       ; \  Set fire color to #01 (normal) if hammer is not active, and #00 (blue) if hammer is active
 315A: DD 77 08    ld      (ix+$08),a  ;  |
-315D: 3A 17 62    ld      a,($6217)   ;  |
+315D: 3A 17 62    ld      a,(unknown_6217)   ;  |
 3160: FE 01       cp      $01         ;  |
 3162: C2 6A 31    jp      nz,$316a    ;  |
 3165: 3E 00       ld      a,$00       ;  |
@@ -9750,9 +9753,9 @@ FF = Extra Mario Icon
 316A: DD 19       add     ix,de       ; next sprite
 316C: 10 DB       djnz    $3149       ; next B
 
-316E: 21 A0 63    ld      hl,$63a0    ; \ Clear fire deployment flag
+316E: 21 A0 63    ld      hl,unknown_63a0    ; \ Clear fire deployment flag
 3171: 36 00       ld      (hl),$00    ; /
-3173: 3A A1 63    ld      a,($63a1)   ; \  Return all the way back to the main routine if no fires are active, otherwise just return.
+3173: 3A A1 63    ld      a,(unknown_63a1)   ; \  Return all the way back to the main routine if no fires are active, otherwise just return.
 3176: FE 00       cp      $00         ;  |
 3178: C0          ret     nz          ;  |
 3179: 33          inc     sp          ;  |
@@ -9760,28 +9763,28 @@ FF = Extra Mario Icon
 317B: C9          ret                 ; /
 
 ; arrive here from #314E
-317C: 3A A1 63    ld      a,($63a1)   ; \  Jump back and don't deploy fire if there are already 5 fires active (Can this ever happen here?)
+317C: 3A A1 63    ld      a,(unknown_63a1)   ; \  Jump back and don't deploy fire if there are already 5 fires active (Can this ever happen here?)
 317F: FE 05       cp      $05         ;  |
 3181: CA 6A 31    jp      z,$316a     ; /
-3184: 3A 27 62    ld      a,($6227)   ; \  Jump ahead if screen is not conveyors (i.e., the screen is rivets)
+3184: 3A 27 62    ld      a,(screen_number_6227)   ; \  Jump ahead if screen is not conveyors (i.e., the screen is rivets)
 3187: FE 02       cp      $02         ;  |
 3189: C2 95 31    jp      nz,$3195    ; /
-318C: 3A A1 63    ld      a,($63a1)   ; \  Return if current count of # of fires == internal difficulty, on conveyors we never have more fireballs
+318C: 3A A1 63    ld      a,(unknown_63a1)   ; \  Return if current count of # of fires == internal difficulty, on conveyors we never have more fireballs
 318F: 4F          ld      c,a         ;  | on screen than the internal difficulty
-3190: 3A 80 63    ld      a,($6380)   ;  |
+3190: 3A 80 63    ld      a,(unknown_6380)   ;  |
 3193: B9          cp      c           ;  |
 3194: C8          ret     z           ; /
-3195: 3A A0 63    ld      a,($63a0)   ; \  Jump back and don't deploy fire if fire deployment flag is not set
+3195: 3A A0 63    ld      a,(unknown_63a0)   ; \  Jump back and don't deploy fire if fire deployment flag is not set
 3198: FE 01       cp      $01         ;  |
 319A: C2 6A 31    jp      nz,$316a    ; /
 
 319D: DD 77 00    ld      (ix+$00),a  ; Deploy a fire. Set status indicator to 1 = active
 31A0: DD 77 18    ld      (ix+$18),a  ; Set spawning indicator to 1
 31A3: AF          xor     a           ; \ Clear fire deployment flag
-31A4: 32 A0 63    ld      ($63a0),a   ; /
-31A7: 3A A1 63    ld      a,($63a1)   ; \  Increment count of # of active fires
+31A4: 32 A0 63    ld      (unknown_63a0),a   ; /
+31A7: 3A A1 63    ld      a,(unknown_63a1)   ; \  Increment count of # of active fires
 31AA: 3C          inc     a           ;  |
-31AB: 32 A1 63    ld      ($63a1),a   ; /
+31AB: 32 A1 63    ld      (unknown_63a1),a   ; /
 31AE: C3 6A 31    jp      $316a       ; jump back and loop for next
 
 ; This subroutine handles all movement for all fireballs.
@@ -9789,24 +9792,24 @@ FF = Extra Mario Icon
 
 31B1: CD DD 31    call    $31dd       ; Check if freezers should enter freezer mode
 31B4: AF          xor     a           ; \ Index of fireball being processed := 0
-31B5: 32 A2 63    ld      ($63a2),a   ; /
-31B8: 21 E0 63    ld      hl,$63e0    ; \ Address of fireball data array for current fireball being processed := #63E0 = #6400 - #20
-31BB: 22 C8 63    ld      ($63c8),hl  ; / This gets incremented by #20 at the start of the following loop
+31B5: 32 A2 63    ld      (unknown_63a2),a   ; /
+31B8: 21 E0 63    ld      hl,current_fireball_data_address_63e0    ; \ Address of fireball data array for current fireball being processed := #63E0 = #6400 - #20
+31BB: 22 C8 63    ld      (address_of_fireball_slot_for_this_fireball_63c8),hl  ; / This gets incremented by #20 at the start of the following loop
 
 ; Loop start
-31BE: 2A C8 63    ld      hl,($63c8)  ; \  Move on to next fireball by incrementing address of fireball data array for current fireball by #20
+31BE: 2A C8 63    ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)  ; \  Move on to next fireball by incrementing address of fireball data array for current fireball by #20
 31C1: 01 20 00    ld      bc,$0020    ;  |
 31C4: 09          add     hl,bc       ;  |
-31C5: 22 C8 63    ld      ($63c8),hl  ; /
+31C5: 22 C8 63    ld      (address_of_fireball_slot_for_this_fireball_63c8),hl  ; /
 31C8: 7E          ld      a,(hl)      ; \  Jump if fireball is not active
 31C9: A7          and     a           ;  |
 31CA: CA D0 31    jp      z,$31d0     ; /
 
 31CD: CD 02 32    call    $3202       ; Handle all movement for this fire
 
-31D0: 3A A2 63    ld      a,($63a2)   ; \  Increment index of current fireball being processed
+31D0: 3A A2 63    ld      a,(unknown_63a2)   ; \  Increment index of current fireball being processed
 31D3: 3C          inc     a           ;  |
-31D4: 32 A2 63    ld      ($63a2),a   ; /
+31D4: 32 A2 63    ld      (unknown_63a2),a   ; /
 31D7: FE 05       cp      $05         ; \ Loop if index is less than 5
 31D9: C2 BE 31    jp      nz,$31be    ; /
 
@@ -9816,7 +9819,7 @@ FF = Extra Mario Icon
 ; every 256 frames (note that this is 256 actual frames, not 256 fireball code execution frames).
 ; called from #31B1 above
 
-31DD: 3A 80 63    ld      a,($6380)   ; \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
+31DD: 3A 80 63    ld      a,(unknown_6380)   ; \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
 31E0: FE 03       cp      $03         ;  |
 31E2: F8          ret     m           ; /
 
@@ -9824,11 +9827,11 @@ FF = Extra Mario Icon
 31E6: FE 01       cp      $01         ; \ Return if should not enter freezer mode
 31E8: C0          ret     nz          ; /
 
-31E9: 21 39 64    ld      hl,$6439    ; \  Set freezer indicator of 2nd fire to #02 to enable freezer mode
+31E9: 21 39 64    ld      hl,freezer_indicator_of_2nd_fire_6439    ; \  Set freezer indicator of 2nd fire to #02 to enable freezer mode
 31EC: 3E 02       ld      a,$02       ;  |
 31EE: 77          ld      (hl),a      ; /
 
-31EF: 21 79 64    ld      hl,$6479    ; \  Set freezer indicator of 4th fire to #02 to enable freezer mode
+31EF: 21 79 64    ld      hl,freezer_indicator_of_4th_fire_6479    ; \  Set freezer indicator of 4th fire to #02 to enable freezer mode
 31F2: 3E 02       ld      a,$02       ;  |
 31F4: 77          ld      (hl),a      ; /
 31F5: C9          ret                 ; return
@@ -9836,18 +9839,18 @@ FF = Extra Mario Icon
 ; Every 256 frames this subroutine has a 25% chance of loading 1 into A. Otherwise a value not equal to 1 is loaded.
 ; called from #31E3
 
-31F6: 3A 18 60    ld      a,(rngtimer1) ; \  Return with 1 not loaded in A if lowest 2 bits of RNG are not 01. (75% probability of returning)
+31F6: 3A 18 60    ld      a,(rngtimer1_6018) ; \  Return with 1 not loaded in A if lowest 2 bits of RNG are not 01. (75% probability of returning)
 31F9: E6 03       and     $03         ;  |
 31FB: FE 01       cp      $01         ;  |
 31FD: C0          ret     nz          ; /
 
-31FE: 3A 1A 60    ld      a,(framecounter) ; \ Else return A with timer that constantly counts down from FF to 00  ... 1 count per frame
+31FE: 3A 1A 60    ld      a,(framecounter_601a) ; \ Else return A with timer that constantly counts down from FF to 00  ... 1 count per frame
 3201: C9          ret                 ; /
 
 ; This subroutine handles all movement for a single fireball.
 ; called from #31CD above
 
-3202: DD 2A C8 63 ld      ix,($63c8)  ; Load IX with address of fireball data array for current fireball
+3202: DD 2A C8 63 ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)  ; Load IX with address of fireball data array for current fireball
 3206: DD 7E 18    ld      a,(ix+$18)  ; \  Jump if fireball is currently in the process of spawning
 3209: FE 01       cp      $01         ;  |
 320B: CA 7A 32    jp      z,$327a     ; /
@@ -9861,7 +9864,7 @@ FF = Extra Mario Icon
 321B: CA 7E 32    jp      z,$327e     ; /
 
 321E: CD 0F 33    call    $330f       ; Check if fireball should randomly reverse direction
-3221: 3A 18 60    ld      a,(rngtimer1) ; \  Jump and do not climb any ladder with 75% probability, so a ladder is climbed with 25% probability.
+3221: 3A 18 60    ld      a,(rngtimer1_6018) ; \  Jump and do not climb any ladder with 75% probability, so a ladder is climbed with 25% probability.
 3224: E6 03       and     $03         ;  | Note that left moving fireballs always skip the ladder climbing check and instead jump to the end of
 3226: C2 33 32    jp      nz,$3233    ; /  this subroutine without updating position.
 
@@ -9882,7 +9885,7 @@ FF = Extra Mario Icon
 3241: FE 01       cp      $01         ; \ Jump if we have reached the edge of a girder
 3243: CA 97 32    jp      z,$3297     ; /
 
-3246: DD 2A C8 63 ld      ix,($63c8)  ; Load IX with address of fireball slot for this fireball
+3246: DD 2A C8 63 ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)  ; Load IX with address of fireball slot for this fireball
 324A: DD 7E 0E    ld      a,(ix+$0e)  ; \  Jump if X-position is < #10 (i.e., fireball has reached left edge of screen)
 324D: FE 10       cp      $10         ;  |
 324F: DA 8C 32    jp      c,$328c     ; /
@@ -9935,7 +9938,7 @@ FF = Extra Mario Icon
 3294: C3 57 32    jp      $3257       ; Jump back
 
 ; Arrived from #3243 when fire is at edge of girder
-3297: DD 2A C8 63 ld      ix,($63c8)  ; Load IX with address of fireball slot for this fireball
+3297: DD 2A C8 63 ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)  ; Load IX with address of fireball slot for this fireball
 329B: DD 7E 0D    ld      a,(ix+$0d)  ; \  Jump if fireball direction is left
 329E: FE 01       cp      $01         ;  |
 32A0: C2 B1 32    jp      nz,$32b1    ; /
@@ -9959,7 +9962,7 @@ FF = Extra Mario Icon
 ; such as when jumping out of an oil can for example.
 ; called from #327A
 
-32BD: 3A 27 62    ld      a,($6227)   ; \  Jump if we are currently on barrels
+32BD: 3A 27 62    ld      a,(screen_number_6227)   ; \  Jump if we are currently on barrels
 32C0: FE 01       cp      $01         ;  |
 32C2: CA CE 32    jp      z,$32ce     ; /
 
@@ -9988,7 +9991,7 @@ FF = Extra Mario Icon
 
 ; It is time to maybe freeze the fireball at the top of a ladder.
 32E6: DD 36 1D 00 ld      (ix+$1d),$00; Reset the freeze flag to zero
-32EA: 3A 05 62    ld      a,($6205)   ; \  Jump if Mario is above fireball, in this case we leave freezer mode immediately without freezing.
+32EA: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; \  Jump if Mario is above fireball, in this case we leave freezer mode immediately without freezing.
 32ED: DD 46 0F    ld      b,(ix+$0f)  ;  |
 32F0: 90          sub     b           ;  |
 32F1: DA 03 33    jp      c,$3303     ; /
@@ -10020,7 +10023,7 @@ FF = Extra Mario Icon
 
 3317: DD 36 16 2B ld      (ix+$16),$2b; Reset direction reverse counter to #2B
 331B: DD 36 0D 00 ld      (ix+$0d),$00; \  Set fireball direction to be left (or frozen for freezers) and jump with 50% probability
-331F: 3A 18 60    ld      a,(rngtimer1) ;  |
+331F: 3A 18 60    ld      a,(rngtimer1_6018) ;  |
 3322: 0F          rrca                ;  |
 3323: D2 32 33    jp      nc,$3332    ; /
 
@@ -10061,7 +10064,7 @@ FF = Extra Mario Icon
 
 ; Else there is a ladder nearby to go down
 3360: DD 70 1F    ld      (ix+$1f),b  ; Store B into +#1F = Y-position of bottom of ladder
-3363: 3A 05 62    ld      a,($6205)   ; \  Return without taking the ladder if Mario is at or above the Y-position of the fireball
+3363: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; \  Return without taking the ladder if Mario is at or above the Y-position of the fireball
 3366: 47          ld      b,a         ;  |
 3367: DD 7E 0F    ld      a,(ix+$0f)  ;  |
 336A: 90          sub     b           ;  |
@@ -10134,7 +10137,7 @@ FF = Extra Mario Icon
 ; This subroutine adjusts a fireball's Y-position based on movement up/down a slanted girder on the barrel screen.
 ; called from #32AB
 
-33C3: 3A 27 62    ld      a,($6227)   ; \  Return if we are not on barrels
+33C3: 3A 27 62    ld      a,(screen_number_6227)   ; \  Return if we are not on barrels
 33C6: fe 01       cp      $01         ;  |
 33C8: c0          ret     nz          ; /
 
@@ -10251,7 +10254,7 @@ FF = Extra Mario Icon
 3484: C2 9A 34    jp      nz,$349a    ; /
 
 3487: 21 AC 3A    ld      hl,$3aac    ; load HL with start of table data
-348A: 3A 03 62    ld      a,($6203)   ; \  Jump if Mario is on left side of the screen, in this case we spawn the fireball on the left
+348A: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; \  Jump if Mario is on left side of the screen, in this case we spawn the fireball on the left
 348D: CB 7F       bit     7,a         ;  |
 348F: CA A8 34    jp      z,$34a8     ; /
 
@@ -10277,11 +10280,11 @@ FF = Extra Mario Icon
 ; is on.
 ; Called from #32CA when screen is elevators or rivets
 
-34B9: 3A 27 62    ld      a,($6227)   ; \  Return if current screen is elevators (Can this ever happen?)
+34B9: 3A 27 62    ld      a,(screen_number_6227)   ; \  Return if current screen is elevators (Can this ever happen?)
 34BC: fe 03       cp      $03         ;  |
 34Be: c8          ret     z           ; /
 
-34Bf: 3A 03 62    ld      a,($6203)   ; \  Jump if bit 7 of Mario's X-position is set (i.e., Mario is on the right half of the screen)
+34Bf: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; \  Jump if bit 7 of Mario's X-position is set (i.e., Mario is on the right half of the screen)
 34C2: cb 7f       bit     7,a         ;  |
 34C4: C2 ED 34    jp      nz,$34ed    ; /
 
@@ -10314,7 +10317,7 @@ FF = Extra Mario Icon
 
 
 34CA: 06 00       ld      b,$00       ; \  Load BC with one of #0000, #0002, #0004, or #0006 randomly
-34CC: 3A 19 60    ld      a,(rngtimer2) ;  |
+34CC: 3A 19 60    ld      a,(rngtimer2_6019) ;  |
 34CF: E6 06       and     $06         ;  |
 34D1: 4F          ld      c,a         ; /
 34D2: 09          add     hl,bc       ; add this result into HL to get offset into table
@@ -10337,8 +10340,8 @@ FF = Extra Mario Icon
 ; update fires or firefoxes to hardware
 ; called from #30F6
 
-34F3: 21 00 64    ld      hl,$6400    ; start of fire/firefox data
-34F6: 11 D0 69    ld      de,$69d0    ; start of firefox sprites (hardware)
+34F3: 21 00 64    ld      hl,start_of_fires_table_6400    ; start of fire/firefox data
+34F6: 11 D0 69    ld      de,start_of_firefox_sprites_69d0    ; start of firefox sprites (hardware)
 34F9: 06 05       ld      b,$05       ; For B = 1 to 5
 
 34FB: 7E          ld      a,(hl)      ; get firefox data
@@ -11022,7 +11025,7 @@ FF = Extra Mario Icon
 ; called from #286B
 ; a patch ?
 
-3E88: 3A 27 62    ld      a,($6227)   ; load A with screen number
+3E88: 3A 27 62    ld      a,(screen_number_6227)   ; load A with screen number
 3E8B: E5          push    hl          ; save HL
 3E8C: EF          rst     $28         ; jump to new location based on screen number
 
@@ -11039,17 +11042,17 @@ FF = Extra Mario Icon
 
 3E99: E1          pop     hl          ; restore HL
 3E9A: AF          xor     a           ; A := 0
-3E9B: 32 60 60    ld      (numobstaclesjumped),a; clear counter for barrels jumped
+3E9B: 32 60 60    ld      (numobstaclesjumped_6060),a; clear counter for barrels jumped
 3E9E: 06 0A       ld      b,$0a       ; For B = 1 to #A barrels
 3EA0: 11 20 00    ld      de,$0020    ; load DE with offset
-3EA3: DD 21 00 67 ld      ix,$6700    ; load IX with start of barrel info table
+3EA3: DD 21 00 67 ld      ix,start_of_barrel_info_table_6700    ; load IX with start of barrel info table
 3EA7: CD C3 3E    call    $3ec3       ; call sub below.  check for barrels under jump
 
 3EAA: 06 05       ld      b,$05       ; for B = 1 to 5 fires
-3EAC: DD 21 00 64 ld      ix,$6400    ; start of fires table
+3EAC: DD 21 00 64 ld      ix,start_of_fires_table_6400    ; start of fires table
 3EB0: CD C3 3E    call    $3ec3       ; check for fires being jumped
 
-3EB3: 3A 60 60    ld      a,(numobstaclesjumped) ; load A with counter for items jumped
+3EB3: 3A 60 60    ld      a,(numobstaclesjumped_6060) ; load A with counter for items jumped
 3EB6: A7          and     a           ; nothing jumped ?
 3EB7: C8          ret     z           ; yes, return
 
@@ -11103,9 +11106,9 @@ FF = Extra Mario Icon
 
 ; item was jumped
 
-3EF3: 3A 60 60    ld      a,(numobstaclesjumped) ; load A with counter of how many barrels/fires jumped
+3EF3: 3A 60 60    ld      a,(numobstaclesjumped_6060) ; load A with counter of how many barrels/fires jumped
 3EF6: 3C          inc     a           ; increase it
-3EF7: 32 60 60    ld      (numobstaclesjumped),a; store
+3EF7: 32 60 60    ld      (numobstaclesjumped_6060),a; store
 
 3EFA: DD 19       add     ix,de       ; add offset for next barrel or fire
 3EFC: 10 C5       djnz    $3ec3       ; Next B
@@ -11176,7 +11179,7 @@ FF = Extra Mario Icon
 ; called from #2285
 ; [seems like a patch ? - resets mario sprite when ladder descends]
 
-3FC0: 21 4D 69    ld      hl,$694d    ; load HL with mario sprite value
+3FC0: 21 4D 69    ld      hl,mario_sprite_value_694d    ; load HL with mario sprite value
 3FC3: 36 03       ld      (hl),$03    ; store 3 = mario on ladder with left hand up
 3FC5: 2C          inc     l
 3FC6: 2C          inc     l           ; HL := #694F = mario sprite Y value
