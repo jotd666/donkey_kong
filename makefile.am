@@ -1,4 +1,4 @@
-PROGNAME = mpatrol
+PROGNAME = donkey_kong
 MAIN = ..\$(PROGNAME)
 
 

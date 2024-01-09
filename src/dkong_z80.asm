@@ -134,7 +134,7 @@ REG_PALETTE_B       equ $7d87
 MAX_CREDITS     equ $90
 
 
-RAM             equ $6000
+RAM             equ unknown_6000
 SPRITE_RAM      equ $7000
 VIDEO_RAM       equ $7400
 
@@ -923,10 +923,9 @@ NumObstaclesJumped  equ RAM+$60
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-                LD      A,#00                           ; A := 0
-                LD      (REG_VBLANK_ENABLED),A          ; disable interrupts
-                JP      Init                            ; skip ahead
+0000: 3E 00       ld   a,$00               ; A := 0
+0002: 32 84 7D    ld   (reg_vblank_enable),a           ; disable interrupts
+0005: C3 66 02    jp   Init_0266               ; skip ahead
 
 ;
 ; RST     #8
@@ -1098,7 +1097,7 @@ NumObstaclesJumped  equ RAM+$60
 009C: E6 0F       and     $0f         ; mask left 4 bits to zero
 009E: 4F          ld      c,a         ; copy this to C
 009F: 3A 11 60    ld      a,(rawinput_6011) ; load A with player input
-00A2: 2F          cpl                 ; The contents of A are inverted (oneâ€™s complement).
+00A2: 2F          cpl                 ; The contents of A are inverted (one’s complement).
 00A3: A0          and     b           ; logical and with raw input - checks for jump button
 00A4: E6 10       and     $10         ; mask all bits but 4.  if jump was pressed it is there
 00A6: 17          rla
@@ -1417,7 +1416,7 @@ NumObstaclesJumped  equ RAM+$60
 
 ; come here from game power-on
 ; first, clear system RAM
-Init:
+Init_0266:
 0266: 06 10       ld      b,$10       ; for B = 0 to #10
 0268: 21 00 60    ld      hl,ram      ; set destination
 026B: AF          xor     a           ; A := 0
@@ -4651,7 +4650,7 @@ Init:
 14C6: 19          add     hl,de       ; add offset for next HL
 14C7: 10 F8       djnz    $14c1       ; Next B
 
-14C9: 22 38 60    ld      (unk6038_6038),hl; store HL into Unk6038
+14C9: 22 38 60    ld      (unknown_6038),hl; store HL into Unk6038
 14CC: 11 F3 FF    ld      de,$fff3    ; load DE with offset of -#13
 14CF: 19          add     hl,de       ; add offset
 14D0: 22 3A 60    ld      (unknown_603a),hl  ; store result into ???
@@ -4785,7 +4784,7 @@ Init:
 159A: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
 159D: 11 BF 01    ld      de,$01bf
 
-15A0: FD 2A 38 60 ld      iy,(unk6038_6038) ; load IY with Unk6038
+15A0: FD 2A 38 60 ld      iy,(unknown_6038) ; load IY with Unk6038
 15A4: FD 6E 04    ld      l,(iy+$04)
 15A7: FD 66 05    ld      h,(iy+$05)
 15AA: E5          push    hl
@@ -4797,7 +4796,7 @@ Init:
 
 15B8: AF          xor     a           ; A := 0
 15B9: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
-15BC: ED 5B 38 60 ld      de,(unk6038_6038)
+15BC: ED 5B 38 60 ld      de,(unknown_6038)
 15C0: 13          inc     de
 15C1: 13          inc     de
 15C2: 13          inc     de
@@ -4806,7 +4805,7 @@ Init:
 ; arrive here from #14E7
 ; high score entry complete ???
 
-15C6: ED 5B 38 60 ld      de,(unk6038_6038) ; load DE with address of high score entry indicator
+15C6: ED 5B 38 60 ld      de,(unknown_6038) ; load DE with address of high score entry indicator
 15CA: AF          xor     a           ; A := 0
 15CB: 12          ld      (de),a      ; store.  this clears the high score indicator
 15CC: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
@@ -6209,19 +6208,19 @@ Init:
         ; A is preloaded with 1,3, or 7
         ; patch ?
 
-        3E70  110100    LD      DE,#0001        ; 100 points
-        3E73  067B      LD      B,#7B           ; sprite for 100
-        3E75  1F        RRA                     ; is the score set for 100 ?
-        3E76  D2281E    JP      NC,#1E28        ; yes, award points
-
-        3E79  1E03      LD      E,#03           ; else set 300 points
-        3E7B  067D      LD      B,#7D           ; sprite for 300
-        3E7D  1F        RRA                     ; is the score set for 300 ?
-        3E7E  D2281E    JP      NC,#1E28        ; yes, award points
-
-        3E81  1E05      LD      E,#05           ; else set 500 points [bug, should be 800]
-        3E83  067F      LD      B,#7F           ; sprite for 800
-        3E85  C3281E    JP      #1E28           ; award points
+;        3E70  110100    LD      DE,#0001        ; 100 points
+;        3E73  067B      LD      B,#7B           ; sprite for 100
+;        3E75  1F        RRA                     ; is the score set for 100 ?
+;        3E76  D2281E    JP      NC,#1E28        ; yes, award points
+;
+;        3E79  1E03      LD      E,#03           ; else set 300 points
+;        3E7B  067D      LD      B,#7D           ; sprite for 300
+;        3E7D  1F        RRA                     ; is the score set for 300 ?
+;        3E7E  D2281E    JP      NC,#1E28        ; yes, award points
+;
+;        3E81  1E05      LD      E,#05           ; else set 500 points [bug, should be 800]
+;        3E83  067F      LD      B,#7F           ; sprite for 800
+;        3E85  C3281E    JP      #1E28           ; award points
 
 1E28: CD 9F 30    call    $309f       ; insert task to add score
 1E2B: 3A 05 62    ld      a,(return_without_taking_the_ladder_6205)   ; load A with Mario's Y position
@@ -10138,8 +10137,8 @@ FF = Extra Mario Icon
 ; called from #32AB
 
 33C3: 3A 27 62    ld      a,(screen_number_6227)   ; \  Return if we are not on barrels
-33C6: fe 01       cp      $01         ;  |
-33C8: c0          ret     nz          ; /
+33C6: FE 01       cp      $01         ;  |
+33C8: C0          ret     nz          ; /
 
 33C9: DD 66 0E    ld      h,(ix+$0e)  ; Load H with fireball X-position
 33CC: DD 6E 0F    ld      l,(ix+$0f)  ; Load L with fireball Y-position
@@ -10281,11 +10280,11 @@ FF = Extra Mario Icon
 ; Called from #32CA when screen is elevators or rivets
 
 34B9: 3A 27 62    ld      a,(screen_number_6227)   ; \  Return if current screen is elevators (Can this ever happen?)
-34BC: fe 03       cp      $03         ;  |
-34Be: c8          ret     z           ; /
+34BC: FE 03       cp      $03         ;  |
+34BE: C8          ret     z           ; /
 
 34Bf: 3A 03 62    ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)   ; \  Jump if bit 7 of Mario's X-position is set (i.e., Mario is on the right half of the screen)
-34C2: cb 7f       bit     7,a         ;  |
+34C2: CB 7F       bit     7,a         ;  |
 34C4: C2 ED 34    jp      nz,$34ed    ; /
 
 34C7: 21 C4 3A    ld      hl,$3ac4    ; Load HL with start of table data for spawning fireball on right side
