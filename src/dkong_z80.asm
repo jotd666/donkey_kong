@@ -1325,7 +1325,7 @@ NumObstaclesJumped  equ RAM+$60
 01CF: ED B0       ldir                ; copy 9 bytes above into #60B2-#60BB
 01D1: 3E 01       ld      a,$01       ; A := 1
 01D3: 32 07 60    ld      (nocredits_6007),a; store into credit indicator == no credits exist
-01D6: 32 29 62    ld      (else_level_number_6229),a   ; initialize level to 1
+01D6: 32 29 62    ld      (level_number_6229),a   ; initialize level to 1
 01D9: 32 28 62    ld      (number_of_lives_remaining_6228),a   ; set number of lives remaining to 1
 01DC: CD B8 06    call    $06b8       ; if a game is played or credits exist, display remaining lives-1 and level
 01DF: CD 07 02    call    $0207       ; set all dip switch settings and create default high score table from ROM
@@ -1665,7 +1665,7 @@ Init_0266:
 0391: 0F          rrca
 0392: 0F          rrca
 0393: 47          ld      b,a         ; store result into B
-0394: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level number
+0394: 3A 29 62    ld      a,(level_number_6229)   ; load A with level number
 0397: 80          add     a,b         ; add B to A
 0398: FE 05       cp      $05         ; is this answer > 5 ?
 039A: 38 02       jr      c,$039e     ; no, skip next step
@@ -2321,12 +2321,12 @@ Init_0266:
 06DA: 36 1C       ld      (hl),$1c    ; draw "L"
 06DC: 21 E3 74    ld      hl,$74e3    ; next location
 06DF: 36 34       ld      (hl),$34    ; draw "="
-06E1: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
+06E1: 3A 29 62    ld      a,(level_number_6229)   ; load A with level #
 06E4: fe 64       cp      $64         ; level < #64 (100 decimal) ?
 06E6: 38 05       jr      c,$06ed     ; yes, skip next 2 steps
 
 06E8: 3E 63       ld      a,$63       ; otherwise A := #63 (99 decimal)
-06Ea: 32 29 62    ld      (else_level_number_6229),a   ; store into level #
+06Ea: 32 29 62    ld      (level_number_6229),a   ; store into level #
 
 06Ed: 01 0A ff    ld      bc,$ff0a    ; B: = #FF, C := #0A (10 decimal)
 
@@ -2410,7 +2410,7 @@ Init_0266:
 0768: 32 A0 63    ld      (unknown_63a0),a   ; clear fireball release indicator
 076B: 3E 01       ld      a,$01       ; A := 1
 076D: 32 27 62    ld      (screen_number_6227),a   ; load screen number with 1
-0770: 32 29 62    ld      (else_level_number_6229),a   ; load level # with 1
+0770: 32 29 62    ld      (level_number_6229),a   ; load level # with 1
 0773: 32 28 62    ld      (number_of_lives_remaining_6228),a   ; load number of lives with 1
 0776: C3 92 0C    jp      $0c92       ; skip ahead
 
@@ -3753,7 +3753,7 @@ Init_0266:
 ; set up initial timer
 ; timer is either 5000, 6000, 7000 or 8000 depending on level
 
-0F7A: 3A 29 62    ld      a,(else_level_number_6229)   ; load level number
+0F7A: 3A 29 62    ld      a,(level_number_6229)   ; load level number
 0F7D: 47          ld      b,a         ; copy to B
 0F7E: A7          and     a           ; clear carry flag
 0F7f: 17          rla                 ; rotate A left (double =2x)
@@ -4517,19 +4517,19 @@ Init_0266:
 
 1407: C5          push    bc          ; else save BC
 
-        1408  0619      LD      B,#19           ; for B = 1 to #19
+1408: 06 19       ld      b,#19           ; for B = 1 to #19
 
         ; exchange the values in (HL) and (DE) for #19 bytes
         ; this causes the high score to percolate up the high score list
 
-        140A  4E        LD      C,(HL)          ; C := (HL)
-        140B  1A        LD      A,(DE)          ; A := (DE)
-        140C  77        LD      (HL),A          ; (HL) := A
-        140D  79        LD      A,C             ; A := C
-        140E  12        LD      (DE),A          ; (DE) := A
-        140F  2B        DEC     HL              ; next HL
-        1410  1B        DEC     DE              ; next DE
-        1411  10F7      DJNZ    #140A           ; Next B
+140A: 4E          ld      c,(hl)          ; C := (HL)
+140B: 1A          ld      a,(de)          ; A := (DE)
+140C: 77          ld      (hl),a          ; (HL) := A
+140D: 79          ld      a,c             ; A := C
+140E: 12          ld      (de),a          ; (DE) := A
+140F: 2B          dec     hl              ; next HL
+1410: 1B          dec     de              ; next DE
+1411: 10 F7       djnz    #140A           ; Next B
 
 1413: 01 F5 FF    ld      bc,$fff5    ; load BC with -#A
 1416: 09          add     hl,bc       ; add to HL.  HL now has #A less than before
@@ -4650,10 +4650,10 @@ Init_0266:
 14C6: 19          add     hl,de       ; add offset for next HL
 14C7: 10 F8       djnz    $14c1       ; Next B
 
-14C9: 22 38 60    ld      (unknown_6038),hl; store HL into Unk6038
+14C9: 22 38 60    ld      (unknown_ram_address_6038),hl; store HL into Unk6038
 14CC: 11 F3 FF    ld      de,$fff3    ; load DE with offset of -#13
 14CF: 19          add     hl,de       ; add offset
-14D0: 22 3A 60    ld      (unknown_603a),hl  ; store result into ???
+14D0: 22 3A 60    ld      (unknown_ram_address_603a),hl  ; store result into ???
 14D3: 06 00       ld      b,$00       ; B := 0
 14D5: 3A 35 60    ld      a,(hscursorpos_6035) ; load A with high score entry digit selected
 14D8: 4F          ld      c,a         ; copy to C
@@ -4784,7 +4784,7 @@ Init_0266:
 159A: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
 159D: 11 BF 01    ld      de,$01bf
 
-15A0: FD 2A 38 60 ld      iy,(unknown_6038) ; load IY with Unk6038
+15A0: FD 2A 38 60 ld      iy,(unknown_ram_address_6038) ; load IY with Unk6038
 15A4: FD 6E 04    ld      l,(iy+$04)
 15A7: FD 66 05    ld      h,(iy+$05)
 15AA: E5          push    hl
@@ -4796,7 +4796,7 @@ Init_0266:
 
 15B8: AF          xor     a           ; A := 0
 15B9: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
-15BC: ED 5B 38 60 ld      de,(unknown_6038)
+15BC: ED 5B 38 60 ld      de,(unknown_ram_address_6038)
 15C0: 13          inc     de
 15C1: 13          inc     de
 15C2: 13          inc     de
@@ -4805,7 +4805,7 @@ Init_0266:
 ; arrive here from #14E7
 ; high score entry complete ???
 
-15C6: ED 5B 38 60 ld      de,(unknown_6038) ; load DE with address of high score entry indicator
+15C6: ED 5B 38 60 ld      de,(unknown_ram_address_6038) ; load DE with address of high score entry indicator
 15CA: AF          xor     a           ; A := 0
 15CB: 12          ld      (de),a      ; store.  this clears the high score indicator
 15CC: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
@@ -4814,7 +4814,7 @@ Init_0266:
 15D2: 35          dec     (hl)        ; decrease game mode2
 15D3: 06 0C       ld      b,$0c       ; for B = 1 to #C (12 decimal)
 15D5: 21 E8 75    ld      hl,$75e8    ; load HL with screen vram address
-15D8: FD 2A 3A 60 ld      iy,(unknown_603a)  ; load IY with ???
+15D8: FD 2A 3A 60 ld      iy,(unknown_ram_address_603a)  ; load IY with ???
 15DC: 11 E0 FF    ld      de,$ffe0    ; load DE with offset of -#20
 
 15DF: 7E          ld      a,(hl)      ; load A with
@@ -5331,7 +5331,7 @@ Init_0266:
 
 1913: 21 8A 60    ld      hl,sound_buffer_address_608a    ; load HL with sound address
 1916: 36 0C       ld      (hl),$0c    ; play sound for rivets cleared
-1918: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
+1918: 3A 29 62    ld      a,(level_number_6229)   ; load A with level #
 191B: 0F          rrca                ; roll a right .  is this an odd level ?
 191C: 38 02       jr      c,$1920     ; Yes, skip next step
 
@@ -5368,7 +5368,7 @@ Init_0266:
 
 194B: 22 2A 62    ld      (store_622a),hl  ; store
 194E: 32 27 62    ld      (screen_number_6227),a   ; store A into screen number
-1951: 21 29 62    ld      hl,else_level_number_6229    ; load HL with level number address
+1951: 21 29 62    ld      hl,level_number_6229    ; load HL with level number address
 1954: 34          inc     (hl)        ; increase #6229 by one
 1955: 11 00 05    ld      de,$0500    ; load task #5, parameter 0 ; adds bonus to player's score
 1958: CD 9F 30    call    $309f       ; insert task
@@ -6148,7 +6148,7 @@ Init_0266:
 
 1DE2: 21 85 60    ld      hl,play_sound_for_bonus_6085    ; else load HL with bonus sound address
 1DE5: 36 03       ld      (hl),$03    ; play bonus sound for 3 duration
-1DE7: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
+1DE7: 3A 29 62    ld      a,(level_number_6229)   ; load A with level #
 1DEA: 3D          dec     a           ; decrease A.  is this level 1 ?
 1DEB: cA 00 1E    jp      z,$1e00     ; yes, jump ahead for 300 pts
 
@@ -7093,7 +7093,7 @@ Init_0266:
 ; arrive here when oil can is not yet lit
 ; used for initial crazy barrel
 
-22E1: 3A 29 62    ld      a,(else_level_number_6229)   ; load A with level #
+22E1: 3A 29 62    ld      a,(level_number_6229)   ; load A with level #
 22E4: 47          ld      b,a         ; store into B
 22E5: 05          dec     b           ; decrement B
 22E6: 3E 01       ld      a,$01       ; load A with 1
@@ -7859,7 +7859,7 @@ through 64 Kbytes if no match is found.
 2700: FE F0       cp      $f0         ; is mario too low ?
 2702: D2 7F 27    jp      nc,$277f    ; yes, then mario dead
 
-2705: 3A 29 62    ld      a,(else_level_number_6229)   ; else load A with level number
+2705: 3A 29 62    ld      a,(level_number_6229)   ; else load A with level number
 2708: 3D          dec     a           ; decrement and check for zero
 2709: 3A 1A 60    ld      a,(framecounter_601a) ; load A with this clock counts down from #FF to 00 over and over...
 270C: C2 1A 27    jp      nz,$271a    ; if level <> 1 then jump ahead
@@ -9033,7 +9033,7 @@ FF = Extra Mario Icon
 2D4D: 0F          rrca                ; Is this a crazy barrel?
 2D4E: DA 83 2D    jp      c,$2d83     ; yes, jump ahead and load HL with #39CC and store into #62A8 and #62A9 and resume on #2D54
 
-2D51: 2A A8 62    ld      hl,(unknown_62a8)  ; else load HL with (???)
+2D51: 2A A8 62    ld      hl,(unknown_rom_address_62a8)  ; else load HL with (???)
 
 2D54: 7E          ld      a,(hl)      ; load A with value in HL.  crazy barrel this value is #BB
 2D55: DD 2A AA 62 ld      ix,(barrel_start_address_62aa)  ; load IX with Barrel start address saved above
@@ -9061,7 +9061,7 @@ FF = Extra Mario Icon
 2D7C: 13          inc     de          ; DE now has Y position
 2D7D: 12          ld      (de),a      ; store into sprite Y position
 2D7E: 23          inc     hl          ; increase HL .  EG #39CE for crazy barrel
-2D7F: 22 A8 62    ld      (unknown_62a8),hl  ; store into 62A8.  EG 62A8 = CE, 62A9 = 39
+2D7F: 22 A8 62    ld      (unknown_rom_address_62a8),hl  ; store into 62A8.  EG 62A8 = CE, 62A9 = 39
 2D82: C9          ret                 ; return
 
 ; arrive here because this barrel is crazy from #2D4E
@@ -9071,14 +9071,14 @@ FF = Extra Mario Icon
         ; 39CC  BB
         ; 39CD  4D
 
-2D86: 22 A8 62    ld      (unknown_62a8),hl  ; Load #62A8 and #62A9 with #39 and #CC
+2D86: 22 A8 62    ld      (unknown_rom_address_62a8),hl  ; Load #62A8 and #62A9 with #39 and #CC
 2D89: C3 54 2D    jp      $2d54       ; jump back
 
 ; jump here from #2D5F
 ; kong is releasing a barrel (?)
 
 2D8C: 21 C3 39    ld      hl,$39c3    ; load HL with start of table data address
-2D8F: 22 A8 62    ld      (unknown_62a8),hl  ; store into ???
+2D8F: 22 A8 62    ld      (unknown_rom_address_62a8),hl  ; store into ???
 2D92: DD 36 01 01 ld      (ix+$01),$01; set crazy barrel indicator
 2D96: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 
