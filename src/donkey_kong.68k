@@ -29,6 +29,11 @@ RAM_END	= 0x7000
 1:
     .endm
 
+	.macro	SET_C_FROM_X
+	roxl.b	#1,d7
+	roxr.b	#1,d7
+    .endm
+
 
 	.macro	LOAD_D1_16_FROM_D1D2
 	and.l	#0xFFFF,d1
@@ -81,7 +86,7 @@ RAM_END	= 0x7000
 110:
 	.endif
 	
-	move.w	d7,var_16bit
+	move.w	d7,\var_16bit
 	.endm
 	
 	.macro	LOAD_RAM_ADDRESS	var_16bit,reg
@@ -1316,9 +1321,9 @@ l_00ed:
 	move.b	#0x01,d0                        	| [$00f3: ld      a,$01] A := 1
 
 l_00f5:
-	move.b	d0,(a1)                         	| [$00f5: ld      (de),a] store sound to output (play sound)
-	addq.b	#1,d4                           	| [$00f6: inc     e] next output address
-	addq.b	#1,d6                           	| [$00f7: inc     l] next source address
+	move.b	d0,(a1)+                         	| [$00f5: ld      (de),a] store sound to output (play sound)
+	                           	| [$00f6: inc     e] next output address
+	addq.w	#1,a0                           	| [$00f7: inc     l] next source address
 	subq.b	#1,d1                           	| [...]
 	jne	l_00ed                             	| [$00f8: djnz    $00ed] Next B
 
@@ -1360,18 +1365,18 @@ l_011c:
 	lea	walking_sound_buffer_6080,a1   	| [$0122: ld      de,walking_sound_buffer_6080] #6080-#6088 get all zeros - clears sound buffer
 
 l_0125:
-	move.b	d0,(a0)                         	| [$0125: ld      (hl),a] clear this memory - clears sound outputs
-	move.b	d0,(a1)                         	| [$0126: ld      (de),a] clear this memory
-	addq.b	#1,d6                           	| [$0127: inc     l] next memory
-	addq.b	#1,d4                           	| [$0128: inc     e] next memory
+	move.b	d0,(a0)+                         	| [$0125: ld      (hl),a] clear this memory - clears sound outputs
+	move.b	d0,(a1)+                         	| [$0126: ld      (de),a] clear this memory
+												| [$0127: inc     l] next memory
+												| [$0128: inc     e] next memory
 	subq.b	#1,d1                           	| [...]
 	jne	l_0125                             	| [$0129: djnz    $0125] Next B
 
 	move.b	#0x04,d1                        	| [$012b: ld      b,$04] For B = 1 to 4
 
 l_012d:
-	move.b	d0,(a1)                         	| [$012d: ld      (de),a] #6088-#608B get all zeros
-	addq.b	#1,d4                           	| [$012e: inc     e] next DE
+	move.b	d0,(a1)+                         	| [$012d: ld      (de),a] #6088-#608B get all zeros
+												| [$012e: inc     e] next DE
 	subq.b	#1,d1                           	| [...]
 	jne	l_012d                             	| [$012f: djnz    $012d] Next B
 
@@ -1686,9 +1691,11 @@ l_0298:
 *
 
 l_02bd:
-	move.b	#0x60,d5                        	| [$02bd: ld      h,$60] H := #60
+	lea		ram_6000,a0	                    	| [$02bd: ld      h,$60] H := #60
+	moveq	#0,d0
 	move.b	the_task_pointer_60b1,d0        	| [$02bf: ld      a,(the_task_pointer_60b1)] load A with task pointer
-	move.b	d0,d6                           	| [$02c2: ld      l,a] copy to L.  HL now has #60XX which is the current task
+												| [$02c2: ld      l,a] copy to L.  HL now has #60XX which is the current task
+	add.w	d0,a0
 	move.b	(a0),d0                         	| [$02c3: ld      a,(hl)] load A with task
 	add.b	d0,d0                            	| [$02c4: add     a,a] double.  Is there a task to do ?
 	jcc	l_02e3                             	| [$02c5: jr      nc,$02e3] yes, skip ahead to handle task
@@ -1714,16 +1721,16 @@ l_02bd:
 * A is preloaded with 2x the task number
 
 l_02e3:
-	illegal  | fix a0,d6
 	and.b	#0x1f,d0                         	| [$02e3: and     $1f] mask bits.  A now between 0 and #1F
 	clr.w	d3                               	| [$02e6: ld      d,$00] D := 0
 	move.b	d0,d3                           	| [$02e5: ld      e,a] copy to E
-	move.b	#0xff,(a0)                      	| [$02e8: ld      (hl),$ff] overwrite the task with empty entry
-	addq.b	#1,d6                           	| [$02ea: inc     l] next HL
+	move.b	#0xff,(a0)+                      	| [$02e8: ld      (hl),$ff] overwrite the task with empty entry
+	                           	| [$02ea: inc     l] next HL
 	move.b	(a0),d2                         	| [$02eb: ld      c,(hl)] load C with the 2nd byte of the task (parameter)
-	move.b	#0xff,(a0)                      	| [$02ec: ld      (hl),$ff] overwrite the task with empty entry
-	addq.b	#1,d6                           	| [$02ee: inc     l] next HL
-	move.b	d6,d0                           	| [$02ef: ld      a,l] load A with low byte of the address
+	move.b	#0xff,(a0)+                      	| [$02ec: ld      (hl),$ff] overwrite the task with empty entry
+	                           	| [$02ee: inc     l] next HL
+	move.l	a0,d0                           	| [$02ef: ld      a,l] load A with low byte of the address
+	sub.l	#ram_6000,d0			| this is RAM based just sub base
 	cmp.b	#0xc0,d0                         	| [$02f0: cp      $c0] < #C0 ?
 	jcc	l_02f6                             	| [$02f2: jr      nc,$02f6] no, skip next step
 
@@ -2280,15 +2287,15 @@ l_055f:
 * update onscreen score
 
 update_onscreen_score_056b:
-	lea	l_7781,a2                      	| [$056b: ld      ix,$7781] load IX with the start of the score in video RAM (100,000's place)
+	lea	0x7781,a2                      	| [$056b: ld      ix,$7781] load IX with the start of the score in video RAM (100,000's place)
 	tst.b	d0                               	| [$056f: and     a] is this player 1?
 	jeq	l_057c                             	| [$0570: jr      z,$057c] Yes, jump ahead
 
-	lea	l_7521,a2                      	| [$0572: ld      ix,$7521] else load IX with #7521 - the start of player 2 score (100,000's place)
+	lea	0x7521,a2                      	| [$0572: ld      ix,$7521] else load IX with #7521 - the start of player 2 score (100,000's place)
 	jra	l_057c                             	| [$0576: jr      $057c] skip next step
 
 l_0578:
-	lea	l_7641,a2                      	| [$0578: ld      ix,$7641] #7641 is the start of high score 100,000 place
+	lea	0x7641,a2                      	| [$0578: ld      ix,$7641] #7641 is the start of high score 100,000 place
 
 l_057c:
 	exg	a1,a0                              	| [$057c: ex      de,hl] DE <> HL
@@ -2414,7 +2421,9 @@ l_05e0:
 l_05e9:
 	lea	l_364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
 	add.b	d0,d0                            	| [$05ec: add     a,a] double the parameter
-	move.w	d0,-(sp)                        	| [$05ed: push    af] save AF to stack
+	scs		d7									| remember carry
+	move.w	d7,-(sp)                        	| [$05ed: push    af] save AF to stack
+	move.w	d7,-(sp)                        	| [$05ed: push    af] save AF to stack (twice, 0026 pops A0/caller)
 	and.b	#0x7f,d0                         	| [$05ee: and     $7f] mask bits
 	clr.w	d3                               	| [$05f1: ld      d,$00] D := 0
 	move.b	d0,d3                           	| [$05f0: ld      e,a] copy to E
@@ -2423,7 +2432,6 @@ l_05e9:
 	                           	| [$05f5: inc     hl] next table entry
 	move.b	(a0),d3                         	| [$05f6: ld      d,(hl)] load D with 2nd byte from table
 	LOAD_D3_16_FROM_D3D4
-	illegal
 	exg	d3,a0                              	| [$05f7: ex      de,hl] DE <> HL
 	move.l	d3,a1
 	
@@ -2431,19 +2439,19 @@ l_05e9:
 	                           	| [$05f9: inc     hl] next table entry
 	move.b	(a0)+,d3                         	| [$05fa: ld      d,(hl)] load D with 2ndy byte from derefernced table
 	LOAD_D3_16_FROM_D3D4
+	move.w	d3,d7
 	                           	| [$05fb: inc     hl] next table entry
 	move.w	#0xffe0,d1                        	| [$05fc: ld      bc,$ffe0] load BC with offset to print characters across 65504
-	exg	a1,a0                              	| [$05ff: ex      de,hl] DE <> HL.  HL now has screen destination, DE has table pointer
-
+	move.l	a0,a1                              	| [$05ff: ex      de,hl] DE <> HL.  HL now has screen destination, DE has table pointer
+	
 l_0600:
 	move.b	(a1),d0                         	| [$0600: ld      a,(de)] load A with table data
 	cmp.b	#0x3f,d0                         	| [$0601: cp      $3f] end code reached?
-	scs		d7
 	jeq	l_0026                             	| [$0603: jp      z,$0026] yes, return to program.  This will effectively RET twice
 
-	move.b	d0,(a0)                         	| [$0606: ld      (hl),a] draw letter to screen
-	move.w	(sp)+,d0                        	| [$0607: pop     af] restore AF from stack.  is there a carry?
-	tst.b	d7
+	jbsr	osd_w_videoram                         	| [$0606: ld      (hl),a] draw letter to screen
+	move.w	(sp)+,d7                        	| [$0607: pop     af] restore AF from stack.  is there a carry?
+	move.w	(sp)+,d7                        	| [$0607: pop     af] restore AF from stack.  is there a carry? twice
 	jeq	l_060c                             	| [$0608: jr      nc,$060c] no, skip next step
 
 	move.b	#0x10,(a0)                      	| [$060a: ld      (hl),$10] yes, write a blank space to the screen
@@ -2825,15 +2833,16 @@ l_07f4:
 
 l_07fa:
 	move.b	#0xb0,d0                        	| [$07fa: ld      a,$b0] A := #B0 = code for girder on screen
-	move.b	(a0),d1                         	| [$07fc: ld      b,(hl)] get first data.  this is used as a loop counter
-	addq.w	#1,a0                           	| [$07fd: inc     hl] next table entry
-	move.b	(a0),d4                         	| [$07fe: ld      e,(hl)] load E with table data
-	addq.w	#1,a0                           	| [$07ff: inc     hl] next entry
+	move.b	(a0)+,d1                         	| [$07fc: ld      b,(hl)] get first data.  this is used as a loop counter
+	                           	| [$07fd: inc     hl] next table entry
+	move.b	(a0)+,d4                         	| [$07fe: ld      e,(hl)] load E with table data
+	                           	| [$07ff: inc     hl] next entry
 	move.b	(a0),d3                         	| [$0800: ld      d,(hl)] load D with table data.  DE now has an address
-
+	LOAD_D3_16_FROM_D3D4
+	move.w	d3,d7
 l_0801:
-	move.b	d0,(a1)                         	| [$0801: ld      (de),a] draw girder on screen
-	addq.w	#1,a1                           	| [$0802: inc     de] next address
+	jbsr	osd_w_videoram                         	| [$0801: ld      (de),a] draw girder on screen
+	addq.w	#1,d7											| [$0802: inc     de] next address
 	subq.b	#1,d1                           	| [...]
 	jne	l_0801                             	| [$0803: djnz    $0801] Next B
 
@@ -3008,8 +3017,8 @@ l_08BA:
 	jbsr	l_0965                            	| [$08cb: call    $0965] draw credits on screen if any are present and displays high score table
 	clr.b	d0                               	| [$08ce: xor     a] A := 0
 	lea	reg_palette_a,a0               	| [$08cf: ld      hl,reg_palette_a] load HL with pallete bank
-	move.b	d0,(a0)                         	| [$08d2: ld      (hl),a] clear palette bank selector
-	addq.b	#1,d6                           	| [$08d3: inc     l] next pallete bank
+	move.b	d0,(a0)+                         	| [$08d2: ld      (hl),a] clear palette bank selector
+	                           	| [$08d3: inc     l] next pallete bank
 	move.b	d0,(a0)                         	| [$08d4: ld      (hl),a] clear palette bank selector
 
 * called from #08F8
@@ -3058,8 +3067,8 @@ l_0906:
 	clr.b	d0                               	| [$090e: xor     a] A := 0
 
 l_090f:
-	move.b	d0,(a0)                         	| [$090f: ld      (hl),a] clear memory
-	addq.b	#1,d6                           	| [$0910: inc     l] next memory
+	move.b	d0,(a0)+                         	| [$090f: ld      (hl),a] clear memory
+	                           	| [$0910: inc     l] next memory
 	subq.b	#1,d1                           	| [...]
 	jne	l_090f                             	| [$0911: djnz    $090f] Next B
 
@@ -3073,8 +3082,8 @@ l_0919:
 	jbsr	l_0977                            	| [$091c: call    $0977] subtract 1 credit and update screen credit counter
 	lea	p2numlives_6048,a1             	| [$091f: ld      de,p2numlives_6048] load DE with RAM location used for player 2
 	move.b	startinglives_6020,d0           	| [$0922: ld      a,(startinglives_6020)] load initial number of lives
-	move.b	d0,(a1)                         	| [$0925: ld      (de),a] store into number of lives player 2
-	addq.b	#1,d4                           	| [$0926: inc     e] DE := Unk6049
+	move.b	d0,(a1)+                         	| [$0925: ld      (de),a] store into number of lives player 2
+											| [$0926: inc     e] DE := Unk6049
 	lea	l_095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
 	move.w	#0x07,d1                        	| [$092a: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$092d: ldir] copy #095E into Unk6049 for 7 bytes
@@ -3089,8 +3098,8 @@ l_0938:
 	jbsr	l_0874                            	| [$093b: call    $0874] clear the screen and sprites
 	lea	p1numlives_6040,a1             	| [$093e: ld      de,p1numlives_6040] load DE with address for number of lives player 1
 	move.b	startinglives_6020,d0           	| [$0941: ld      a,(startinglives_6020)] number of initial lives set with dip switches (3, 4, 5, or 6)
-	move.b	d0,(a1)                         	| [$0944: ld      (de),a] store into number of lives
-	addq.b	#1,d4                           	| [$0945: inc     e] DE := Unk6041
+	move.b	d0,(a1)+                         	| [$0944: ld      (de),a] store into number of lives
+	                           	| [$0945: inc     e] DE := Unk6041
 	lea	l_095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
 	move.w	#0x07,d1                        	| [$0949: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$094c: ldir] copy #095E into Unk6041 for 7 bytes
@@ -3117,7 +3126,7 @@ l_0965:
 
 l_0970:
 	jbsr	insert_task_309f                            	| [$0970: call    $309f] insert task
-	addq.b	#1,d4                           	| [$0973: inc     e] increase task parameter
+	addq.b	#1,d3                           	| [$0973: inc     e] increase task parameter
 	subq.b	#1,d1                           	| [...]
 	jne	l_0970                             	| [$0974: djnz    $0970] Next B
 
@@ -3534,12 +3543,12 @@ l_0bd1:
 	move.b	d0,d3                           	| [$0be6: ld      e,a] store into task parameter
 	jbsr	insert_task_309f                            	| [$0be7: call    $309f] insert task to display remaining lives and level number
 	lea	reg_palette_a,a0               	| [$0bea: ld      hl,reg_palette_a] load HL with palette bank
-	move.b	#0x01,(a0)                      	| [$0bed: ld      (hl),$01] set palette bank selector
-	addq.w	#1,a0                           	| [$0bef: inc     hl] next pallete bank
+	move.b	#0x01,(a0)+                      	| [$0bed: ld      (hl),$01] set palette bank selector
+										| [$0bef: inc     hl] next pallete bank
 	clr.b	(a0)                             	| [$0bf0: ld      (hl),$00] clear palette bank selector
 	lea	sound_buffer_address_608a,a0   	| [$0bf2: ld      hl,sound_buffer_address_608a] load HL with tune address
-	move.b	#0x02,(a0)                      	| [$0bf5: ld      (hl),$02] play how high can you get sound?
-	addq.w	#1,a0                           	| [$0bf7: inc     hl] HL := #608B .  load HL with music timer ?
+	move.b	#0x02,(a0)+                      	| [$0bf5: ld      (hl),$02] play how high can you get sound?
+	                           	| [$0bf7: inc     hl] HL := #608B .  load HL with music timer ?
 	move.b	#0x03,(a0)                      	| [$0bf8: ld      (hl),$03] set to 3 units
 	lea	store_63a7,a0                  	| [$0bfa: ld      hl,store_63a7] load HL with address of counter
 	clr.b	(a0)                             	| [$0bfd: ld      (hl),$00] clear the counter
@@ -4245,8 +4254,8 @@ l_0f8e:
 	move.b	#0x03,d1                        	| [$0f91: ld      b,$03] For B = 1 to 3
 
 l_0f93:
-	move.b	d0,(a0)                         	| [$0f93: ld      (hl),a] store A into timer memory
-	addq.b	#1,d6                           	| [$0f94: inc     l] next memory
+	move.b	d0,(a0)+                         	| [$0f93: ld      (hl),a] store A into timer memory
+	                           	| [$0f94: inc     l] next memory
 	subq.b	#1,d1                           	| [...]
 	jne	l_0f93                             	| [$0f95: djnz    $0f93] Next B
 
@@ -4260,12 +4269,12 @@ l_0f93:
 	move.b	#0x28,d0                        	| [$0fa0: ld      a,$28] else load a with #28 (40). minimum value (never get this ... ?????)
 
 l_0fa2:
-	move.b	d0,(a0)                         	| [$0fa2: ld      (hl),a] store A into address of HL=#62B3 which controls timers
-	addq.b	#1,d6                           	| [$0fa3: inc     l] HL := #62B4
+	move.b	d0,(a0)+                         	| [$0fa2: ld      (hl),a] store A into address of HL=#62B3 which controls timers
+	                           	| [$0fa3: inc     l] HL := #62B4
 	move.b	d0,(a0)                         	| [$0fa4: ld      (hl),a] store A into the timer control
 	lea	unknown_6209,a0                	| [$0fa5: ld      hl,unknown_6209] load HL with #6209
-	move.b	#0x04,(a0)                      	| [$0fa8: ld      (hl),$04] store 4 into #6209
-	addq.b	#1,d6                           	| [$0faa: inc     l] HL := #620A
+	move.b	#0x04,(a0)+                      	| [$0fa8: ld      (hl),$04] store 4 into #6209
+	                           	| [$0faa: inc     l] HL := #620A
 	move.b	#0x08,(a0)                      	| [$0fab: ld      (hl),$08] store 8 into #620A
 	move.b	screen_number_6227,d0           	| [$0fad: ld      a,(screen_number_6227)] load A with screen number
 	move.b	d0,d2                           	| [$0fb0: ld      c,a] copy to C, used at #0FCB
@@ -4280,14 +4289,14 @@ l_0fa2:
 	move.b	#0x03,d1                        	| [$0fba: ld      b,$03] For B = 1 to 3
 
 l_0fbc:
-	move.b	d0,(a0)                         	| [$0fbc: ld      (hl),a] set the sprite X position
-	addq.b	#1,d6                           	| [$0fbd: inc     l] next address = sprite type
-	move.b	#0x3a,(a0)                      	| [$0fbe: ld      (hl),$3a] set sprite type as blank square
-	addq.b	#1,d6                           	| [$0fc0: inc     l] next address = sprite color
-	move.b	#0x0f,(a0)                      	| [$0fc1: ld      (hl),$0f] set color to black
-	addq.b	#1,d6                           	| [$0fc3: inc     l] next address = sprite Y position
-	move.b	#0x18,(a0)                      	| [$0fc4: ld      (hl),$18] set sprite Y position to #18
-	addq.b	#1,d6                           	| [$0fc6: inc     l] next memory
+	move.b	d0,(a0)+                         	| [$0fbc: ld      (hl),a] set the sprite X position
+	                           	| [$0fbd: inc     l] next address = sprite type
+	move.b	#0x3a,(a0)+                      	| [$0fbe: ld      (hl),$3a] set sprite type as blank square
+	                           	| [$0fc0: inc     l] next address = sprite color
+	move.b	#0x0f,(a0)+                      	| [$0fc1: ld      (hl),$0f] set color to black
+	                           	| [$0fc3: inc     l] next address = sprite Y position
+	move.b	#0x18,(a0)+                      	| [$0fc4: ld      (hl),$18] set sprite Y position to #18
+	                           	| [$0fc6: inc     l] next memory
 	add.b	#0x10,d0                         	| [$0fc7: add     a,$10] A := A + #10 to adjust for next X position
 	subq.b	#1,d1                           	| [...]
 	jne	l_0fbc                             	| [$0fc9: djnz    $0fbc] Next B
@@ -4620,18 +4629,19 @@ l_11d3:
 * also used on elevators, called from #10C0
 
 l_11ec:
-	move.b	(a0),d0                         	| [$11ec: ld      a,(hl)] load A with first table data
+	and.w	#0xFF,d2
+0:
+	move.b	(a0)+,d0                         	| [$11ec: ld      a,(hl)] load A with first table data
 	move.b	d0,(a1)                         	| [$11ed: ld      (de),a] store into (DE) = sprite ?
-	addq.w	#1,a0                           	| [$11ee: inc     hl] next table data
-	addq.b	#2,d4                           	| [$11ef: inc     e] * 2
-	move.b	(a0),d0                         	| [$11f1: ld      a,(hl)] load next data
-	move.b	d0,(a1)                         	| [$11f2: ld      (de),a] store
-	addq.w	#1,a0                           	| [$11f3: inc     hl] next data
-	move.b	d4,d0                           	| [$11f4: ld      a,e] load A with E
-	add.b	d2,d0                            	| [$11f5: add     a,c] add C (offset for next sprite) |  EG #0E
-	move.b	d0,d4                           	| [$11f6: ld      e,a] store into E
+	                           	| [$11ee: inc     hl] next table data
+	addq.w	#2,a1                           	| [$11ef: inc     e] * 2
+	move.b	(a0)+,d0                         	| [$11f1: ld      a,(hl)] load next data
+	move.b	d0,(a1)                         	| [$11f2: ld      (de),a] store                           	| [$11f3: inc     hl] next data
+	                           	| [$11f4: ld      a,e] load A with E
+	add.w	d2,a1                            	| [$11f5: add     a,c] add C (offset for next sprite) |  EG #0E
+	                           	| [$11f6: ld      e,a] store into E
 	subq.b	#1,d1                           	| [...]
-	jne	l_11ec                             	| [$11f7: djnz    $11ec] loop until done
+	jne	0b                             	| [$11f7: djnz    $11ec] loop until done
 
 	rts                                    	| [$11f9: ret] return
 
@@ -4648,28 +4658,28 @@ l_11fa:
 	lea	oil_can_address_66a0,a2        	| [$11fa: ld      ix,oil_can_address_66a0] load IX with sprite memory array for fire above the barrel
 	lea	hardware_sprite_memory_for_same_fire_6a28,a1	| [$11fe: ld      de,hardware_sprite_memory_for_same_fire_6a28] load DE with hardware sprite memory for same fire
 	move.b	#0x01,(a2)                 	| [$1201: ld      (ix+$00),$01] enable the sprite
-	move.b	(a0),d0                         	| [$1205: ld      a,(hl)] load A with table data
+	move.b	(a0)+,d0                         	| [$1205: ld      a,(hl)] load A with table data
 	move.b	d0,(0x03,a2)                    	| [$1206: ld      (ix+$03),a] store into sprite X position
-	move.b	d0,(a1)                         	| [$1209: ld      (de),a] store into sprite X position
-	addq.b	#1,d4                           	| [$120a: inc     e] next DE
-	addq.w	#1,a0                           	| [$120b: inc     hl] next HL
-	move.b	(a0),d0                         	| [$120c: ld      a,(hl)] load A with table data
+	move.b	d0,(a1)+                         	| [$1209: ld      (de),a] store into sprite X position
+	                           	| [$120a: inc     e] next DE
+	                           	| [$120b: inc     hl] next HL
+	move.b	(a0)+,d0                         	| [$120c: ld      a,(hl)] load A with table data
 	move.b	d0,(0x07,a2)                    	| [$120d: ld      (ix+$07),a] store into sprite graphic
-	move.b	d0,(a1)                         	| [$1210: ld      (de),a] store into sprite graphic
-	addq.b	#1,d4                           	| [$1211: inc     e] next DE
-	addq.w	#1,a0                           	| [$1212: inc     hl] next HL
-	move.b	(a0),d0                         	| [$1213: ld      a,(hl)] load A with table data
+	move.b	d0,(a1)+                         	| [$1210: ld      (de),a] store into sprite graphic
+	                           	| [$1211: inc     e] next DE
+	                           	| [$1212: inc     hl] next HL
+	move.b	(a0)+,d0                         	| [$1213: ld      a,(hl)] load A with table data
 	move.b	d0,(0x08,a2)                    	| [$1214: ld      (ix+$08),a] store into sprite color
-	move.b	d0,(a1)                         	| [$1217: ld      (de),a] store into sprite color
-	addq.b	#1,d4                           	| [$1218: inc     e] next DE
-	addq.w	#1,a0                           	| [$1219: inc     hl] next HL
-	move.b	(a0),d0                         	| [$121a: ld      a,(hl)] load A with table data
+	move.b	d0,(a1)+                         	| [$1217: ld      (de),a] store into sprite color
+	                           	| [$1218: inc     e] next DE
+	                           	| [$1219: inc     hl] next HL
+	move.b	(a0)+,d0                         	| [$121a: ld      a,(hl)] load A with table data
 	move.b	d0,(0x05,a2)                    	| [$121b: ld      (ix+$05),a] store into sprite Y position
 	move.b	d0,(a1)                         	| [$121e: ld      (de),a] store into sprite Y position
-	addq.w	#1,a0                           	| [$121f: inc     hl] next HL
-	move.b	(a0),d0                         	| [$1220: ld      a,(hl)] load A with table data
+	                           	| [$121f: inc     hl] next HL
+	move.b	(a0)+,d0                         	| [$1220: ld      a,(hl)] load A with table data
 	move.b	d0,(0x09,a2)                    	| [$1221: ld      (ix+$09),a] store into size (width?) ???
-	addq.w	#1,a0                           	| [$1224: inc     hl] next HL
+	                           	| [$1224: inc     hl] next HL
 	move.b	(a0),d0                         	| [$1225: ld      a,(hl)] load A with table data
 	move.b	d0,(0x0a,a2)                    	| [$1226: ld      (ix+$0a),a] store into size? (height?) ??
 	rts                                    	| [$1229: ret] return
@@ -4688,19 +4698,20 @@ l_122a:
 	move.b	#0x04,d1                        	| [$122c: ld      b,$04] For B = 1 to 4
 
 l_122e:
-	move.b	(a0),d0                         	| [$122e: ld      a,(hl)] load A with the Contents of HL table data
-	move.b	d0,(a1)                         	| [$122f: ld      (de),a] store data into address DE
-	addq.w	#1,a0                           	| [$1230: inc     hl] next table data
-	addq.b	#1,d4                           	| [$1231: inc     e] next destination
+	move.b	(a0)+,(a1)+                         	| [$122e: ld      a,(hl)] load A with the Contents of HL table data
+										| [$122f: ld      (de),a] store data into address DE
+	                           	| [$1230: inc     hl] next table data
+	                           	| [$1231: inc     e] next destination
 	subq.b	#1,d1                           	| [...]
 	jne	l_122e                             	| [$1232: djnz    $122e] Next B
 
 
 	movem.w	(sp)+,d1/d2                    	| [$1234: pop     bc] Restore BC - For B = 1 to Initial B value
 	move.l	(sp)+,a0                        	| [$1235: pop     hl] Restore HL
-	move.b	d4,d0                           	| [$1236: ld      a,e] A := E
-	add.b	d2,d0                            	| [$1237: add     a,c] add C
-	move.b	d0,d4                           	| [$1238: ld      e,a] store result into E
+	and.w	#0xFF,d2
+											| [$1236: ld      a,e] A := E
+	add.w	d2,a1                            	| [$1237: add     a,c] add C
+											| [$1238: ld      e,a] store result into E
 	subq.b	#1,d1                           	| [...]
 	jne	l_122a                             	| [$1239: djnz    $122a] Loop again if not zero
 
@@ -4723,14 +4734,14 @@ l_124b:
 	lea	mario_sprite_x_position_694c,a0	| [$124f: ld      hl,mario_sprite_x_position_694c] load HL with address for mario sprite X value
 	move.b	#0x01,(a2)                 	| [$1252: ld      (ix+$00),$01] turn on sprite
 	move.b	d2,(0x03,a2)                    	| [$1256: ld      (ix+$03),c] store X position
-	move.b	d2,(a0)                         	| [$1259: ld      (hl),c] store X position
-	addq.b	#1,d6                           	| [$125a: inc     l] next
+	move.b	d2,(a0)+                         	| [$1259: ld      (hl),c] store X position
+	                           	| [$125a: inc     l] next
 	move.b	#0x80,(0x07,a2)                 	| [$125b: ld      (ix+$07),$80] store sprite graphic
-	move.b	#0x80,(a0)                      	| [$125f: ld      (hl),$80] store sprite graphic
-	addq.b	#1,d6                           	| [$1261: inc     l] next
+	move.b	#0x80,(a0)+                      	| [$125f: ld      (hl),$80] store sprite graphic
+												| [$1261: inc     l] next
 	move.b	#0x02,(0x08,a2)                 	| [$1262: ld      (ix+$08),$02] store sprite color
-	move.b	#0x02,(a0)                      	| [$1266: ld      (hl),$02] store sprite color
-	addq.b	#1,d6                           	| [$1268: inc     l] next
+	move.b	#0x02,(a0)+                      	| [$1266: ld      (hl),$02] store sprite color
+												| [$1268: inc     l] next
 	move.b	d1,(0x05,a2)                    	| [$1269: ld      (ix+$05),b] store Y position
 	move.b	d1,(a0)                         	| [$126c: ld      (hl),b] store Y position
 	move.b	#0x01,(0x0f,a2)                 	| [$126d: ld      (ix+$0f),$01] turn this on (???)
@@ -4792,8 +4803,8 @@ l_128B:
 	move.b	d0,d1                           	| [$12c1: ld      b,a] copy to B
 	move.b	(a0),d7
 	eor.b	d7,d0                            	| [$12c2: xor     (hl)] toggle HL rightmost bit
-	move.b	d0,(a0)                         	| [$12c3: ld      (hl),a] save new sprite value
-	addq.b	#1,d6                           	| [$12c4: inc     l] next HL
+	move.b	d0,(a0)+                         	| [$12c3: ld      (hl),a] save new sprite value
+												| [$12c4: inc     l] next HL
 	move.b	d1,d0                           	| [$12c5: ld      a,b] load A with B
 	and.b	#0x80,d0                         	| [$12c6: and     $80] apply mask
 	move.b	(a0),d7
@@ -4856,22 +4867,22 @@ l_12ed:
 	move.b	#0x01,d0                        	| [$130a: ld      a,$01] A := 1
 	lea	player_1_score_address_60b2,a0 	| [$130c: ld      hl,player_1_score_address_60b2] load HL with player 1 score address
 	jbsr	l_13ca                            	| [$130f: call    $13ca] check for high score entry ???
-	lea	l_76d4,a0                      	| [$1312: ld      hl,$76d4] load HL with screen VRAM address ???
+	move.w	#0x76d4,d7                      	| [$1312: ld      hl,$76d4] load HL with screen VRAM address ???
 	move.b	twoplayergame_600f,d0           	| [$1315: ld      a,(twoplayergame_600f)] load A with number of players
 	                               	| [$1318: and     a] 1 player game?
 	jeq	l_1322                             	| [$1319: jr      z,$1322] yes, skip next 3 steps
 
 	move.w  #0x0302,d3                      	| [$131b: ld      de,$0302] load task data for text #2 "PLAYER <I>"
 	jbsr	insert_task_309f                            	| [$131e: call    $309f] insert task to draw text
-	subq.w	#1,a0                           	| [$1321: dec     hl] HL := #76D3
+	subq.w	#1,d7                           	| [$1321: dec     hl] HL := #76D3
 
 l_1322:
-	jbsr	l_1826                            	| [$1322: call    $1826] clear an area of the screen
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$1322: call    $1826] clear an area of the screen
 	move.w  #0x0300,d3                      	| [$1325: ld      de,$0300] load task data for text #0 "GAME OVER"
 	jbsr	insert_task_309f                            	| [$1328: call    $309f] insert task to draw text
 	lea	waittimermsb_6009,a0           	| [$132b: ld      hl,waittimermsb_6009] load HL with timer
-	move.b	#0xc0,(a0)                      	| [$132e: ld      (hl),$c0] set timer to #C0
-	addq.w	#1,a0                           	| [$1330: inc     hl] HL := GameMode2
+	move.b	#0xc0,(a0)+                      	| [$132e: ld      (hl),$c0] set timer to #C0
+	                           	| [$1330: inc     hl] HL := GameMode2
 	move.b	#0x10,(a0)                      	| [$1331: ld      (hl),$10] set game mode2 to #10
 	rts                                    	| [$1333: ret] return
 
@@ -4912,11 +4923,11 @@ l_133f:
 	jbsr	insert_task_309f                            	| [$1367: call    $309f] insert task to draw text
 	move.w  #0x0300,d3                      	| [$136a: ld      de,$0300] load task data for text #0 "GAME OVER"
 	jbsr	insert_task_309f                            	| [$136d: call    $309f] insert task to draw text
-	lea	l_76d3,a0                      	| [$1370: ld      hl,$76d3] load HL with screen address ???
-	jbsr	l_1826                            	| [$1373: call    $1826] clear an area of the screen
+	move.w	#0x76d3,d7                      	| [$1370: ld      hl,$76d3] load HL with screen address ???
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$1373: call    $1826] clear an area of the screen
 	lea	waittimermsb_6009,a0           	| [$1376: ld      hl,waittimermsb_6009] load HL with timer
-	move.b	#0xc0,(a0)                      	| [$1379: ld      (hl),$c0] set timer to #C0
-	addq.w	#1,a0                           	| [$137b: inc     hl] HL := GameMode2
+	move.b	#0xc0,(a0)+                      	| [$1379: ld      (hl),$c0] set timer to #C0
+	                           	| [$137b: inc     hl] HL := GameMode2
 	move.b	#0x11,(a0)                      	| [$137c: ld      (hl),$11] set game mode2 to #11
 	rts                                    	| [$137e: ret] return
 
@@ -4968,8 +4979,9 @@ l_139c:
 	move.b	d0,reg_flipscreen               	| [$13ad: ld      (reg_flipscreen),a] store into hardware screen flip
 	clr.b	d0                               	| [$13b0: xor     a] A := 0
 	move.b	d0,gamemode2_600a               	| [$13b1: ld      (gamemode2_600a),a] set game mode2 to 0
-	lea	l_0101,a0                      	| [$13b4: ld      hl,$0101] HL := #101
-	move.b	a0,playerturna_600d             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
+	                      	| [$13b4: ld      hl,$0101] HL := #101
+	move.b	#0x1,playerturna_600d             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
+	move.b	#0x1,playerturna_600d+1             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
 	rts                                    	| [$13ba: ret] return
 
 * arrive from #0701 when GameMode2 == 13
@@ -5063,6 +5075,7 @@ l_13fc:
         * exchange the values in (HL) and (DE) for #19 bytes
         * this causes the high score to percolate up the high score list
 
+l_140A:
 	move.b	(a0),d2                         	| [$140a: ld      c,(hl)] C := (HL)
 	move.b	(a1),d0                         	| [$140b: ld      a,(de)] A := (DE)
 	move.b	d0,(a0)                         	| [$140c: ld      (hl),a] (HL) := A
@@ -5071,7 +5084,7 @@ l_13fc:
 	subq.w	#1,a0                           	| [$140f: dec     hl] next HL
 	subq.w	#1,a1                           	| [$1410: dec     de] next DE
 	subq.b	#1,d1                           	| [...]
-	jne	140A                               	| [$1411: djnz    #140A] Next B
+	jne		l_140A                               	| [$1411: djnz    #140A] Next B
 
 	move.w	#10,d1                        	| [$1413: ld      bc,$fff5] load BC with -#A 65525
 	sub.w	d1,a0                            	| [$1416: add     hl,bc] add to HL.  HL now has #A less than before
@@ -5400,7 +5413,7 @@ l_15df:
 	jne	l_15df                             	| [$15e6: djnz    $15df] next B
 
 	move.b	#0x05,d1                        	| [$15e8: ld      b,$05] For B = 1 to 5
-	lea	l_0314,a1                      	| [$15ea: ld      de,$0314] load task data for text #14 - start of high score table
+	move.w	#0x0314,d3                      	| [$15ea: ld      de,$0314] load task data for text #14 - start of high score table
 
 l_15ed:
 	jbsr	insert_task_309f                            	| [$15ed: call    $309f] insert task to draw text
@@ -5719,7 +5732,7 @@ l_1785:
 	move.b	(a0),d0                         	| [$179c: ld      a,(hl)] load A with the screen
 
 l_179d:
-	STORE_ROM_ADDRESS	store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
+	STORE_ROM_ADDRESS	a0,store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
 	move.b	d0,screen_number_6227           	| [$17a0: ld      (screen_number_6227),a] store A into screen number
 	move.w  #0x0500,d3                      	| [$17a3: ld      de,$0500] load task #5, parameter 0 | adds bonus to player's score
 	jbsr	insert_task_309f                            	| [$17a6: call    $309f] insert task
@@ -5746,20 +5759,20 @@ l_179d:
 	jbsr	l_0514                            	| [$17ca: call    $0514] clear "help" on left side of girl
 	lea	l_7583,a0                      	| [$17cd: ld      hl,$7583] load HL with video RAM location
 	jbsr	l_0514                            	| [$17d0: call    $0514] clear "help of right side of girl
-	lea	l_76da,a0                      	| [$17d3: ld      hl,$76da] load HL with center area of video ram
-	jbsr	l_1826                            	| [$17d6: call    $1826] clear screen area
+	move.w	#0x76da,d7                      	| [$17d3: ld      hl,$76da] load HL with center area of video ram
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17d6: call    $1826] clear screen area
 	lea	l_3a47,a1                      	| [$17d9: ld      de,$3a47] load DE with start of table data
 	jbsr	l_0da7                            	| [$17dc: call    $0da7] draw the screen
-	lea	l_76d5,a0                      	| [$17df: ld      hl,$76d5] load HL with center area of video ram
-	jbsr	l_1826                            	| [$17e2: call    $1826] clear screen area
+	move.w	#0x76d5,d7                      	| [$17df: ld      hl,$76d5] load HL with center area of video ram
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17e2: call    $1826] clear screen area
 	lea	l_3a4d,a1                      	| [$17e5: ld      de,$3a4d] load DE with start of table data
 	jbsr	l_0da7                            	| [$17e8: call    $0da7] draw the screen
-	lea	l_76d0,a0                      	| [$17eb: ld      hl,$76d0] load HL with center area of video ram
-	jbsr	l_1826                            	| [$17ee: call    $1826] clear screen area
+	move.w	#0x76d0,d7                      	| [$17eb: ld      hl,$76d0] load HL with center area of video ram
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17ee: call    $1826] clear screen area
 	lea	l_3a53,a1                      	| [$17f1: ld      de,$3a53] load DE with start of table data
 	jbsr	l_0da7                            	| [$17f4: call    $0da7] draw the screen
-	lea	l_76cb,a0                      	| [$17f7: ld      hl,$76cb] load HL with center area of video ram
-	jbsr	l_1826                            	| [$17fa: call    $1826] clear screen area
+	move.w	#0x76cb,d7                      	| [$17f7: ld      hl,$76cb] load HL with center area of video ram
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17fa: call    $1826] clear screen area
 	lea	l_3a59,a1                      	| [$17fd: ld      de,$3a59] load DE with start of table data
 	jbsr	l_0da7                            	| [$1800: call    $0da7] draw the screen
 	lea	l_385c,a0                      	| [$1803: ld      hl,$385c] load HL with start of kong graphic table data
@@ -5775,14 +5788,14 @@ l_179d:
 	move.b	d0,timer_unknown_6390           	| [$181b: ld      (timer_unknown_6390),a] store into timer ???
 	lea	end_of_level_counter_6388,a0   	| [$181e: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$1821: inc     (hl)] increase counter
-	move.b	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$1825: ret] return
 
 * called from several places with HL preloaded with a video RAM address
 * used to clear sections of the rivets screen when it is completed
 
-l_1826:
-	lea	l_ffdb,a1                      	| [$1826: ld      de,$ffdb] load DE with offset for each column
+clear_sections_of_rivets_screen_1826:
+	move.w	#0xffdb,d3                      	| [$1826: ld      de,$ffdb] load DE with offset for each column
 	move.b	#0x0e,d2                        	| [$1829: ld      c,$0e] for C = 1 to #0E
 	move.b	#0x10,d0                        	| [$182b: ld      a,$10] A := #10 (clear space on screen)
 
@@ -5790,12 +5803,12 @@ l_182d:
 	move.b	#0x05,d1                        	| [$182d: ld      b,$05] for B = 1 to 5
 
 l_182f:
-	move.b	d0,(a0)                         	| [$182f: ld      (hl),a] store A into (HL) - clears the screen element
-	addq.w	#1,a0                           	| [$1830: inc     hl] next HL
+	jbsr	osd_w_videoram                         	| [$182f: ld      (hl),a] store A into (HL) - clears the screen element
+	addq.w	#1,d7                           	| [$1830: inc     hl] next HL
 	subq.b	#1,d1                           	| [...]
 	jne	l_182f                             	| [$1831: djnz    $182f] next B
 
-	add.w	d3,a0                            	| [$1833: add     hl,de] add offset to HL
+	add.w	d3,d7                            	| [$1833: add     hl,de] add offset to HL
 	subq.b	#1,d2                           	| [$1834: dec     c] next C
 	jne	l_182d                             	| [$1835: jp      nz,$182d] loop until done
 
@@ -5868,15 +5881,15 @@ l_1859:
 	move.b	#0x20,d0                        	| [$188c: ld      a,$20] A := #20
 	move.b	d0,unknown_6919                 	| [$188e: ld      (unknown_6919),a] store into kong's face sprite - kong is now bigmouthed with crazy eyes
 	lea	sprite_address_used_for_kong_aching_head_lines_6a24,a0	| [$1891: ld      hl,sprite_address_used_for_kong_aching_head_lines_6a24] load HL with sprite address used for kong's aching head lines
-	move.b	#0x7f,(a0)                      	| [$1894: ld      (hl),$7f] set sprite X value
-	addq.b	#1,d6                           	| [$1896: inc     l] next
-	move.b	#0x39,(a0)                      	| [$1897: ld      (hl),$39] set sprite color
-	addq.b	#1,d6                           	| [$1899: inc     l] next
-	move.b	#0x01,(a0)                      	| [$189a: ld      (hl),$01] set sprite value
-	addq.b	#1,d6                           	| [$189c: inc     l] next
-	move.b	#0xd8,(a0)                      	| [$189d: ld      (hl),$d8] set sprite Y value
-	lea	l_76c6,a0                      	| [$189f: ld      hl,$76c6] load HL with start of screen location to clear
-	jbsr	l_1826                            	| [$18a2: call    $1826] clear the top part of rivets
+	move.b	#0x7f,(a0)+                      	| [$1894: ld      (hl),$7f] set sprite X value
+	                           	| [$1896: inc     l] next
+	move.b	#0x39,(a0)+                      	| [$1897: ld      (hl),$39] set sprite color
+	                           	| [$1899: inc     l] next
+	move.b	#0x01,(a0)+                      	| [$189a: ld      (hl),$01] set sprite value
+	                           	| [$189c: inc     l] next
+	move.b	#0xd8,(a0)+                      	| [$189d: ld      (hl),$d8] set sprite Y value
+	move.w	#0x76c6,d7                      	| [$189f: ld      hl,$76c6] load HL with start of screen location to clear
+	jbsr	clear_sections_of_rivets_screen_1826                            	| [$18a2: call    $1826] clear the top part of rivets
 	lea	l_3a5f,a1                      	| [$18a5: ld      de,$3a5f] load DE with table data for sections to clear after rivets done
 	jbsr	l_0da7                            	| [$18a8: call    $0da7] draw the top girder where mario and girl meet
 
@@ -5990,7 +6003,7 @@ l_193d:
 	move.b	(a0),d0                         	| [$194a: ld      a,(hl)] load A with screen number from table
 
 l_194b:
-	STORE_ROM_ADDRESS	store_622a                   	| [$194b: ld      (store_622a),hl] store
+	STORE_ROM_ADDRESS	a0,store_622a                   	| [$194b: ld      (store_622a),hl] store
 	move.b	d0,screen_number_6227           	| [$194e: ld      (screen_number_6227),a] store A into screen number
 	lea	level_number_6229,a0      	| [$1951: ld      hl,level_number_6229] load HL with level number address
 	addq.b	#1,(a0)                         	| [$1954: inc     (hl)] increase #6229 by one
@@ -6078,7 +6091,7 @@ l_19e2:
 	cmp.b	(a0),d0                          	| [$19e2: cp      (hl)] are they equal?
 	jeq	l_19ed                             	| [$19e3: jp      z,$19ed] yes, then test the Y position too
 
-	addq.b	#4,d6                           	| [$19e6: inc     l] * 4
+	addq.w	#4,a0                           	| [$19e6: inc     l] * 4
 	subq.b	#1,d1                           	| [...]
 	jne	l_19e2                             	| [$19ea: djnz    $19e2] Loop 3 times, check for the 3 items
 
@@ -6086,13 +6099,13 @@ l_19e2:
 
 l_19ed:
 	move.b	return_without_taking_the_ladder_6205,d0	| [$19ed: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
-	addq.b	#3,d6                           	| [$19f0: inc     l] * 3
+	addq.w	#3,a0                           	| [$19f0: inc     l] * 3
 	cmp.b	(a0),d0                          	| [$19f3: cp      (hl)] are they equal?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$19f4: ret     nz] no, return from this test [...]
 0:
 
-	subq.b	#2,d6                           	| [$19f5: dec     l] yes, decrement L 2 times to check if this item has already been picked up * 2
+	subq.w	#2,a0                           	| [$19f5: dec     l] yes, decrement L 2 times to check if this item has already been picked up * 2
 	btst.b	#3,(a0)                         	| [$19f7: bit     3,(hl)] test bit 3 of HL, tells whether picked up already or not.  Item not already picked up?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$19f9: ret     nz] Item picked up already, then return [...]
@@ -6100,8 +6113,8 @@ l_19ed:
 
 * bonus item has been picked up
 
-	subq.b	#1,d6                           	| [$19fa: dec     l] decrease L.  HL now has the starting address of the sprite that was picked up
-	move.b	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
+	subq.w	#1,a0                           	| [$19fa: dec     l] decrease L.  HL now has the starting address of the sprite that was picked up
+	STORE_RAM_ADDRESS	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
 	clr.b	d0                               	| [$19fe: xor     a] A := 0
 	move.b	d0,scoring_indicator_6342       	| [$19ff: ld      (scoring_indicator_6342),a] store into ???.  read from at #1DD6
 	addq.b	#1,d0                           	| [$1a02: inc     a] A := 1
@@ -6209,10 +6222,11 @@ l_1a72:
 
 	bset.b	#0,d1                           	| [$1a79: set     0,b] B := B + 1
 l_1a7b:
+	and.w	#0xFF,d1
 	lea	start_of_array_of_rivets_6292,a0	| [$1a7b: ld      hl,start_of_array_of_rivets_6292] load HL with start of array of rivets
-	move.b	d1,d0                           	| [$1a7e: ld      a,b] A := B
-	add.b	d6,d0                            	| [$1a7f: add     a,l] add #92
-	move.b	d0,d6                           	| [$1a80: ld      l,a] copy to L
+	                           	| [$1a7e: ld      a,b] A := B
+	add.w	d1,a0                            	| [$1a7f: add     a,l] add #92
+	                           	| [$1a80: ld      l,a] copy to L
 	move.b	(a0),d0                         	| [$1a81: ld      a,(hl)] get the status of the rivet mario is crossing
 	                               	| [$1a82: and     a] has this rivet already been traversed?
 	bne.b	0f                               	| [...]
@@ -6244,11 +6258,10 @@ l_1a9e:
 	move.w	#0x74,d1                        	| [$1a9e: ld      bc,$7400] start of video RAM is #7400 29696
 	add.w	d1,a0                            	| [$1aa1: add     hl,bc] add offset computed based on which rivet is cleared
 	move.b	#0x10,d0                        	| [$1aa2: ld      a,$10] A := #10 = clear space
-	illegal  | a0/d6
 	move.b	d0,(a0)                         	| [$1aa4: ld      (hl),a] erase the rivet
-	subq.b	#1,d6                           	| [$1aa5: dec     l] next video memory
-	move.b	d0,(a0)                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
-	addq.b	#2,d6                           	| [$1aa7: inc     l] * 2
+	                           	| [$1aa5: dec     l] next video memory
+	move.b	d0,-(a0)                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
+	addq.w	#2,a0                           	| [$1aa7: inc     l] * 2
 	move.b	d0,(a0)                         	| [$1aa9: ld      (hl),a] erase underneath the rivet [ not needed , there is nothing there to erase ???]
 	move.b	#0x01,d0                        	| [$1aaa: ld      a,$01] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1aac: ld      (bonus_indicator_6340),a] store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
@@ -6357,9 +6370,9 @@ l_1b2c:
 
 * top of unbroken ladder
 
-	addq.b	#1,d6                           	| [$1b34: inc     l] next HL := #621B
-	move.b	d3,(a0)                         	| [$1b35: ld      (hl),d] store D
-	addq.b	#1,d6                           	| [$1b36: inc     l] next HL := #621C
+	addq.w	#1,a0                           	| [$1b34: inc     l] next HL := #621B
+	move.b	d3,(a0)+                         	| [$1b35: ld      (hl),d] store D
+												| [$1b36: inc     l] next HL := #621C
 	move.b	d1,(a0)                         	| [$1b37: ld      (hl),b] store B
 
 * if mario is on a ladder
@@ -6386,9 +6399,9 @@ l_1b45:
 * mario is next to bottom of ladder
 
 l_1b4e:
-	addq.b	#1,d6                           	| [$1b4e: inc     l] next HL := #621B
-	move.b	d1,(a0)                         	| [$1b4f: ld      (hl),b] store B
-	addq.b	#1,d6                           	| [$1b50: inc     l] next HL := #621C
+	addq.w	#1,a0                           	| [$1b4e: inc     l] next HL := #621B
+	move.b	d1,(a0)+                         	| [$1b4f: ld      (hl),b] store B
+	                           	| [$1b50: inc     l] next HL := #621C
 	move.b	d3,(a0)                         	| [$1b51: ld      (hl),d] store D
 	jra	l_1b45                             	| [$1b52: jp      $1b45] loop back
 
@@ -6436,16 +6449,15 @@ l_1b6e:
 	move.b	#0x00,d2                        	| [$1b87: ld      bc,$0000] B := 0, C := 0 = codes for jumping straight up 0
 
 l_1b8a:
-	illegal  | a0/d6
 	clr.b	d0                               	| [$1b8a: xor     a] A := 0
-	move.b	d1,(a0)                         	| [$1b8b: ld      (hl),b] store B into #6210 = jump direction (0 = right, #FF = left, 0 = up)
-	addq.b	#1,d6                           	| [$1b8c: inc     l] HL := #6211
-	move.b	d2,(a0)                         	| [$1b8d: ld      (hl),c] store C into jump direction indicator (#80 for left or right, 0 for up)
-	addq.b	#1,d6                           	| [$1b8e: inc     l] HL := #6212
-	move.b	#0x01,(a0)                      	| [$1b8f: ld      (hl),$01] store 1 into this indicator ???
-	addq.b	#1,d6                           	| [$1b91: inc     l] HL := #6213
-	move.b	#0x48,(a0)                      	| [$1b92: ld      (hl),$48]
-	addq.b	#1,d6                           	| [$1b94: inc     l] HL := #6214 (jump counter)
+	move.b	d1,(a0)+                         	| [$1b8b: ld      (hl),b] store B into #6210 = jump direction (0 = right, #FF = left, 0 = up)
+	                           	| [$1b8c: inc     l] HL := #6211
+	move.b	d2,(a0)+                         	| [$1b8d: ld      (hl),c] store C into jump direction indicator (#80 for left or right, 0 for up)
+	                           	| [$1b8e: inc     l] HL := #6212
+	move.b	#0x01,(a0)+                      	| [$1b8f: ld      (hl),$01] store 1 into this indicator ???
+	                           	| [$1b91: inc     l] HL := #6213
+	move.b	#0x48,(a0)+                      	| [$1b92: ld      (hl),$48]
+	                           	| [$1b94: inc     l] HL := #6214 (jump counter)
 	move.b	d0,(a0)                         	| [$1b95: ld      (hl),a] clear jump counter
 	move.b	d0,unknown_6204                 	| [$1b96: ld      (unknown_6204),a]
 	move.b	d0,unknown_6206                 	| [$1b99: ld      (unknown_6206),a]
@@ -6556,8 +6568,8 @@ l_1c3a:
 	move.b	#0x05,d1                        	| [$1c46: ld      b,$05] for B := 1 to 5
 
 l_1c48:
-	move.b	d0,(a0)                         	| [$1c48: ld      (hl),a] clear this memory (jump direction, etc)
-	addq.b	#1,d6                           	| [$1c49: inc     l] next HL
+	move.b	d0,(a0)+                         	| [$1c48: ld      (hl),a] clear this memory (jump direction, etc)
+												| [$1c49: inc     l] next HL
 	subq.b	#1,d1                           	| [...]
 	jne	l_1c48                             	| [$1c4a: djnz    $1c48] next B
 
@@ -6712,8 +6724,8 @@ l_1d11:
 	cmp.b	(a0),d0                          	| [$1d28: cp      (hl)] is mario at top of ladder ?
 	jeq	l_1d67                             	| [$1d29: jp      z,$1d67] yes, skip ahead to handle
 
-	subq.b	#1,d6                           	| [$1d2c: dec     l] HL := #621B = Y value of bottom of ladder
-	sub.b	(a0),d0                          	| [$1d2d: sub     (hl)] is mario at bottom of ladder ?
+	                           	| [$1d2c: dec     l] HL := #621B = Y value of bottom of ladder
+	sub.b	-(a0),d0                          	| [$1d2d: sub     (hl)] is mario at bottom of ladder ?
 	jeq	l_1d67                             	| [$1d2e: jp      z,$1d67] yes, skip ahead to handle
 
 	move.b	#0x05,d1                        	| [$1d31: ld      b,$05] B := 5
@@ -6740,8 +6752,8 @@ l_1d49:
 	jra	l_1da6                             	| [$1d4e: jp      $1da6] jump ahead to update mario sprite and RET
 
 l_1d51:
-	subq.b	#1,d6                           	| [$1d51: dec     l]
-	subq.b	#1,d6                           	| [$1d52: dec     l] HL := #6203
+	subq.w	#2,a0                           	| [$1d51: dec     l]
+	                           	| [$1d52: dec     l] HL := #6203
 	move.b	(a0),d0                         	| [$1d53: ld      a,(hl)] load A with mario sprite value
 	or.b	#0x03,d0                          	| [$1d54: or      $03] turn on bits 0 and 1
 	bclr.b	#2,d0                           	| [$1d56: res     2,a] clear bit 2
@@ -6808,8 +6820,8 @@ l_1d95:
 * play bonus sound
 
 	lea	sound_buffer_address_608a,a0   	| [$1d9d: ld      hl,sound_buffer_address_608a] else load HL with sound address
-	move.b	#0x0d,(a0)                      	| [$1da0: ld      (hl),$0d] play bonus sound
-	addq.b	#1,d6                           	| [$1da2: inc     l] HL := #608B = sound duration
+	move.b	#0x0d,(a0)+                      	| [$1da0: ld      (hl),$0d] play bonus sound
+	                           	| [$1da2: inc     l] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$1da3: ld      (hl),$03] set sound duration to 3
 	rts                                    	| [$1da5: ret] return
 
@@ -6818,15 +6830,15 @@ l_1d95:
 l_1da6:
 	lea	mario_sprite_x_position_694c,a0	| [$1da6: ld      hl,mario_sprite_x_position_694c] load HL with mario sprite X position
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1da9: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
-	move.b	d0,(a0)                         	| [$1dac: ld      (hl),a] store into hardware sprite mario X position
+	move.b	d0,(a0)+                         	| [$1dac: ld      (hl),a] store into hardware sprite mario X position
 	move.b	mario_movement_indicator_sprite_value_6207,d0	| [$1dad: ld      a,(mario_movement_indicator_sprite_value_6207)] load A with movement indicator
-	addq.b	#1,d6                           	| [$1db0: inc     l] HL := #694D = hardware mario sprite
-	move.b	d0,(a0)                         	| [$1db1: ld      (hl),a] store into hardware mario sprite value
+	                           	| [$1db0: inc     l] HL := #694D = hardware mario sprite
+	move.b	d0,(a0)+                         	| [$1db1: ld      (hl),a] store into hardware mario sprite value
 	move.b	mario_color_6208,d0             	| [$1db2: ld      a,(mario_color_6208)] load A with mario color
-	addq.b	#1,d6                           	| [$1db5: inc     l] HL := #694E = hardware mario sprite color
-	move.b	d0,(a0)                         	| [$1db6: ld      (hl),a] store into mario sprite color
+	                           	| [$1db5: inc     l] HL := #694E = hardware mario sprite color
+	move.b	d0,(a0)+                         	| [$1db6: ld      (hl),a] store into mario sprite color
 	move.b	return_without_taking_the_ladder_6205,d0	| [$1db7: ld      a,(return_without_taking_the_ladder_6205)] load A with mario Y position
-	addq.b	#1,d6                           	| [$1dba: inc     l] HL := #694F = mario sprite Y position
+	                           	| [$1dba: inc     l] HL := #694F = mario sprite Y position
 	move.b	d0,(a0)                         	| [$1dbb: ld      (hl),a] store into mario sprite Y position
 	rts                                    	| [$1dbc: ret] return
 
@@ -6913,7 +6925,7 @@ l_1E15:
 	LOAD_RAM_ADDRESS	unknown_for_use_later_6343,a0	| [$1e18: ld      hl,(unknown_for_use_later_6343)] load HL with contents of #6343 , this gives the address of the sprite location
 	move.b	(a0),d0                         	| [$1e1b: ld      a,(hl)] load A with the X position of the sprite in question
 	clr.b	(a0)                             	| [$1e1c: ld      (hl),$00] clear the sprite from the screen
-	addq.b	#3,a0                           	| [$1e1e: inc     l] increase L 3 times * 3
+	addq.w	#3,a0                           	| [$1e1e: inc     l] increase L 3 times * 3
 	move.b	(a0),d2                         	| [$1e21: ld      c,(hl)] load C with the Y position of the item
 	jra	l_1e36                             	| [$1e22: jp      $1e36] jump ahead
 
@@ -7177,7 +7189,7 @@ l_1f34:
 	addq.b	#1,d0                           	| [$1f3b: inc     a] A := 11:18 AM 6/15/2009
 	move.b	d0,bonus_indicator_6340         	| [$1f3c: ld      (bonus_indicator_6340),a] store into bonus indicator
 	lea	location_of_item_hit_6a2c,a0   	| [$1f3f: ld      hl,location_of_item_hit_6a2c] load HL with location of item hit
-	move.b	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
+	STORE_ROM_ADDRESS	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
 	rts                                    	| [$1f45: ret] return
 
 * called from main routine at #19A4
@@ -7230,9 +7242,9 @@ l_1f83:
 	subq.b	#1,d0                           	| [$1f86: dec     a] Is this barrel rolling ?
 	jeq	l_1f93                             	| [$1f87: jp      z,$1f93] Yes, jump ahead
 
-	addq.b	#3,d6                           	| [$1f8a: inc     l] otherwise increase L by 4 * 3
+	addq.w	#3,a0                           	| [$1f8a: inc     l] otherwise increase L by 4 * 3
 l_1f8d:
-	addq.b	#1,d6                           	| [$1f8d: inc     l]
+	addq.w	#1,a0                           	| [$1f8d: inc     l]
 	add.w	d3,a2                            	| [$1f8e: add     ix,de] Add offset to check for next barrel
 	subq.b	#1,d1                           	| [...]
 	jne	l_1f83                             	| [$1f90: djnz    $1f83] Next B
@@ -7632,34 +7644,35 @@ l_21ba:
 * data used in sub below for attract mode movement
 * first byte is movement, second is duration
 
-fe                  | jump
-c0                  | run right
-21D5,0x04,0x50     | up = climb ladder
-21D7,0x02,0x10     | run left
-21D9,0x82,0x60     | jump left
-21DB,0x02,0x10     | run left
-ca                  | jump left
-21DF,0x01,0x10     | run right
-ff                  | jump right (gets hammer)
-21E3,0x02,0x38     | run left
-21E5,0x01,0x80     | run right - mario dies falling over right edge
-ff                  | run left
-21E9,0x04,0x80     | up
-21EB,0x04,0x60     | up
-21ED,0x80        | ?
+*fe                  | jump
+*c0                  | run right
+*21D5,0x04,0x50     | up = climb ladder
+*21D7,0x02,0x10     | run left
+*21D9,0x82,0x60     | jump left
+*21DB,0x02,0x10     | run left
+*ca                  | jump left
+*21DF,0x01,0x10     | run right
+*ff                  | jump right (gets hammer)
+*21E3,0x02,0x38     | run left
+*21E5,0x01,0x80     | run right - mario dies falling over right edge
+*ff                  | run left
+*21E9,0x04,0x80     | up
+*21EB,0x04,0x60     | up
+*21ED,0x80        | ?
 
 * called during attract mode only from #1977
 
 l_21ee:
-	lea	l_21d1,a1                      	| [$21ee: ld      de,$21d1] load DE with start of table data
+	lea	game_rom+0x21d1,a1                      	| [$21ee: ld      de,$21d1] load DE with start of table data
 	lea	state_of_attract_mode_63cc,a0  	| [$21f1: ld      hl,state_of_attract_mode_63cc] load HL with state of attract mode
+	moveq	#0,d0
 	move.b	(a0),d0                         	| [$21f4: ld      a,(hl)] load A with state
 	rol.b	#1,d0                            	| [$21f5: rlca] rotate left (x2)
-	add.b	d4,d0                            	| [$21f6: add     a,e] add to E to get the movement
-	move.b	d0,d4                           	| [$21f7: ld      e,a] put back
+	add.w	d0,a1                            	| [$21f6: add     a,e] add to E to get the movement
+												| [$21f7: ld      e,a] put back
 	move.b	(a1),d0                         	| [$21f8: ld      a,(de)] load A with data from table
 	move.b	d0,inputstate_6010              	| [$21f9: ld      (inputstate_6010),a] store into copy of input
-	addq.b	#1,d6                           	| [$21fc: inc     l] HL := #63CD (timer)
+	addq.w	#1,a0                           	| [$21fc: inc     l] HL := #63CD (timer)
 	move.b	(a0),d0                         	| [$21fd: ld      a,(hl)] load timer
 	subq.b	#1,(a0)                         	| [$21fe: dec     (hl)] decrement
 	tst.b	d0                               	| [$21ff: and     a] == #00 ?
@@ -7667,11 +7680,11 @@ l_21ee:
 	rts                                    	| [$2200: ret     nz] no, return [...]
 0:
 
-	addq.b	#1,d4                           	| [$2201: inc     e] else next movement
+	addq.w	#1,a1                           	| [$2201: inc     e] else next movement
 	move.b	(a1),d0                         	| [$2202: ld      a,(de)] load A with timer from table
 	move.b	d0,(a0)                         	| [$2203: ld      (hl),a] store into timer
-	subq.b	#1,d6                           	| [$2204: dec     l] HL := #63CC (state)
-	addq.b	#1,(a0)                         	| [$2205: inc     (hl)] increase state
+									| [$2204: dec     l] HL := #63CC (state)
+	addq.b	#1,-(a0)                         	| [$2205: inc     (hl)] increase state
 	rts                                    	| [$2206: ret] return
 
 * arrive here from main routine at #199B
@@ -7703,13 +7716,13 @@ l_2219:
 * ladder is all the way up
 l_2227:
 	move.l	(sp)+,a0                        	| [$2227: pop     hl] restore HL - it has the ladder address
-	addq.b	#1,d6                           	| [$2228: inc     l] HL := #6289 or #6281 - timer for movement ???
+	addq.w	#1,a0                           	| [$2228: inc     l] HL := #6289 or #6281 - timer for movement ???
 	subq.b	#1,(a0)                         	| [$2229: dec     (hl)] decrement.  at zero ?
 	jne	l_223a                             	| [$222a: jp      nz,$223a] no, skip ahead and check to disable moving ladder indicator
 
-	subq.b	#1,d6                           	| [$222d: dec     l] put HL back where it was
+	subq.w	#1,a0                           	| [$222d: dec     l] put HL back where it was
 	addq.b	#1,(a0)                         	| [$222e: inc     (hl)] increase ladder status.  now it is moving down
-	addq.b	#2,d6                           	| [$222f: inc     l] * 2
+	addq.w	#2,a0                           	| [$222f: inc     l] * 2
 	jbsr	l_2243                            	| [$2231: call    $2243] only continue below if mario is on the ladder
 
 	move.b	#0x01,d0                        	| [$2234: ld      a,$01] A := 1
@@ -7717,7 +7730,7 @@ l_2227:
 	rts                                    	| [$2239: ret] return
 
 l_223a:
-	addq.b	#1,d6                           	| [$223a: inc     l] HL := #628A or #6282
+	addq.w	#1,a0                           	| [$223a: inc     l] HL := #628A or #6282
 	jbsr	l_2243                            	| [$223b: call    $2243] only continue below if mario is on the ladder, else RET
 
 	clr.b	d0                               	| [$223e: xor     a] A := 0
@@ -7750,7 +7763,7 @@ l_2257:
 * arrive from #221A when ladder is moving down
 
 	move.l	(sp)+,a0                        	| [$2259: pop     hl] restore HL = ladder status
-	addq.b	#4,d6                           	| [$225a: inc     l] * 4
+	addq.w	#4,a0                           	| [$225a: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$225e: dec     (hl)] decrease.  at zero?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$225f: ret     nz] no, return [...]
@@ -7758,19 +7771,19 @@ l_2257:
 
 	move.b	#0x04,d0                        	| [$2260: ld      a,$04] A := 4
 	move.b	d0,(a0)                         	| [$2262: ld      (hl),a] store into the ladder's ???
-	subq.b	#1,d6                           	| [$2263: dec     l] HL now has the ladder's ???
-	addq.b	#1,(a0)                         	| [$2264: inc     (hl)] increase
+	                           	| [$2263: dec     l] HL now has the ladder's ???
+	addq.b	#1,-(a0)                         	| [$2264: inc     (hl)] increase
 	jbsr	l_22bd                            	| [$2265: call    $22bd] ???
 	move.b	#0x78,d0                        	| [$2268: ld      a,$78] A := #78
 	cmp.b	(a0),d0                          	| [$226a: cp      (hl)] == (HL) ?
 	jne	l_2275                             	| [$226b: jp      nz,$2275] no, skip ahead
 
-	subq.b	#3,d6                           	| [$226e: dec     l] * 3
-	addq.b	#1,(a0)                         	| [$2271: inc     (hl)]
-	addq.b	#3,d6                           	| [$2272: inc     l] * 3
+	                           	| [$226e: dec     l] * 3
+	addq.b	#1,(-3,a0)                         	| [$2271: inc     (hl)]
+	                           	| [$2272: inc     l] * 3
 
 l_2275:
-	subq.b	#1,d6                           	| [$2275: dec     l] HL now has ???
+	subq.w	#1,a0                           	| [$2275: dec     l] HL now has ???
 	jbsr	l_2243                            	| [$2276: call    $2243] only continue below if mario is on the ladder, else RET
 
 * ladder is moving down and mario is on it
@@ -7818,14 +7831,14 @@ l_2295_2:
 * HL popped from stack is either 6280 for left ladder or 6288 for right ladder
 
 	move.l	(sp)+,a0                        	| [$22a2: pop     hl] restore HL
-	addq.b	#4,d6                           	| [$22a3: inc     l] * 4
+	addq.w	#4,a0                           	| [$22a3: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$22a7: dec     (hl)] decrease (HL).  zero?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$22a8: ret     nz] no, return [...]
 0:
 
-	move.b	#0x02,(a0)                      	| [$22a9: ld      (hl),$02] else set (HL) to 2
-	subq.b	#1,d6                           	| [$22ab: dec     l]
+	move.b	#0x02,(a0)+                      	| [$22a9: ld      (hl),$02] else set (HL) to 2
+											| [$22ab: dec     l]
 	subq.b	#1,(a0)                         	| [$22ac: dec     (hl)] decrease ladder Y value - makes ladder move up
 	jbsr	l_22bd                            	| [$22ad: call    $22bd] update the sprite
 	move.b	#0x68,d0                        	| [$22b0: ld      a,$68] A := #68
@@ -7838,10 +7851,10 @@ l_2295_2:
 
 	clr.b	d0                               	| [$22b4: xor     a] A := 0
 	move.b	#0x80,d1                        	| [$22b5: ld      b,$80] B := #80
-	subq.b	#2,d6                           	| [$22b7: dec     l] * 2
+	subq.w	#2,a0                           	| [$22b7: dec     l] * 2
 	move.b	d1,(a0)                         	| [$22b9: ld      (hl),b]
-	subq.b	#1,d6                           	| [$22ba: dec     l] set HL to ladder status
-	move.b	d0,(a0)                         	| [$22bb: ld      (hl),a] set ladder status to 0 == all the way up
+											| [$22ba: dec     l] set HL to ladder status
+	move.b	d0,-(a0)                         	| [$22bb: ld      (hl),a] set ladder status to 0 == all the way up
 	rts                                    	| [$22bc: ret] return
 
 * called from #22AD above and from #2265
@@ -7849,7 +7862,10 @@ l_2295_2:
 
 l_22bd:
 	move.b	(a0),d0                         	| [$22bd: ld      a,(hl)] load A with ladder Y value
-	btst.b	#3,d6                           	| [$22be: bit     3,l] test bit 3 of L
+	move.l	a0,d7
+	sub.l	#ram_6000,d7
+	illegal
+	btst.b	#3,d7                           	| [$22be: bit     3,l] test bit 3 of L
 	lea	ladder_sprite_y_value_694b,a1  	| [$22c0: ld      de,ladder_sprite_y_value_694b] load DE with ladder sprite Y value
 	jne	l_22c9                             	| [$22c3: jp      nz,$22c9] if other ladder, skip next step
 
@@ -8121,9 +8137,13 @@ l_23de:
 	jne	l_2403                             	| [$23e2: jp      nz,$2403] if not, jump ahead, store new timer value and return
 
 	clr.b	d0                               	| [$23e5: xor     a] A := 0
-	asl.b	#1,(0x07,a2)                     	| [$23e6: sla     (ix+$07)] shift left the barrel sprite status, push bit 7 into carry flag
+	move.b	(0x07,a2),d7
+	asl.b	#1,d7                     	| [$23e6: sla     (ix+$07)] shift left the barrel sprite status, push bit 7 into carry flag
+	move.b	d7,(0x07,a2)
 	roxl.b	#1,d0                           	| [$23ea: rla] rotate in carry flag into A
-	asl.b	#1,(0x08,a2)                     	| [$23eb: sla     (ix+$08)] shift left the other barrel color, push bit 7 into carry flag
+	move.b	(0x08,a2),d7
+	asl.b	#1,d7                     	| [$23eb: sla     (ix+$08)] shift left the other barrel color, push bit 7 into carry flag
+	move.b	d7,(0x08,a2)
 	roxl.b	#1,d0                           	| [$23ef: rla] rotate in carry flag into A
 	move.b	d0,d1                           	| [$23f0: ld      b,a] copy result into B
 	move.b	#0x03,d0                        	| [$23f1: ld      a,$03] A := 3
@@ -8437,18 +8457,20 @@ l_2558:
 	move.b	#0xcc,(0x05,a2)                 	| [$2558: ld      (ix+$05),$cc] store #CC into pie's Y position
 	move.b	master_direction_vector_for_lower_level_62a6,d0	| [$255c: ld      a,(master_direction_vector_for_lower_level_62a6)] load A with master direction vector for lower conveyor
 	rol.b	#1,d0                            	| [$255f: rlca] is this tray moving to the right ?
+	scs		d7
 
 l_2560:
 	move.b	#0x07,(0x03,a2)                 	| [$2560: ld      (ix+$03),$07] set pie X position to 7
-	jcc	l_2576                             	| [$2564: jp      nc,$2576] if tray moving right, skip ahead
-      ^^^^^^ TODO: review cpu flags (move.b,jcc)
-
+	tst.b	d7
+	jeq	l_2576                             	| [$2564: jp      nc,$2576] if tray moving right, skip ahead
+ 
 	move.b	#0xf8,(0x03,a2)                 	| [$2567: ld      (ix+$03),$f8] set pie X position to #F8
 	jra	l_2576                             	| [$256b: jp      $2576] skip ahead
 
 l_256e:
 	jbsr	l_0057                            	| [$256e: call    $0057] load A with random number
 	cmp.b	#0x68,d0                         	| [$2571: cp      $68] < #68 ?
+	scs		d7
 	jra	l_2560                             	| [$2573: jp      $2560] use to decide to put on left or right side
 
 l_2576:
@@ -8501,11 +8523,12 @@ l_25bb:
 l_25c0:
 	move.b	d5,d0                           	| [$25c0: ld      a,h] load A with pie X position
 	cmp.b	#0x80,d0                         	| [$25c1: cp      $80] is the pie in the center fire?
+	scs		d7
 	jeq	l_25d6                             	| [$25c3: jp      z,$25d6] yes, skip ahead
 
 	move.b	upper_right_pie_tray_vector_63a5,d0	| [$25c6: ld      a,(upper_right_pie_tray_vector_63a5)] load A with direction for upper left pie tray
-	jcc	l_25cf                             	| [$25c9: jp      nc,$25cf] if pie < #80, use this address and skip next step
-      ^^^^^^ TODO: review cpu flags (move.b,jcc)
+	tst.b	d7
+	jeq	l_25cf                             	| [$25c9: jp      nc,$25cf] if pie < #80, use this address and skip next step
 
 	move.b	upper_left_pie_tray_vector_63a4,d0	| [$25cc: ld      a,(upper_left_pie_tray_vector_63a4)] else load A with direction for upper right tray
 
@@ -8557,8 +8580,8 @@ l_2602:
 	subq.b	#1,(a0)                         	| [$260c: dec     (hl)] decrease.  time to reverse?
 	jne	l_2616                             	| [$260d: jp      nz,$2616] no, skip next 3 steps
 
-	move.b	#0x80,(a0)                      	| [$2610: ld      (hl),$80] reset counter
-	addq.b	#1,d6                           	| [$2612: inc     l] HL := #62A1 = master direction vector for top tray
+	move.b	#0x80,(a0)+                      	| [$2610: ld      (hl),$80] reset counter
+	                           	| [$2612: inc     l] HL := #62A1 = master direction vector for top tray
 	jbsr	l_26de                            	| [$2613: call    $26de] reverse the direction of this tray
 
 l_2616:
@@ -8589,12 +8612,12 @@ l_262f:
 	ror.b	#1,d0                            	| [$263d: rrca] roll right, is there a carry bit?
 	jcs	l_264c                             	| [$263e: jp      c,$264c] yes, skip ahead
 
-	subq.b	#1,d6                           	| [$2641: dec     l] load HL with middle conveyor counter
-	subq.b	#1,(a0)                         	| [$2642: dec     (hl)] decrease it.  at zero?
+	                           	| [$2641: dec     l] load HL with middle conveyor counter
+	subq.b	#1,-(a0)                         	| [$2642: dec     (hl)] decrease it.  at zero?
 	jne	l_264c                             	| [$2643: jp      nz,$264c] no, skip ahead
 
-	move.b	#0xc0,(a0)                      	| [$2646: ld      (hl),$c0] yes, reset the counter to #C0
-	addq.b	#1,d6                           	| [$2648: inc     l] HL := #62A3 = master direction vector for middle conveyor
+	move.b	#0xc0,(a0)+                      	| [$2646: ld      (hl),$c0] yes, reset the counter to #C0
+	                           	| [$2648: inc     l] HL := #62A3 = master direction vector for middle conveyor
 	jbsr	l_26de                            	| [$2649: call    $26de] reverse the direction of this tray
 
 l_264c:
@@ -8609,7 +8632,7 @@ l_264c:
 	rts                                    	| [$265f: ret     nz] no, return [...]
 0:
 
-	subq.b	#1,d6                           	| [$2660: dec     l] HL := #62A2 = middle conveyor counter
+	subq.w	#1,a0                           	| [$2660: dec     l] HL := #62A2 = middle conveyor counter
 	lea	middle_pulley_sprites_69ec,a1  	| [$2661: ld      de,middle_pulley_sprites_69ec] load DE with middle pulley sprites
 	exg	a1,a0                              	| [$2664: ex      de,hl] DE <> HL
 	jbsr	l_26a6                            	| [$2665: call    $26a6] animate the pulleys
@@ -8636,8 +8659,8 @@ l_2679:
 	subq.b	#1,(a0)                         	| [$2683: dec     (hl)] count it down.  zero?
 	jne	l_268d                             	| [$2684: jp      nz,$268d] no, skip ahead
 
-	move.b	#0xff,(a0)                      	| [$2687: ld      (hl),$ff] yes, reset counter to #FF
-	addq.b	#1,d6                           	| [$2689: inc     l] HL := #62A6 = master direction vector for lower level
+	move.b	#0xff,(a0)+                      	| [$2687: ld      (hl),$ff] yes, reset counter to #FF
+	                           	| [$2689: inc     l] HL := #62A6 = master direction vector for lower level
 	jbsr	l_26de                            	| [$268a: call    $26de] reverse direction of this tray
 
 l_268d:
@@ -8660,7 +8683,7 @@ l_268d:
 * animates the pulleys
 
 l_26a6:
-	addq.b	#1,a0                           	| [$26a6: inc     l] load HL with pulley sprite value
+	addq.w	#1,a0                           	| [$26a6: inc     l] load HL with pulley sprite value
 	move.b	(a1),d0                         	| [$26a7: ld      a,(de)] load A with master conveyor direction
 	CLEAR_XC_FLAGS
 	roxl.b	#1,d0                           	| [$26a8: rla] rotate left.  carry set?
@@ -8795,10 +8818,10 @@ l_2722:
 l_2734:
 	move.b	(0x03,a2),d0                    	| [$2734: ld      a,(ix+$03)] load X position value for elevator
 	move.b	d0,(a0)                         	| [$2737: ld      (hl),a] store into sprite value X position
-	addq.b	#3,d6                           	| [$2738: inc     l] * 3
+	addq.w	#3,a0                           	| [$2738: inc     l] * 3
 	move.b	(0x05,a2),d0                    	| [$273b: ld      a,(ix+$05)] load A with elevator Y position
-	move.b	d0,(a0)                         	| [$273e: ld      (hl),a] store into sprite Y position
-	addq.b	#1,d6                           	| [$273f: inc     l] next position
+	move.b	d0,(a0)+                         	| [$273e: ld      (hl),a] store into sprite Y position
+	                           	| [$273f: inc     l] next position
 	add.w	d3,a2                            	| [$2740: add     ix,de] next elevator
 	subq.b	#1,d1                           	| [...]
 	jne	l_2734                             	| [$2742: djnz    $2734] Next B
@@ -8902,7 +8925,6 @@ l_27a0:
 
 l_27c2:
 	add.w	d3,a2                            	| [$27c2: add     ix,de] add offset for next elevator
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_27a0                             	| [$27c4: djnz    $27a0] next B
 	rts                                    	| [$27c6: ret] return
@@ -8932,12 +8954,13 @@ l_27da:
 	move.b	#0x06,d1                        	| [$27e2: ld      b,$06] for B = 1 to 6 elevators
 	lea	elevator_array_start_6600,a2   	| [$27e4: ld      ix,elevator_array_start_6600] load IX with sprite addr. for elevators
 
+	illegal  |  TODO: review d3 computation
 l_27e8:
 	btst.b	#0,(a2)                    	| [$27e8: bit     0,(ix+$00)] is this elevator active ?
 	jeq	l_27f4                             	| [$27ec: jp      z,$27f4] no, skip ahead and reset
 
 	add.w	d3,a2                            	| [$27ef: add     ix,de] add offset for next elevator
-  ^^^^ TODO: review d3 computation above
+ 
 	subq.b	#1,d1                           	| [...]
 	jne	l_27e8                             	| [$27f1: djnz    $27e8] next B
 	rts                                    	| [$27f3: ret] return
@@ -8985,7 +9008,6 @@ l_2826:
 	jne	l_2832                             	| [$282a: jp      nz,$2832] yes, then do stuff ahead
 
 	add.w	d3,a3                            	| [$282d: add     iy,de] else look at next one
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_2826                             	| [$282f: djnz    $2826] next B
 
@@ -9200,7 +9222,6 @@ l_2945:
 
 l_294c:
 	add.w	d3,a2                            	| [$294c: add     ix,de] add offset for next sprite
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_2915                             	| [$294e: djnz    $2915] Next B
 
@@ -9289,21 +9310,22 @@ l_29af:
 	lea	mario_array_6200,a3            	| [$29b2: ld      iy,mario_array_6200] load IY with mario's array
 	move.b	return_without_taking_the_ladder_6205,d0	| [$29b6: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$29b9: ld      c,a] copy to C
-	lea	l_0408,a0                      	| [$29ba: ld      hl,$0408] H := 4, L := 8
+	move.b	#0x04,d5
+	move.b	#0x08,d6                      	| [$29ba: ld      hl,$0408] H := 4, L := 8
 	jbsr	l_2a22                            	| [$29bd: call    $2a22] check for collision with elevators
 	tst.b	d0                               	| [$29c0: and     a] was there a collision?
 	jeq	l_2a20                             	| [$29c1: jp      z,$2a20] no, load B with #00 and return
 
 * arrive here when landing near an elevator
 * B has the index of the elevator that we hit
-
+	
 	move.b	#0x06,d0                        	| [$29c4: ld      a,$06] A := 6
 	sub.b	d1,d0                            	| [$29c6: sub     b] subtract B.  zero ?
+	and.w	#0xFF,d4		| jotd: this is possibly wrong, d4 or d3?
 l_29c7:
 	jeq	l_29d0                             	| [$29c7: jp      z,$29d0] yes, skip ahead
 
-	add.w	d3,a2                            	| [$29ca: add     ix,de] else add offset for next elevator
-  ^^^^ TODO: review d3 computation above
+	add.w	d4,a2                            	| [$29ca: add     ix,de] else add offset for next elevator
 	subq.b	#1,d0                           	| [$29cc: dec     a] decrease counter
 	jra	l_29c7                             	| [$29cd: jp      $29c7] loop again
 
@@ -9530,11 +9552,9 @@ l_2ab4:
 	and.b	#0x07,d0                         	| [$2ab5: and     $07] mask bits, now between 0 and 7.  zero?
 	jeq	l_2acd                             	| [$2ab7: jp      z,$2acd] yes, skip ahead, mario is falling
 
-	move.b	#0x00,d1                        	| [$2aba: ld      bc,$0020] BC := 20 32
-	move.b	#0x20,d2                        	| [$2aba: ld      bc,$0020] BC := 20 32
-	sub.w	d1,d5                            	| [$2abd: sbc     hl,bc] subtract from HL.  now HL is the next column?
-     ^^^^ TODO: review compared/subbed registers
-	move.b	(a0),d0                         	| [$2abf: ld      a,(hl)] load A with the screen element of this location
+	move.w	#0x20,d1                        	| [$2aba: ld      bc,$0020] BC := 20 32
+	sub.w	d1,d7                            	| [$2abd: sbc     hl,bc] subtract from HL.  now HL is the next column?
+	jbsr	osd_r_videoram                         	| [$2abf: ld      a,(hl)] load A with the screen element of this location
 	cmp.b	#0xb0,d0                         	| [$2ac0: cp      $b0] > #B0 ?
 	jcs	l_2acd                             	| [$2ac2: jp      c,$2acd] yes, skip ahead, mario is falling
 
@@ -9910,7 +9930,6 @@ l_2c69:
 	jeq	l_2c72                             	| [$2c6b: jp      z,$2c72] no, skip next 3 steps| we don't have 5 fires onscreen and therefore have room for a blue barrel
 
 	add.w	d3,a0                            	| [$2c6e: add     hl,de] yes, add #20 offset to test next fire and loop again
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_2c69                             	| [$2c6f: djnz    $2c69] next B
 
@@ -9973,7 +9992,6 @@ l_2ca8:
 
 l_2cb3:
 	add.w	d3,a2                            	| [$2cb3: add     ix,de] Increase to next barrel
-  ^^^^ TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_2ca8                             	| [$2cb5: djnz    $2ca8] Next B
 
@@ -9982,21 +10000,20 @@ l_2cb3:
 * arrive here when a barrel is being deployed
 
 l_2cb8:
-	move.b	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
+	STORE_RAM_ADDRESS	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
 	move.b	#0x02,(a2)                 	| [$2cbc: ld      (ix+$00),$02] set deployement indicator
-	clr.b	d3                               	| [$2cc0: ld      d,$00] D := 0
+	clr.w	d3                               	| [$2cc0: ld      d,$00] D := 0
 	move.b	#0x0a,d0                        	| [$2cc2: ld      a,$0a] A := #0A
 	sub.b	d1,d0                            	| [$2cc4: sub     b] A = A - B |  B has the number of the barrel A now will be 0 if this is the first barrel, #0A if the last
 	add.b	d0,d0                            	| [$2cc5: add     a,a] A = A * 2
 	add.b	d0,d0                            	| [$2cc6: add     a,a] A = A * 2 (A is now 4 times what it was)
-	move.b	d0,d4                           	| [$2cc7: ld      e,a] copy this to E
+	move.b	d0,d3                           	| [$2cc7: ld      e,a] copy this to E
 	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$2cc8: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with starting sprite address for the barrels
 	add.w	d3,a0                            	| [$2ccb: add     hl,de] Now add in offset depending on the barrel number ( will vary from 0 to #28 by 4's)
-  ^^^^ TODO: review d3 computation above
-	move.b	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
+	STORE_RAM_ADDRESS	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
 	move.b	#0x01,d0                        	| [$2ccf: ld      a,$01] A := 1
 	move.b	d0,barrel_deployment_indicator_6393	| [$2cd1: ld      (barrel_deployment_indicator_6393),a] set barrel deployment indicator
-	lea	l_0501,a1                      	| [$2cd4: ld      de,$0501] load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
+	move.w	#0x0501,d3                      	| [$2cd4: ld      de,$0501] load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 	jbsr	insert_task_309f                            	| [$2cd7: call    $309f] insert task
 	lea	bonus_timer_62b1,a0            	| [$2cda: ld      hl,bonus_timer_62b1] load bonus counter into HL
 	subq.b	#1,(a0)                         	| [$2cdd: dec     (hl)] decrement bonus counter.  Is it zero?
@@ -10013,10 +10030,9 @@ l_2ce6:
 	lea	extra_barrels_sprites_69a8,a0  	| [$2cec: ld      hl,extra_barrels_sprites_69a8] else load HL with extra barrels sprites
 	add.b	d0,d0                            	| [$2cef: add     a,a]
 	add.b	d0,d0                            	| [$2cf0: add     a,a] A := A * 4
-	move.b	d0,d4                           	| [$2cf1: ld      e,a] copy to E
-	clr.b	d3                               	| [$2cf2: ld      d,$00] D := 0.  DE now has offset based on timer
+	clr.w	d3                               	| [$2cf2: ld      d,$00] D := 0.  DE now has offset based on timer
+	move.b	d0,d3                           	| [$2cf1: ld      e,a] copy to E
 	add.w	d3,a0                            	| [$2cf4: add     hl,de] compute which sprite to remove based on timer
-  ^^^^ TODO: review d3 computation above
 	move.b	d3,(a0)                         	| [$2cf5: ld      (hl),d] clear the sprite
 
 * IX holds 6700 +N*20 = start of barrel N info
@@ -10065,10 +10081,9 @@ l_2d2f:
 	add.b	d0,d0                            	| [$2d34: add     a,a]
 	add.b	d0,d0                            	| [$2d35: add     a,a]
 	add.b	d2,d0                            	| [$2d36: add     a,c]
-	move.b	d0,d4                           	| [$2d37: ld      e,a] A is #50 when barrel is crazy, #28 when normal
-	clr.b	d3                               	| [$2d38: ld      d,$00] D: = 0
+	clr.w	d3                               	| [$2d38: ld      d,$00] D: = 0
+	move.b	d0,d3                           	| [$2d37: ld      e,a] A is #50 when barrel is crazy, #28 when normal
 	add.w	d3,a0                            	| [$2d3a: add     hl,de] HL becomes #3982 when barrel is crazy, 395A when normal, 3932 when deploying all the way.  this will skip the final animation when dropping crazy barrel (?)
-  ^^^^ TODO: review d3 computation above
 	jbsr	l_004e                            	| [$2d3b: call    $004e] update kong's sprites
 	lea	deployment_indicator_638f,a0   	| [$2d3e: ld      hl,deployment_indicator_638f] load HL with deployment indicator
 	subq.b	#1,(a0)                         	| [$2d41: dec     (hl)] Decrease indicator
@@ -10242,6 +10257,8 @@ l_2e29:
 	addq.b	#2,(0x03,a2)                    	| [$2e31: inc     (ix+$03)] no, increase X position * 2
 	move.b	(0x0e,a2),d6                    	| [$2e37: ld      l,(ix+$0e)]
 	move.b	(0x0f,a2),d5                    	| [$2e3a: ld      h,(ix+$0f)] load HL with table address for bouncer offsets of Y positions for each pixel across
+	LOAD_D5_16_FROM_D5D6
+	LOAD_ROM_ADDRESS	d5,a0
 	move.b	(a0),d0                         	| [$2e3d: ld      a,(hl)] load table data
 	move.b	d0,d2                           	| [$2e3e: ld      c,a] copy to C
 	cmp.b	#0x7f,d0                         	| [$2e3f: cp      $7f] == #7F ? (end code ?)
@@ -10252,6 +10269,8 @@ l_2e29:
 	move.b	d0,(0x05,a2)                    	| [$2e48: ld      (ix+$05),a] store into item's Y position
 
 l_2e4b:
+	STORE_ROM_ADDRESS	a0,d5
+	LOAD_D5D6_FROM_D5_16
 	move.b	d6,(0x0e,a2)                    	| [$2e4b: ld      (ix+$0e),l]
 	move.b	d5,(0x0f,a2)                    	| [$2e4e: ld      (ix+$0f),h] store the updated HL for next time
 	move.b	(0x03,a2),d0                    	| [$2e51: ld      a,(ix+$03)] load A with X position
@@ -10325,8 +10344,9 @@ l_2ea7:
 	move.b	d0,(0x03,a2)                    	| [$2ec1: ld      (ix+$03),a] store A into initial X position for bouncer sprite
 	move.b	#0x01,(a2)                 	| [$2ec4: ld      (ix+$00),$01] set sprite as active
 	lea	l_39aa,a0                      	| [$2ec8: ld      hl,$39aa] values #39 and #AA to be inserted below.  #39AA is the start of table data for Y offsets to add for each movement
-	move.b	d6,(0x0e,a2)                    	| [$2ecb: ld      (ix+$0e),l]
-	move.b	d5,(0x0f,a2)                    	| [$2ece: ld      (ix+$0f),h] store HL into +E and +F
+	
+	move.b	#0xAA,(0x0e,a2)                    	| [$2ecb: ld      (ix+$0e),l]
+	move.b	#0x39,(0x0f,a2)                    	| [$2ece: ld      (ix+$0f),h] store HL into +E and +F
 	jra	l_2e78                             	| [$2ed1: jp      $2e78] jump back
 
 * arrive from main routine at #1998
@@ -10502,7 +10522,7 @@ l_2fcb:
 	move.b	#0x03,d0                        	| [$2fd3: ld      a,$03] else A := 3
 	move.b	d0,fire_release_62b9            	| [$2fd5: ld      (fire_release_62b9),a] store into fire release - a new fire can be released
 	move.b	d0,bouncer_release_6396         	| [$2fd8: ld      (bouncer_release_6396),a] store into bouncer release - a new bouncer can be deployed
-	lea	l_0501,a1                      	| [$2fdb: ld      de,$0501] load task #5, parameter #1 = update onscreen bonus timer and play sound & change to red if below 1000
+	move.w	#0x0501,d3                      	| [$2fdb: ld      de,$0501] load task #5, parameter #1 = update onscreen bonus timer and play sound & change to red if below 1000
 	jbsr	insert_task_309f                            	| [$2fde: call    $309f] insert task
 	move.b	intial_timer_value_62b3,d0      	| [$2fe1: ld      a,(intial_timer_value_62b3)] load A with intial timer value.
 	move.b	d0,(a0)                         	| [$2fe4: ld      (hl),a] reset the timer
@@ -10703,18 +10723,20 @@ insert_task_309f:
 	move.w	d3,-(sp)
 	LOAD_D3D4_FROM_D3_16
 	move.l	a0,-(sp)                        	| [$309f: push    hl] save HL
-	lea	start_of_task_list_60c0,a0     	| [$30a0: ld      hl,start_of_task_list_60c0] load HL with start of task list [why?  L is set later, only H needs to be loaded here]
+	* jotd once again we emulate H/L, start address is known this is quite easy
+	lea	start_of_task_list_60c0-0xC0,a0     	| [$30a0: ld      hl,start_of_task_list_60c0] load HL with start of task list [why?  L is set later, only H needs to be loaded here]
+	moveq	#0,d7
 	move.b	task_list_pointer_60b0,d0       	| [$30a3: ld      a,(task_list_pointer_60b0)] load A with task pointer
-	move.b	d0,d6                           	| [$30a6: ld      l,a] HL now has task pointer full address
-	illegal | a0 vs d6
+	move.b	d0,d7                           	| [$30a6: ld      l,a] HL now has task pointer full address
+	add.w	d7,a0
 	btst.b	#7,(a0)                         	| [$30a7: bit     7,(hl)] test high bit 7 of the task at this address.  zero?
 	jeq	l_30bb                             	| [$30a9: jp      z,$30bb] yes, skip ahead, restore HL and return. [when would this happen??? if task list is full???]
 
 	move.b	d3,(a0)+                         	| [$30ac: ld      (hl),d] else store task number into task list
-	addq.b	#1,d6                           	| [$30ad: inc     l] next HL
-	move.b	d4,(a0)+                         	| [$30ae: ld      (hl),e] store task parameter
-	addq.b	#1,d6                           	| [$30af: inc     l] next HL
-	move.b	d6,d0                           	| [$30b0: ld      a,l] load A with low byte of task pointer
+	addq.b	#1,d7                           	| [$30ad: inc     l] next HL
+	move.b	d4,(a0)+                       	| [$30ae: ld      (hl),e] store task parameter
+	addq.b	#1,d7                       	| [$30af: inc     l] next HL
+	move.b	d7,d0                           	| [$30b0: ld      a,l] load A with low byte of task pointer
 	cmp.b	#0xc0,d0                         	| [$30b1: cp      $c0] is A > #C0 ? (did the task list roll over?)
 	jcc	l_30b8                             	| [$30b3: jp      nc,$30b8] no, skip next instruction
 
@@ -10735,10 +10757,10 @@ l_30bd:
 	lea	start_of_hammers_6950,a0       	| [$30bd: ld      hl,start_of_hammers_6950] load HL with start of hammers
 	move.b	#0x02,d1                        	| [$30c0: ld      b,$02] B := 2
 	jbsr	l_30e4                            	| [$30c2: call    $30e4] clear hammers ?
-	move.b	#0x80,d6                        	| [$30c5: ld      l,$80] L := #80
+	lea	start_of_hammers_6950+0x30,a0                        	| [$30c5: ld      l,$80] L := #80
 	move.b	#0x0a,d1                        	| [$30c7: ld      b,$0a] B := #A
 	jbsr	l_30e4                            	| [$30c9: call    $30e4] clear barrels ?
-	move.b	#0xb8,d6                        	| [$30cc: ld      l,$b8] L := #B8
+	lea	start_of_hammers_6950+0xB8-0x50,a0                        	| [$30cc: ld      l,$b8] L := #B8
 	move.b	#0x0b,d1                        	| [$30ce: ld      b,$0b] B := #B
 	jbsr	l_30e4                            	| [$30d0: call    $30e4] clear firefoxes ?
 	lea	start_of_bonus_items_6a0c,a0   	| [$30d3: ld      hl,start_of_bonus_items_6a0c] load HL with start of bonus items
@@ -10751,16 +10773,16 @@ l_30bd:
 l_30db:
 	lea	mario_sprite_x_position_694c,a0	| [$30db: ld      hl,mario_sprite_x_position_694c] load address for mario sprite X position
 	clr.b	(a0)                             	| [$30de: ld      (hl),$00] clear this memory = move mario off screen
-	move.b	#0x58,d6                        	| [$30e0: ld      l,$58] HL := #6958 = elevator sprite start
+	lea		elevator_sprites_6958,a0          	| [$30e0: ld      l,$58] HL := #6958 = elevator sprite start
 	move.b	#0x06,d1                        	| [$30e2: ld      b,$06] for B = 1 to 6
 
 l_30e4:
-	move.b	d6,d0                           	| [$30e4: ld      a,l] load A with low byte addr
+	                           	| [$30e4: ld      a,l] load A with low byte addr
 
 l_30e5:
 	clr.b	(a0)                             	| [$30e5: ld      (hl),$00] clear this sprite position to zero = move off screen
-	addq.b	#0x04,d0                        	| [$30e7: add     a,$04] add 4 for next sprite
-	move.b	d0,d6                           	| [$30e9: ld      l,a] store into HL
+	addq.w	#0x04,a0                        	| [$30e7: add     a,$04] add 4 for next sprite
+	                           	| [$30e9: ld      l,a] store into HL
 	subq.b	#1,d1                           	| [...]
 	jne	l_30e5                             	| [$30ea: djnz    $30e5] next B
 
@@ -10924,7 +10946,7 @@ l_31b1:
 	clr.b	d0                               	| [$31b4: xor     a] \ Index of fireball being processed := 0
 	move.b	d0,unknown_63a2                 	| [$31b5: ld      (unknown_63a2),a] /
 	lea	current_fireball_data_address_63e0,a0	| [$31b8: ld      hl,current_fireball_data_address_63e0] \ Address of fireball data array for current fireball being processed := #63E0 = #6400 - #20
-	move.b	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
+	STORE_RAM_ADDRESS	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
 
 * Loop start
 l_31be:
@@ -11399,10 +11421,12 @@ l_3428:
 l_342c:
 	move.b	(0x1a,a2),d6                    	| [$342c: ld      l,(ix+$1a)] \ Load HL with address into Y-position table
 	move.b	(0x1b,a2),d5                    	| [$342f: ld      h,(ix+$1b)] /
-	clr.b	d0                               	| [$3432: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
+	LOAD_D5_16_FROM_D5D6
+	LOAD_ROM_ADDRESS	d5,a0
+	                               	| [$3432: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
 	move.b	#0x00,d1                        	| [$3433: ld      bc,$0000]| 0
 	move.b	#0x00,d2                        	| [$3433: ld      bc,$0000]| 0
-adc     hl,bc       |                   	|
+	tst.w	d5		| adc     hl,bc       |                   	|
 	jne	l_3442                             	| [$3438: jp      nz,$3442] /
 
 	lea	l_3a8c,a0                      	| [$343b: ld      hl,$3a8c] We just began to spawn, load HL with address of start of Y-position table
@@ -11423,6 +11447,9 @@ l_3445:
 
 	move.b	d0,(0x05,a2)                    	| [$344b: ld      (ix+$05),a] Else store table data into fire's Y-position
 	addq.w	#1,a0                           	| [$344e: inc     hl] \  Advance to next table entry, for the next frame
+	STORE_ROM_ADDRESS	a0,d5
+	LOAD_D5D6_FROM_D5_16
+	
 	move.b	d6,(0x1a,a2)                    	| [$344f: ld      (ix+$1a),l]|
 	move.b	d5,(0x1b,a2)                    	| [$3452: ld      (ix+$1b),h] /
 	rts                                    	| [$3455: ret] return
@@ -11448,10 +11475,12 @@ l_3456:
 l_3478:
 	move.b	(0x1a,a2),d6                    	| [$3478: ld      l,(ix+$1a)] \ Load HL with address into Y-position table
 	move.b	(0x1b,a2),d5                    	| [$347b: ld      h,(ix+$1b)] /
-	clr.b	d0                               	| [$347e: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
-	move.b	#0x00,d1                        	| [$347f: ld      bc,$0000]| 0
-	move.b	#0x00,d2                        	| [$347f: ld      bc,$0000]| 0
-adc     hl,bc       |                   	|
+	LOAD_D5_16_FROM_D5D6
+	LOAD_ROM_ADDRESS	d5,a0
+													| [$347e: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
+	                        	| [$347f: ld      bc,$0000]| 0
+	                        	| [$347f: ld      bc,$0000]| 0
+	tst.w	d5				| adc     hl,bc       |                   	|
 	jne	l_349a                             	| [$3484: jp      nz,$349a] /
 
 	lea	l_3aac,a0                      	| [$3487: ld      hl,$3aac] load HL with start of table data
@@ -11463,6 +11492,7 @@ adc     hl,bc       |                   	|
 	move.b	#0x7e,(0x03,a2)                 	| [$3496: ld      (ix+$03),$7e] Initialize X position to #7E
 
 l_349a:
+
 	move.b	(0x0d,a2),d0                    	| [$349a: ld      a,(ix+$0d)] \  Jump if fireball moving left
 	cmp.b	#0x01,d0                         	| [$349d: cp      $01]|
 	jne	l_34b3                             	| [$349f: jp      nz,$34b3] /
@@ -11561,29 +11591,29 @@ l_34fb:
 	                               	| [$34fc: and     a] is this sprite active ?
 	jeq	l_351e                             	| [$34fd: jp      z,$351e] no, jump away and set for next sprite
 
-	addq.b	#3,d6                           	| [$3500: inc     l] * 3
+	addq.w	#3,a0                           	| [$3500: inc     l] * 3
 	move.b	(a0),d0                         	| [$3503: ld      a,(hl)] load A with firefox X position
-	move.b	d0,(a1)                         	| [$3504: ld      (de),a] store into sprite X position
-	move.b	#0x04,d0                        	| [$3505: ld      a,$04] A := 4
-	add.b	d6,d0                            	| [$3507: add     a,l] add to L
-	move.b	d0,d6                           	| [$3508: ld      l,a] HL now points to firefox's Y position (IX + #07)
-	addq.b	#1,d4                           	| [$3509: inc     e] next DE, now it has sprite Y position
-	move.b	(a0),d0                         	| [$350a: ld      a,(hl)] load A with firefox Y position
-	move.b	d0,(a1)                         	| [$350b: ld      (de),a] store into hardaware sprite Y position
-	addq.b	#1,d6                           	| [$350c: inc     l] next HL
-	addq.b	#1,d4                           	| [$350d: inc     e] next DE
+	move.b	d0,(a1)+                         	| [$3504: ld      (de),a] store into sprite X position
+	addq.w	#0x04,a0                        	| [$3505: ld      a,$04] A := 4
+												| [$3507: add     a,l] add to L
+												| [$3508: ld      l,a] HL now points to firefox's Y position (IX + #07)
+	                           	| [$3509: inc     e] next DE, now it has sprite Y position
+	move.b	(a0)+,d0                         	| [$350a: ld      a,(hl)] load A with firefox Y position
+	move.b	d0,(a1)+                         	| [$350b: ld      (de),a] store into hardaware sprite Y position
+												| [$350c: inc     l] next HL
+	                           	| [$350d: inc     e] next DE
 	move.b	(a0),d0                         	| [$350e: ld      a,(hl)] load A with firefox sprite color value
-	move.b	d0,(a1)                         	| [$350f: ld      (de),a] store sprite color
-	subq.b	#3,d6                           	| [$3510: dec     l] * 3
-	addq.b	#1,d4                           	| [$3513: inc     e] next DE
+	move.b	d0,(a1)+                         	| [$350f: ld      (de),a] store sprite color
+	subq.w	#3,a0                           	| [$3510: dec     l] * 3
+	                           	| [$3513: inc     e] next DE
 	move.b	(a0),d0                         	| [$3514: ld      a,(hl)] load A with sprite value
-	move.b	d0,(a1)                         	| [$3515: ld      (de),a] store sprite value to hardware
-	addq.w	#1,a1                           	| [$3516: inc     de] next DE
+	move.b	d0,(a1)+                         	| [$3515: ld      (de),a] store sprite value to hardware
+												| [$3516: inc     de] next DE
 
 l_3517:
-	move.b	#0x1b,d0                        	| [$3517: ld      a,$1b] A := #1B
-	add.b	d6,d0                            	| [$3519: add     a,l] add to L
-	move.b	d0,d6                           	| [$351a: ld      l,a] store into L.  HL how has #1B more.  The next sprite is referenced
+	add.w	#0x1b,a0                        	| [$3517: ld      a,$1b] A := #1B
+												| [$3519: add     a,l] add to L
+											| [$351a: ld      l,a] store into L.  HL how has #1B more.  The next sprite is referenced
 	subq.b	#1,d1                           	| [...]
 	jne	l_34fb                             	| [$351b: djnz    $34fb] Next Firefox
 
@@ -11592,9 +11622,9 @@ l_3517:
 * arrive here when firefox is not being used, sets pointer for next sprite
 
 l_351e:
-	move.b	#0x05,d0                        	| [$351e: ld      a,$05] A := 5
-	add.b	d6,d0                            	| [$3520: add     a,l] add to L
-	move.b	d0,d6                           	| [$3521: ld      l,a] store into L.  HL is now 5 more than before
+	addq.w	#0x05,a0                        	| [$351e: ld      a,$05] A := 5
+											| [$3520: add     a,l] add to L
+											| [$3521: ld      l,a] store into L.  HL is now 5 more than before
 	move.b	#0x04,d0                        	| [$3522: ld      a,$04] A := 4
 	add.b	d4,d0                            	| [$3524: add     a,e] add to E
 	move.b	d0,d4                           	| [$3525: ld      e,a] store into E.  DE is now 4 more than before.  next sprite
@@ -12431,9 +12461,9 @@ l_3CEF:
 *
 
 l_3CF0:
-	.byte	0x10,0x82,0x85,0x8B,0x10,0x85,0x80,0x8B,0x10,0x87,0x85,0x8B,0x81,0x80,0x80,0x8B  .25m.50m.75m100m
+	.byte	0x10,0x82,0x85,0x8B,0x10,0x85,0x80,0x8B,0x10,0x87,0x85,0x8B,0x81,0x80,0x80,0x8B |  .25m.50m.75m100m
 l_3D00:
-	.byte	0x81,0x82,0x85,0x8B,0x81,0x85,0x80,0x8B                          125m150m
+	.byte	0x81,0x82,0x85,0x8B,0x81,0x85,0x80,0x8B                          | 125m150m
 
 * used to draw the game logo in attract mode
 * data called from #07F7
@@ -12485,16 +12515,18 @@ l_3DD0:
 * data used for the barrel pile next to kong
 * called from #0FD7
 
-3DDC,0x1E,0x18,0x0B,0x4B       | first barrel
-3DE0,0x14,0x18,0x0B,0x4B       | second barrel
-3DE4,0x1E,0x18,0x0B,0x3B       | third barrel
-3DE8,0x14,0x18,0x0B,0x3B       | fourth barrel
+l_3DDC:
+	.byte	0x1E,0x18,0x0B,0x4B       | first barrel
+	.byte	0x14,0x18,0x0B,0x4B       | second barrel
+	.byte	0x1E,0x18,0x0B,0x3B       | third barrel
+	.byte	0x14,0x18,0x0B,0x3B       | fourth barrel
 
 * the following is table data that gets copied to #6407 - location and other data of the fires?
 * 05 is a loop varialbe
 * 1C loops value corresponds to total length of table
 
-3DEC,0x3D,0x01,0x03,0x02
+l_3DEC:
+	.byte	0x3D,0x01,0x03,0x02
 
 * table data that also gets called from #1138
 * DE is #6407 - Fire # 1 y value
@@ -12510,8 +12542,9 @@ l_3DFA:
 
 * table data called from #0FF5.  4 bytes
 
-3E00,0x27,0x49,0x0C,0xF0               | oil can for girders
-3E04,0x7F,0x49,0x0C,0x88               | oil can for conveyors ?
+l_3E00:
+	.byte	0x27,0x49,0x0C,0xF0               | oil can for girders
+	.byte	0x7F,0x49,0x0C,0x88               | oil can for conveyors ?
 
 * another table called and copied into #6687-668A an #6697-#669A - has to do with the hammers
 * B counter is #02 and C is #0C
@@ -12567,15 +12600,17 @@ l_3e3c:
 
 * bonus items for elevators
 
-3E48,0x5B,0x73,0x0A,0xC8               |  hat at,0x5B,C8
-3E4C,0xE3,0x74,0x0A,0x60               |  purse at,0xE3,60
-3E50,0x1B,0x75,0x0A,0x80               |  umbrella on elevator is,0x80,1B
+l_3E48:
+	.byte	0x5B,0x73,0x0A,0xC8               |  hat at,0x5B,C8
+	.byte	0xE3,0x74,0x0A,0x60               |  purse at,0xE3,60
+	.byte	0x1B,0x75,0x0A,0x80               |  umbrella on elevator is,0x80,1B
 
 * bonus items for rivets
 
-3E54,0xDB,0x73,0x0A,0xC8               | hat on rivets at,0xDB,C8
-3E58,0x93,0x74,0x0A,0xF0               | purse on rivets at,0x93,F0
-3E5C,0x33,0x75,0x0A,0x50               | umbrella on rivets at,0x33,50
+l_3E54:
+	.byte	0xDB,0x73,0x0A,0xC8               | hat on rivets at,0xDB,C8
+	.byte	0x93,0x74,0x0A,0xF0               | purse on rivets at,0x93,F0
+	.byte	0x33,0x75,0x0A,0x50               | umbrella on rivets at,0x33,50
 
 * used in elevators - called from #10CC
 
@@ -12746,7 +12781,7 @@ l_3F20:
 
 l_3f24:
 	move.w	#0x74af,d7                      	| [$3f24: ld      hl,$74af] load HL with screen VRAM address
-	move.w	#0xffe0,a1                      	| [$3f27: ld      de,$ffe0] load offset
+	move.w	#0xffe0,d3                      	| [$3f27: ld      de,$ffe0] load offset
 	move.b	#0x9f,d0                      	| [$3f2a: ld      (hl),$9f] draw first part of TM logo to screen
 	jbsr	osd_w_videoram
 	add.w	d3,d7                            	| [$3f2c: add     hl,de] next screen location
@@ -12816,7 +12851,7 @@ l_3FBA:
 l_3fc0:
 	lea	mario_sprite_value_694d,a0     	| [$3fc0: ld      hl,mario_sprite_value_694d] load HL with mario sprite value
 	move.b	#0x03,(a0)                      	| [$3fc3: ld      (hl),$03] store 3 = mario on ladder with left hand up
-	addq.b	#2,d6                           	| [$3fc5: inc     l] * 2
+	addq.w	#2,a0                           	| [$3fc5: inc     l] * 2
 	rts                                    	| [$3fc7: ret] return
 
 * unknown
