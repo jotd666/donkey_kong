@@ -1045,7 +1045,14 @@ NumObstaclesJumped  = RAM+$60
 
 
 
+    .global donkey_kong_irq
+    .global donkey_kong_reset
 
+	.include	"donkey_kong.inc"
+	.ifdef	__amiga__
+	.include "donkey_kong_ram.68k"
+	.align	2
+	.endif
 
 *
 *
@@ -1053,7 +1060,7 @@ NumObstaclesJumped  = RAM+$60
 *
 *
 
-l_0000:
+donkey_kong_reset:
 	clr.b	d0                               	| [$0000: ld   a,$00] A := 0
 	jbsr	osd_interrupt_control           	| [$0002: ld   (REG_VBLANK_ENABLED),a] disable interrupts
 	jra	Init_0266                          	| [$0005: jp   Init_0266] skip ahead
@@ -1063,6 +1070,7 @@ l_0000:
 * if there are credits or the game is being played it returns immediately.  if not, it returns to higher subroutine
 *
 
+rst_08:
 	move.b	nocredits_6007,d0               	| [$0008: ld      a,(nocredits_6007)] load A with 1 when no credits have been inserted, 0 if any credits exist or game is being played
 	ror.b	#1,d0                            	| [$000b: rrca] any credits in the game ?
 	bcs.b	0f                               	| [...]
@@ -1076,6 +1084,7 @@ l_0000:
 * RST     #10
 * if mario is alive, it returns.  if mario is dead, it returns to the higher subroutine.
 *
+rst_10:
 
 	move.b	mario_array_6200,d0             	| [$0010: ld      a,(mario_array_6200)] 1 when mario is alive, 0 when dead
 	ror.b	#1,d0                            	| [$0013: rrca] is mario alive?
@@ -1090,6 +1099,7 @@ l_0000:
 * RST     #18
 *
 
+rst_18:
 l_0018:
 	lea	waittimermsb_6009,a0           	| [$0018: ld      hl,waittimermsb_6009] load timer that counts down
 	subq.b	#1,(a0)                         	| [$001b: dec     (hl)] Count it down...
@@ -1103,7 +1113,7 @@ l_0018:
 *
 * RST     #20
 *
-
+rst_20:
 	lea	waittimerlsb_6008,a0           	| [$0020: ld      hl,waittimerlsb_6008] load HL with timer
 	subq.b	#1,(a0)                         	| [$0023: dec     (hl)] count it down
 	jeq	l_0018                             	| [$0024: jr      z,$0018] If zero skip up and count down the other timer
@@ -1128,7 +1138,7 @@ rst_28:
 *
 * RST #30
 *
-
+rst_30:
 	jra	l_0044                             	| [$0030: jr      $0044] this core sub is actually at #0044
 
 *
@@ -1152,7 +1162,7 @@ l_0032:
 *
 * Also #003D is called from several places. used for updating girl's sprite
 *
-
+rst_38:
 	move.w	#0x0004,d3                      	| [$0038: ld      de,$0004] load offset of 4 to add 4
 	move.b	#0x0a,d1                        	| [$003b: ld      b,$0a] for B = 1 to #A (10 decimal)
 
@@ -1206,6 +1216,7 @@ l_0057:
 	move.b	d0,rngtimer1_6018               	| [$0062: ld      (rngtimer1_6018),a] store
 	rts                                    	| [$0065: ret] return
 
+donkey_kong_irq:
 * interrupt routine
 
 	move.w	d0,-(sp)                        	| [$0066: push    af]
@@ -1496,7 +1507,7 @@ l_01ba:
 	.align	2
 	
 * this is called when the game is first turned on or reset from #00C9
-
+l_01C3:
 	jbsr	l_0874                            	| [$01c3: call    $0874] clears the screen and sprites
 	lea	l_01ba(pc),a0                      	| [$01c6: ld      hl,$01ba] start of table data above
 	lea	player_1_score_address_60b2,a1 	| [$01c9: ld      de,player_1_score_address_60b2] set destination
@@ -1642,14 +1653,14 @@ l_027a:
 
 	move.b	#0x04,d1                        	| [$0281: ld      b,$04] for B = 1 to 4
 	move.b	#0x10,d0                        	| [$0283: ld      a,$10] #10 is the code for clear on the screen
-	lea	l_7400,a0                      	| [$0285: ld      hl,$7400] load HL with beginning of graphics memory
+	move.w	#0x7400,d7                      	| [$0285: ld      hl,$7400] load HL with beginning of graphics memory
 
 l_0288:
 	clr.b	d2                               	| [$0288: ld      c,$00] For C = 1 to #FF
 
 l_028a:
-	move.b	d0,(a0)                         	| [$028a: ld      (hl),a] load clear into video RAM
-	addq.w	#1,a0                           	| [$028b: inc     hl] next location
+	jbsr	osd_w_videoram                         	| [$028a: ld      (hl),a] load clear into video RAM
+	addq.w	#1,d7                           	| [$028b: inc     hl] next location
 	subq.b	#1,d2                           	| [$028c: dec     c]
 	jne	l_028a                             	| [$028d: jr      nz,$028a] Next C
 
@@ -2481,7 +2492,7 @@ l_0616:
 	jbsr	l_05e9                            	| [$0618: call    $05e9] draw to screen
 	lea	numcredits_6001,a0             	| [$061b: ld      hl,numcredits_6001] load HL with pointer to number of credits
 	move.w	#0xffe0,d3                      	| [$061e: ld      de,$ffe0] load DE with #ffe0 = offset for columns?
-	lea	l_74bf(pc),a2                      	| [$0621: ld      ix,$74bf] load IX with screen address to draw
+	lea	0x74bf,a2                      	| [$0621: ld      ix,$74bf] load IX with screen address to draw
 	move.b	#0x01,d1                        	| [$0625: ld      b,$01] B := 1
 	jra	l_0583                             	| [$0627: jp      $0583] jump back to draw number of credits on screen and return
 
@@ -2696,7 +2707,7 @@ playing_game_06fe:
     .long	l_196B                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
 
 * arrive from #00C9 when attract mode starts
-
+attract_mode_073c:
 	lea	gamemode2_600a,a0              	| [$073c: ld      hl,gamemode2_600a] load HL with game mode2 address
 	move.b	numcredits_6001,d0              	| [$073f: ld      a,(numcredits_6001)] load A with number of credits
 	                               	| [$0742: and     a] any credits exist ?
@@ -2903,15 +2914,15 @@ l_083b:
 * clears screen and all sprites
 
 l_0852:
-	lea	l_7400,a0                      	| [$0852: ld      hl,$7400] #7400 is beginning of video RAM
+	move.w	#0x7400,d7                      	| [$0852: ld      hl,$7400] #7400 is beginning of video RAM
 	move.b	#0x04,d2                        	| [$0855: ld      c,$04] for C= 1 to 4
 l_0857:
 	clr.b	d1                               	| [$0857: ld      b,$00] for B = 1 to 256
 	move.b	#0x10,d0                        	| [$0859: ld      a,$10] #10 is clear for screen in video RAM
 
 l_085b:
-	move.b	d0,(a0)                         	| [$085b: ld      (hl),a] clear this screen element
-	addq.w	#1,a0                           	| [$085c: inc     hl] next screen location
+	jbsr	osd_w_videoram                         	| [$085b: ld      (hl),a] clear this screen element
+	addq.w	#1,d7                           	| [$085c: inc     hl] next screen location
 	subq.b	#1,d1                           	| [...]
 	jne	l_085b                             	| [$085d: djnz    $085b] Next B
 
@@ -11429,7 +11440,7 @@ l_342c:
 	tst.w	d5		| adc     hl,bc       |                   	|
 	jne	l_3442                             	| [$3438: jp      nz,$3442] /
 
-	lea	l_3a8c,a0                      	| [$343b: ld      hl,$3a8c] We just began to spawn, load HL with address of start of Y-position table
+	lea	game_rom+0x3a8c,a0                      	| [$343b: ld      hl,$3a8c] We just began to spawn, load HL with address of start of Y-position table
 	move.b	#0x26,(0x03,a2)                 	| [$343e: ld      (ix+$03),$26] Initialize X position to #26, the X-position of the oilcan
 
 * This table stores the Y-positions a fireball should have each frame to follow a parabolic arc used when fireballs are coming out of oilcans.
@@ -12830,13 +12841,15 @@ l_3fa6:
 	jbsr	rst_30                            	| [$3fa8: rst     $30] check to see if the level is pie factory.  If not, RET to #3FA3 [then jump to #0D5F]
 
 	move.b	#0x02,d1                        	| [$3fa9: ld      b,$02] for B = 1 to 2
-	lea	l_776c,a0                      	| [$3fab: ld      hl,$776c] load HL with video RAM address for top rectractable ladder
+	move.w	#0x776c,d7                      	| [$3fab: ld      hl,$776c] load HL with video RAM address for top rectractable ladder
 
 l_3fae:
-	move.b	#0x10,(a0)                      	| [$3fae: ld      (hl),$10] clear the top of the ladder
-	addq.w	#2,a0                           	| [$3fb0: inc     hl] * 2
-	move.b	#0xc0,(a0)                      	| [$3fb2: ld      (hl),$c0] draw a ladder 2 rows down
-	lea	l_748c,a0                      	| [$3fb4: ld      hl,$748c] set HL for next loop - does the other side of the screen | [sloppy?  this instruction not needed on 2nd loop]
+	move.b	#0x10,d0                      	| [$3fae: ld      (hl),$10] clear the top of the ladder
+	jbsr	osd_w_videoram
+	addq.w	#2,d7                           	| [$3fb0: inc     hl] * 2
+	move.b	#0xc0,d0                      	| [$3fb2: ld      (hl),$c0] draw a ladder 2 rows down
+	jbsr	osd_w_videoram
+	move.w	#0x748c,d7                      	| [$3fb4: ld      hl,$748c] set HL for next loop - does the other side of the screen | [sloppy?  this instruction not needed on 2nd loop]
 	subq.b	#1,d1                           	| [...]
 	jne	l_3fae                             	| [$3fb7: djnz    $3fae] Next B
 

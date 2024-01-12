@@ -42,7 +42,7 @@ all: $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
 clean:
 	del $(OBJS) "$(MAIN)"
 	
-$(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py $(ASSETS)/../$(PROGNAME)_gfx.c
+$(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py $(ASSETS)/../dkong_gfx.c
 	cmd /c $(ASSETS)\convert_graphics.py
 
 
