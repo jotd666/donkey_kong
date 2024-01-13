@@ -120,12 +120,12 @@ RAM_END	= 0x7000
 110:
 	.endif
 	add.w	#RAM_START,d7
-	move.w	d7,var_16bit
+	move.w	d7,\var_16bit
 	.endm
 	
 	.macro	WRITE_TO_SCREEN	addr
 	move.w	d7,-(a7)
-	move.w	#addr,d7
+	move.w	#\addr,d7
 	jbsr	osd_w_videoram
 	move.w	(a7)+,d7
 	.endm
@@ -1061,6 +1061,7 @@ NumObstaclesJumped  = RAM+$60
 *
 
 donkey_kong_reset:
+l_0000:
 	clr.b	d0                               	| [$0000: ld   a,$00] A := 0
 	jbsr	osd_interrupt_control           	| [$0002: ld   (REG_VBLANK_ENABLED),a] disable interrupts
 	jra	Init_0266                          	| [$0005: jp   Init_0266] skip ahead
@@ -1184,6 +1185,7 @@ l_0044:
 	lea	screen_number_6227,a0          	| [$0044: ld      hl,screen_number_6227] Load HL with address of Screen #
 	move.b	(a0),d1                         	| [$0047: ld      b,(hl)] load B with Screen #, For B = 1 to screen # (1, 2, 3 or 4)
 
+l_0048:
 	ror.b	#1,d0                            	| [$0048: rrca] Rotate A right with carry
 	jne	l_0048                             	| [$0049: djnz    $0048] Next B
 
@@ -1232,9 +1234,9 @@ donkey_kong_irq:
 
 	clr.b	d0                               	| [$006e: xor     a] A := 0
 	jbsr	osd_interrupt_control            	| [$006f: ld      (reg_vblank_enable),a] disable interrupts
-	move.b	in2,d0                          	| [$0072: ld      a,(in2)] load A with Credit/Service/Start Info
-	and.b	#0x01,d0                         	| [$0075: and     $01] is the Service button being pressed?
-	jne	l_4000                             	| [$0077: jp      nz,$4000] yes, jump to #4000 [??? this would cause a crash ???]
+*	move.b	in2,d0                          	| [$0072: ld      a,(in2)] load A with Credit/Service/Start Info
+*	and.b	#0x01,d0                         	| [$0075: and     $01] is the Service button being pressed?
+*	jne	l_4000                             	| [$0077: jp      nz,$4000] yes, jump to #4000 [??? this would cause a crash ???]
 
 	lea	game_rom+0x0138,a0                      	| [$007a: ld      hl,$0138] load HL with start of table data
 	jbsr	l_0141                            	| [$007d: call    $0141] refresh the P8257 Control registers / refresh sprites to hardware
@@ -1286,9 +1288,9 @@ l_00b5:
 
      jbsr	rst_28             | jump based on above:
 
-	.long   l_01C3 | #01C3 = startup
+	.long   l_01c3 | #01C3 = startup
 	.long   attract_mode_073c | #073C = attract mode
-	.long   l_08B2 | #08B2 = credits, waiting
+	.long   l_08b2 | #08B2 = credits, waiting
 	.long   playing_game_06fe | #06FE = playing game
 
 * return here from any of the jumps above, based on return address pushed to stack at #00C5
@@ -1369,7 +1371,7 @@ l_0118:
 * clear all sounds
 * called from several places
 
-l_011c:
+clear_all_sounds_011c:
 	move.b	#0x08,d1                        	| [$011c: ld      b,$08] For B = 1 to 8
 	clr.b	d0                               	| [$011e: xor     a] A := 0
 	lea	reg_sfx,a0                     	| [$011f: ld      hl,reg_sfx] [REG_SFX..REG_SFX+7] get all zeros
@@ -1467,7 +1469,7 @@ l_0189:
 	cmp.b	#0x03,d0                         	| [$0190: cp      $03] is someone playing?
 	jeq	l_019d                             	| [$0192: jp      z,$019d] yes, skip ahead and don't play the sound
 
-	jbsr	l_011c                            	| [$0195: call    $011c] no, then clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$0195: call    $011c] no, then clear all sounds
 	move.b	#0x03,d0                        	| [$0198: ld      a,$03] load sound duration
 	move.b	d0,play_sound_for_bouncer_6083  	| [$019a: ld      (play_sound_for_bouncer_6083),a] plays the coin insert sound
 
@@ -1507,7 +1509,8 @@ l_01ba:
 	.align	2
 	
 * this is called when the game is first turned on or reset from #00C9
-l_01C3:
+
+l_01c3:
 	jbsr	l_0874                            	| [$01c3: call    $0874] clears the screen and sprites
 	lea	l_01ba(pc),a0                      	| [$01c6: ld      hl,$01ba] start of table data above
 	lea	player_1_score_address_60b2,a1 	| [$01c9: ld      de,player_1_score_address_60b2] set destination
@@ -1616,7 +1619,7 @@ l_0259_2:
 
 * come here from game power-on
 * first, clear system RAM
-Init:
+Init_0266:
 	move.b	#0x10,d1                        	| [$0266: ld      b,$10] for B = 0 to #10
 	lea	ram_6000,a0                         	| [$0268: ld      hl,ram] set destination
 	clr.b	d0                               	| [$026b: xor     a] A := 0
@@ -1692,7 +1695,7 @@ l_0298:
 	addq.b	#1,d0                           	| [$02ae: inc     a] A: = 1
 	move.b	d0,reg_flipscreen               	| [$02af: ld      (reg_flipscreen),a] set flip screen setting
 	lea     stack_pointer_6c00,sp				|  ld      sp,stack_pointer_6c00    | set Stack Pointer to #6C00
-	jbsr	l_011c                            	| [$02b5: call    $011c] clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$02b5: call    $011c] clear all sounds
 	move.b	#0x01,d0                        	| [$02b8: ld      a,$01] A := 1
 	jbsr	osd_interrupt_control            	| [$02ba: ld      (reg_vblank_enable),a] enable interrupts
 
@@ -1766,13 +1769,13 @@ l_02f6:
 * task table
 
 jump_table_0307:
-	.long	l_051C                             | #051C | 0, for adding to score.  parameter is score in hundreds
-	.long	l_059B                             | #059B | 1, clears and displays scores.  parameter 0 for p1, 1 for p2
-	.long	l_05C6                             | #05C6 | 2, displays score.  0 for p1, 1 for p2, 2 for highscore
-	.long	l_05E9                             | #05E9 | 3, used to draw text.  parameter is code for text to draw
+	.long	l_051c                             | #051C | 0, for adding to score.  parameter is score in hundreds
+	.long	l_059b                             | #059B | 1, clears and displays scores.  parameter 0 for p1, 1 for p2
+	.long	l_05c6                             | #05C6 | 2, displays score.  0 for p1, 1 for p2, 2 for highscore
+	.long	l_05e9                             | #05E9 | 3, used to draw text.  parameter is code for text to draw
 	.long	l_0611                             | #0611 | 4, draws credits on screen if any are present
-	.long	l_062A                             | #062A | 5, parameter 0 adds bonus to player's score , parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
-	.long	l_06B8                             | #06B8 | 6, draws remaining lives and level number.  parameter 1 to draw lives-1
+	.long	l_062a                             | #062A | 5, parameter 0 adds bonus to player's score , parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
+	.long	l_06b8                             | #06B8 | 6, draws remaining lives and level number.  parameter 1 to draw lives-1
 
 * called from #02C7
 * flashes 1UP or 2UP
@@ -2118,7 +2121,7 @@ l_04a1:
 
 l_04a3:
 	lea	l_75c4,a0                      	| [$04a3: ld      hl,$75c4] load HL with address of a location in video RAM where girl yells "HELP"
-	jbsr	l_0514                            	| [$04a6: call    $0514] update girl yelling "HELP"
+	jbsr	clear_help_0514                            	| [$04a6: call    $0514] update girl yelling "HELP"
 	move.b	girls_sprite_6905,d0            	| [$04a9: ld      a,(girls_sprite_6905)] load A with girl's sprite
 
 l_04ac:
@@ -2144,10 +2147,10 @@ l_04ac:
 
 l_04be:
 	move.b	#0x10,d0                        	| [$04be: ld      a,$10] A := #10 = code for clear space
-	lea	l_7623,a0                      	| [$04c0: ld      hl,$7623] load HL with video RAM for girl location
-	jbsr	l_0514                            	| [$04c3: call    $0514] clear the "help" the girl yells on the left side
-	lea	l_7583,a0                      	| [$04c6: ld      hl,$7583] load HL with video RAM right of girl
-	jbsr	l_0514                            	| [$04c9: call    $0514] clear the "help" the girl yells on the right side
+	move.w	#0x7623,d7                      	| [$04c0: ld      hl,$7623] load HL with video RAM for girl location
+	jbsr	clear_help_0514                            	| [$04c3: call    $0514] clear the "help" the girl yells on the left side
+	move.w	#0x7583,d7                      	| [$04c6: ld      hl,$7583] load HL with video RAM right of girl
+	jbsr	clear_help_0514                            	| [$04c9: call    $0514] clear the "help" the girl yells on the right side
 	btst.b	#6,d2                           	| [$04cc: bit     6,c] check timer bit 6.  zero?
 	jeq	l_0509                             	| [$04ce: jp      z,$0509] yes, skip ahead
 
@@ -2156,8 +2159,8 @@ l_04be:
 	jcc	l_04f1                             	| [$04d6: jp      nc,$04f1] yes, skip ahead
 
 	move.b	#0xdf,d0                        	| [$04d9: ld      a,$df] else A := #DF
-	lea	l_7623,a0                      	| [$04db: ld      hl,$7623] load HL with video RAM for girl location
-	jbsr	l_0514                            	| [$04de: call    $0514] draw "help" on the left side
+	move.w	#0x7623,d7                      	| [$04db: ld      hl,$7623] load HL with video RAM for girl location
+	jbsr	clear_help_0514                            	| [$04de: call    $0514] draw "help" on the left side
 
 l_04e1:
 	move.b	unknown_6901,d0                 	| [$04e1: ld      a,(unknown_6901)] load A with sprite used for girl
@@ -2169,8 +2172,8 @@ l_04e1:
 
 l_04f1:
 	move.b	#0xef,d0                        	| [$04f1: ld      a,$ef] A := #EF
-	lea	l_7583,a0                      	| [$04f3: ld      hl,$7583] load HL with video RAM for girl location
-	jbsr	l_0514                            	| [$04f6: call    $0514] draw "help" on the right side
+	move.w	#0x7583,d7                      	| [$04f3: ld      hl,$7583] load HL with video RAM for girl location
+	jbsr	clear_help_0514                            	| [$04f6: call    $0514] draw "help" on the right side
 
 l_04f9:
 	move.b	unknown_6901,d0                 	| [$04f9: ld      a,(unknown_6901)] load A with sprite used for girl
@@ -2191,18 +2194,18 @@ l_0509:
 
 *
 * this sub gets called a lot
-* HL is preloaded with an address of video RAM ?
-* DE is preloaded with an offset to add
-* A is preloaded with a value to write
+* d7 is preloaded with an address of video RAM
+* d3 is preloaded with an offset to add
+* d0 is preloaded with a value to write
 * writes A into HL, A-1 into HL+DE, A-2 into HL+2DE
 *
 
-l_0514:
+clear_help_0514:
 	move.b	#0x03,d1                        	| [$0514: ld      b,$03] for B = 1 to 3
 
 l_0516:
-	move.b	d0,(a0)                         	| [$0516: ld      (hl),a] store A into memory
-	add.w	d3,a0                            	| [$0517: add     hl,de] next memory
+	jbsr	osd_w_videoram                         	| [$0516: ld      (hl),a] store A into memory
+	add.w	d3,d7                            	| [$0517: add     hl,de] next memory
 	subq.b	#1,d0                           	| [$0518: dec     a] decrease A
 	subq.b	#1,d1                           	| [...]
 	jne	l_0516                             	| [$0519: djnz    $0516] next B
@@ -2215,6 +2218,7 @@ l_0516:
 * parameter in A is the score to add in hundreds
 *
 
+l_051c:
 	move.b	d0,d2                           	| [$051c: ld      c,a] copy score to C
 	jbsr	rst_08                            	| [$051d: rst     $8] only continue if credits exist or someone is playing, else RET
 	jbsr	l_055f                            	| [$051e: call    $055f] load DE with address of player score
@@ -2223,7 +2227,7 @@ l_0516:
 	add.b	d2,d0                            	| [$0523: add     a,c] triple
 	clr.w	d1                               	| [$0528: ld      b,$00] B := 0
 	move.b	d0,d1                           	| [$0524: ld      c,a] C is now 3 times A for use in the scoring table
-	lea	game_rom+0x3529,a0                      	| [$0525: ld      hl,$3529] #3529 holds table data for scoring
+	lea	item_scoring_table_3529,a0                      	| [$0525: ld      hl,$3529] #3529 holds table data for scoring
 	add.w	d1,a0                            	| [$052a: add     hl,bc] add offset for scoring table
  	tst.b	d0                               	| [$052b: and     a] clear carry flag
 	move.w	#3,d1                        	| [$052c: ld      b,$03] for B = 1 to 3
@@ -2479,6 +2483,7 @@ l_060c:
 * draws credits on screen if any are present
 *
 
+l_0611:
 	move.b	nocredits_6007,d0               	| [$0611: ld      a,(nocredits_6007)] 1 when no credits have been inserted| 0 if any credits exist
 	ror.b	#1,d0                            	| [$0614: rrca] credits in game ?
 	bcs.b	0f                               	| [...]
@@ -2502,6 +2507,7 @@ l_0616:
 * parameter 0 = adds bonus to player's score
 * parameter 1 = update onscreen bonus timer and play sound & change to red if below 1000
 
+l_062a:
 	tst.b	d0                               	| [$062a: and     a] parameter == 0 ?
 	jeq	l_0691                             	| [$062b: jp      z,$0691] yes, skip ahead and add bonus to player's score
 
@@ -2552,7 +2558,7 @@ l_0655:
 
 	move.b	reset_onscreen_timer_638c,d0    	| [$0667: ld      a,(reset_onscreen_timer_638c)] load a with value from on screen timer
 
-l_066A:
+l_066a:
 	move.b	d0,d2                           	| [$066a: ld      c,a] copy to C
 	and.b	#0x0f,d0                         	| [$066b: and     $0f] zeroes out left 4 bits
 	move.b	d0,d1                           	| [$066d: ld      b,a] store result in B
@@ -2601,6 +2607,7 @@ l_0691:
 
 l_06A8:
 	moveq	#1,d7
+l_06a8:
 	sbcd	d7,d0                        	| [$06a8: sub     $01] subtract 1 from bonus timer
 	jne	l_06b1                             	| [$06aa: jr      nz,$06b1] If not zero, skip next 2 steps
 
@@ -2626,11 +2633,11 @@ l_06b8:
 
 	move.b	#0x06,d1                        	| [$06ba: ld      b,$06] For B = 1 to 6
 	move.w	#0xffe0,d3                      	| [$06bc: ld      de,$ffe0] load DE with offset for next column
-	lea	l_7783,a0                      	| [$06bf: ld      hl,$7783] load HL with screen location where mario extra lives drawn
-
+	move.w	#0x7783,d7                      	| [$06bf: ld      hl,$7783] load HL with screen location where mario extra lives drawn
+	move.b	#0x10,d0
 l_06c2:
-	move.b	#0x10,(a0)                      	| [$06c2: ld      (hl),$10] clear this area of screen
-	add.w	d3,a0                            	| [$06c4: add     hl,de] add offset for next column
+	jbsr	osd_w_videoram                      	| [$06c2: ld      (hl),$10] clear this area of screen
+	add.w	d3,d7                            	| [$06c4: add     hl,de] add offset for next column
 	subq.b	#1,d1                           	| [...]
 	jne	l_06c2                             	| [$06c5: djnz    $06c2] next B
 
@@ -2639,19 +2646,21 @@ l_06c2:
 	jeq	l_06d7                             	| [$06cb: jp      z,$06d7] yes, skip next 5 steps
 
 	move.b	d0,d1                           	| [$06ce: ld      b,a] For B = 1 to A
-	lea	l_7783,a0                      	| [$06cf: ld      hl,$7783] load HL with screen location to draw remaining lives
-
+	move.w	#0x7783,d7                      	| [$06cf: ld      hl,$7783] load HL with screen location to draw remaining lives
+	st	d0
 l_06d2:
-	move.b	#0xff,(a0)                      	| [$06d2: ld      (hl),$ff] draw the extra mario
-	add.w	d3,a0                            	| [$06d4: add     hl,de] add offset for next column
+	jbsr	osd_w_videoram                      	| [$06d2: ld      (hl),$ff] draw the extra mario
+	add.w	d3,d7                            	| [$06d4: add     hl,de] add offset for next column
 	subq.b	#1,d1                           	| [...]
 	jne	l_06d2                             	| [$06d5: djnz    $06d2] next B
 
 l_06d7:
-	lea	l_7503,a0                      	| [$06d7: ld      hl,$7503] load HL with screen location for "L="
-	move.b	#0x1c,(a0)                      	| [$06da: ld      (hl),$1c] draw "L"
-	lea	l_74e3,a0                      	| [$06dc: ld      hl,$74e3] next location
-	move.b	#0x34,(a0)                      	| [$06df: ld      (hl),$34] draw "="
+	move.w	#0x7503,d7                      	| [$06d7: ld      hl,$7503] load HL with screen location for "L="
+	move.b	#0x1c,d0                      	| [$06da: ld      (hl),$1c] draw "L"
+	jbsr	osd_w_videoram
+	move.w	#0x74e3,d7                      	| [$06dc: ld      hl,$74e3] next location
+	move.b	#0x34,d0                      	| [$06df: ld      (hl),$34] draw "="
+	jbsr	osd_w_videoram
 	move.b	level_number_6229,d0       	| [$06e1: ld      a,(level_number_6229)] load A with level #
 	cmp.b	#0x64,d0                         	| [$06e4: cp      $64] level < #64 (100 decimal) ?
 	jcs	l_06ed                             	| [$06e6: jr      c,$06ed] yes, skip next 2 steps
@@ -2682,29 +2691,29 @@ playing_game_06fe:
 	jbsr	rst_28                            	| [$0701: rst     $28] jump based on what the game state is
 
     .long	l_0986                      | (0)  #0986     | game start = clears screen, clears sounds, sets screen flip if needed
-    .long	l_09AB                      | (1)  #09AB     | copy player data, set screen, set next game mode based on number of players
-    .long	l_09D6                      | (2)  #09D6     | clears palettes, draws "PLAYER <I>", draws player2 score, draws "2UP" (2 player game only)
-    .long	l_09FE                      | (3)  #09FE     | copy player data into correct area (2 player game only)
-    .long	l_0A1B                      | (4)  #0A1B     | clears palletes, draws "PLAYER <II>", update player2 score, draw "2UP" to screen (2 player game only)
-    .long	l_0A37                      | (5)  #0A37     | updates high score, player score, remaining lives, level, 1UP
-    .long	l_0A63                      | (6)  #0A63     | clears screen and sprites, check for intro screen to run
-    .long	l_0A76                      | (7)  #0A76     | kong clims ladders and scary music played
-    .long	l_0BDA                      | (8)  #0BDA     | draw goofy kongs, how high can you get, play music
+    .long	l_09ab                      | (1)  #09AB     | copy player data, set screen, set next game mode based on number of players
+    .long	l_09d6                      | (2)  #09D6     | clears palettes, draws "PLAYER <I>", draws player2 score, draws "2UP" (2 player game only)
+    .long	l_09fe                      | (3)  #09FE     | copy player data into correct area (2 player game only)
+    .long	l_0a1b                      | (4)  #0A1B     | clears palletes, draws "PLAYER <II>", update player2 score, draw "2UP" to screen (2 player game only)
+    .long	l_0a37                      | (5)  #0A37     | updates high score, player score, remaining lives, level, 1UP
+    .long	l_0a63                      | (6)  #0A63     | clears screen and sprites, check for intro screen to run
+    .long	l_0a76                      | (7)  #0A76     | kong clims ladders and scary music played
+    .long	l_0bda                      | (8)  #0BDA     | draw goofy kongs, how high can you get, play music
     .long	0                           | (9)            | unused
-    .long	l_0C91                      | (A)  #0C91     | clears screen, update timers, draws current screen, sets background music
-    .long	l_123C                      | (B)  #123C     | set initial mario sprite position and draw remaining lives and level
-    .long	l_197A                      | (C)  #197A     | for when playing a game.  this is the main routine
-    .long	l_127C                      | (D)  #127C     | mario died.  handle mario dying animations
-    .long	l_12F2                      | (E)  #12F2     | clear sounds, decrease life, check for and handle game over
+    .long	l_0c91                      | (A)  #0C91     | clears screen, update timers, draws current screen, sets background music
+    .long	l_123c                      | (B)  #123C     | set initial mario sprite position and draw remaining lives and level
+    .long	l_197a                      | (C)  #197A     | for when playing a game.  this is the main routine
+    .long	l_127c                      | (D)  #127C     | mario died.  handle mario dying animations
+    .long	l_12f2                      | (E)  #12F2     | clear sounds, decrease life, check for and handle game over
     .long	l_1344                      | (F)  #1344     | clear sounds, clear game start flag, draw game over if needed PL2, set game mode2 accordingly
-    .long	l_138F                      | (10) #138F    | check for game over status on a 2 player game
-    .long	l_13A1                      | (11) #13A1    | check for game over status on a 2 player game
-    .long	l_13AA                      | (12) #13AA    | flip screen if needed, reset game mode2 to zero, set player 2
-    .long	l_13BB                      | (13) #13BB    | set player 1, reset game mode2 to zero, set screen flip to not flipped
-    .long	l_141E                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
+    .long	l_138f                      | (10) #138F    | check for game over status on a 2 player game
+    .long	l_13a1                      | (11) #13A1    | check for game over status on a 2 player game
+    .long	l_13aa                      | (12) #13AA    | flip screen if needed, reset game mode2 to zero, set player 2
+    .long	l_13bb                      | (13) #13BB    | set player 1, reset game mode2 to zero, set screen flip to not flipped
+    .long	l_141e                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
     .long	l_1486                      | (15) #1486    | player enters initials in high score table
     .long	l_1615                      | (16) #1615    | handle end of level animations
-    .long	l_196B                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
+    .long	l_196b                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
 
 * arrive from #00C9 when attract mode starts
 attract_mode_073c:
@@ -2716,15 +2725,15 @@ attract_mode_073c:
 	move.b	(a0),d0                         	| [$0746: ld      a,(hl)] else load A with game mode2
 	jbsr	rst_28                            	| [$0747: rst     $28] jump based on A
 
-	.long	0x0779 | #0779         | clear screen, set color palettes, draw attract mode text and high score table,
-					  	          | [continued] increase game mode2, clear sprites, | draw "1UP" on screen , draws number of coins needed for play
-	.long	0x0763 | #0763         |
-	.long	0x123C | #123C         | set initial mario sprite position and draw remaining lives and level
-	.long	0x1977 | #1977         | set artificial input for demo play [change to #197A to enable playing in demo part 1/2]
-	.long	0x127C | #127C         | handle mario dying animations
-	.long	0x07C3 | #07C3         | clears the screen and sprites and increase game mode2
-	.long	0x07CB | #07CB         | handle intro splash screen ?
-	.long	0x084B | #084B         | counts down a timer then resets game mode2 to 0
+	.long	l_0779 | #0779         | clear screen, set color palettes, draw attract mode text and high score table,
+				  	          | [continued] increase game mode2, clear sprites, | draw "1UP" on screen , draws number of coins needed for play
+	.long	l_0763 | #0763         |
+	.long	l_123c | #123C         | set initial mario sprite position and draw remaining lives and level
+	.long	l_1977 | #1977         | set artificial input for demo play [change to #197A to enable playing in demo part 1/2]
+	.long	l_127c | #127C         | handle mario dying animations
+	.long	l_07c3 | #07C3         | clears the screen and sprites and increase game mode2
+	.long	l_07cb | #07CB         | handle intro splash screen ?
+	.long	l_084b | #084B         | counts down a timer then resets game mode2 to 0
 
 * arrive from #0743 when credits exist
 
@@ -2736,6 +2745,7 @@ l_075c:
 
 * arrive here from #0747 during attract mode when GameMode2 == 1
 
+l_0763:
 	jbsr	rst_20                            	| [$0763: rst     $20] only continue here once per frame, else RET
 
 	clr.b	d0                               	| [$0764: xor     a] A := 0
@@ -2750,6 +2760,7 @@ l_075c:
 * arrive from #0747 when GameMode2 == 0
 * clear screen, set color palettes, draw attract mode text and high score table, increase game mode2, clear sprites, | draw "1UP" on screen , draws number of coins needed for play
 
+l_0779:
 	lea	reg_palette_a,a0               	| [$0779: ld      hl,reg_palette_a]
 	clr.b	(a0)                             	| [$077c: ld      (hl),$00] clear palette bank selector
 	addq.w	#1,a0                           	| [$077e: inc     hl]
@@ -2798,6 +2809,7 @@ l_07bc:
 
 * arrive from #0747 when GameMode2 == 5
 
+l_07c3:
 	jbsr	l_0874                            	| [$07c3: call    $0874] clears the screen and sprites
 	lea	gamemode2_600a,a0              	| [$07c6: ld      hl,gamemode2_600a] load HL with game mode 2
 	addq.b	#1,(a0)                         	| [$07c9: inc     (hl)] increase game mode2
@@ -2805,6 +2817,7 @@ l_07bc:
 
 * arrive from jump at #0747 when GameMode2 == 6
 
+l_07cb:
 	move.b	kong_intro_flash_counter_638a,d0	| [$07cb: ld      a,(kong_intro_flash_counter_638a)] load A with kong screen flash counter
 	                               	| [$07ce: cp      $00] == 0 ?  time to flash?
 	jne	l_082d                             	| [$07d0: jp      nz,$082d] no, skip ahead : load C with (#638B), decreases #638A, loads A with (#638A) | loads C with #638B, decreases #638A returns to #07DA
@@ -2904,6 +2917,7 @@ l_083b:
 
 * arrive from #0747 when GameMode2 == 7
 
+l_084b:
 	jbsr	rst_20                            	| [$084b: rst     $20] update timer and continue here only when complete, else RET
 
 	lea	gamemode2_600a,a0              	| [$084c: ld      hl,gamemode2_600a] load HL with game mode2
@@ -3006,7 +3020,8 @@ l_08ad:
 
 * jump from #00C9
 * arrive here when credits have been inserted, waiting for game to start
-l_08B2:
+
+l_08b2:
 	move.b	gamemode2_600a,d0               	| [$08b2: ld      a,(gamemode2_600a)] load A with game mode2
 
 * GameMode2 = 1 during attract mode, 7 during intro , A during how high can u get,
@@ -3161,8 +3176,9 @@ l_0977:
 * clears screen, clears sounds, sets screen flip if needed
 * jump from #0701 when GameMode2 == 0
 
+l_0986:
 	jbsr	l_0852                            	| [$0986: call    $0852] clear screen and all sprites
-	jbsr	l_011c                            	| [$0989: call    $011c] clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$0989: call    $011c] clear all sounds
 	lea	reg_flipscreen,a1              	| [$098c: ld      de,reg_flipscreen] load DE with flip screen setting
 	move.b	#0x01,d0                        	| [$098f: ld      a,$01] A := 1
 	move.b	d0,(a1)                         	| [$0991: ld      (de),a] store
@@ -3189,6 +3205,7 @@ l_09a8:
 * jump from #0701 when GameMode2 == 1
 * copy player data, set screen, set next game mode based on number of players
 
+l_09ab:
 	lea	p1numlives_6040,a0             	| [$09ab: ld      hl,p1numlives_6040] load HL with source data location
 	lea	number_of_lives_remaining_6228,a1	| [$09ae: ld      de,number_of_lives_remaining_6228] load DE with destination data location.  start with remaining lives
 	move.w	#0x08,d1                        	| [$09b1: ld      bc,$0008] byte counter set to 8 8
@@ -3222,6 +3239,7 @@ l_09d0:
 * jump here from #0701
 * clears palettes, draws "PLAYER <I>", draws player2 score, draws "2UP"
 
+l_09d6:
 	clr.b	d0                               	| [$09d6: xor     a] A := 0
 	move.b	d0,reg_palette_a                	| [$09d7: ld      (reg_palette_a),a] clear palette bank selector
 	move.b	d0,reg_palette_b                	| [$09da: ld      (reg_palette_b),a] clear palette bank selector
@@ -3243,6 +3261,7 @@ l_09ee:
 
 * arrive from #0701 when GameMode2 == 3
 
+l_09fe:
 	lea	p2numlives_6048,a0             	| [$09fe: ld      hl,p2numlives_6048] source location is ???
 	lea	number_of_lives_remaining_6228,a1	| [$0a01: ld      de,number_of_lives_remaining_6228] destination is player lives remaining plus other player variables
 	move.w	#0x08,d1                        	| [$0a04: ld      bc,$0008] byte counter set to 8 8
@@ -3259,6 +3278,7 @@ l_09ee:
 * arrive from #0701 when GameMode2 == 4
 * clears palletes, draws "PLAYER <II>", update player2 score, draw "2UP" to screen
 
+l_0a1b:
 	clr.b	d0                               	| [$0a1b: xor     a] A := 0
 	move.b	d0,reg_palette_a                	| [$0a1c: ld      (reg_palette_a),a] clear palette bank selector
 	move.b	d0,reg_palette_b                	| [$0a1f: ld      (reg_palette_b),a] clear palette bank selector
@@ -3274,6 +3294,7 @@ l_09ee:
 * arrive from #0701 when GameMode2 == 5
 * updates high score, player score, remaining lives, level, 1UP
 
+l_0a37:
 	move.w  #0x0304,d3                      	| [$0a37: ld      de,$0304] load task data for text #4 "HIGH SCORE"
 	jbsr	insert_task_309f                            	| [$0a3a: call    $309f] insert task to draw text
 	move.w  #0x0202,d3                      	| [$0a3d: ld      de,$0202] load task #2, parameter 2 to display high score
@@ -3300,6 +3321,7 @@ l_0a53:
 * arrive from #0701 when GameMode2 == 6
 * clears screen and sprites, check for intro screen to run
 
+l_0a63:
 	jbsr	rst_18                            	| [$0a63: rst     $18] count down WaitTimerMSB and only continue here if == 0, else return to higher sub.
 	jbsr	l_0874                            	| [$0a64: call    $0874] clears the screen and sprites
 	lea	waittimermsb_6009,a0           	| [$0a67: ld      hl,waittimermsb_6009] load HL with timer
@@ -3318,19 +3340,20 @@ l_0a53:
 
 * arrive from #0701 when GameMode2 == 7
 
+l_0a76:
 	move.b	intro_screen_counter_6385,d0    	| [$0a76: ld      a,(intro_screen_counter_6385)] varies from 0 to 7 while the intro screen runs, when kong climbs the dual ladders and scary music is played
 	jbsr	rst_28                            	| [$0a79: rst     $28] jump based on A
 
-	.long	l_0A8A	|    0       | #0A8A
-	.long	l_0ABF	|    1       | #0ABF
-	.long	l_0AE8	|    2       | #0AE8
+	.long	l_0a8a	|    0       | #0A8A
+	.long	l_0abf	|    1       | #0ABF
+	.long	l_0ae8	|    2       | #0AE8
 	.long	l_3069	|    3       | #3069
-	.long	l_0B06	|    4       | #0B06
+	.long	l_0b06	|    4       | #0B06
 	.long	l_3069	|    5       | #3069
-	.long	l_0B68	|    6       | #0B68
-	.long	l_0BB3	|    7       | #0BB3
+	.long	l_0b68	|    6       | #0B68
+	.long	l_0bb3	|    7       | #0BB3
 
-l_0A8A:
+l_0a8a:
 * arrive from #0A79 when intro screen indicator == 0
 
 	clr.b	d0                               	| [$0a8a: xor     a] A := 0
@@ -3358,6 +3381,7 @@ l_0A8A:
 
 * arrive from #0A79 when intro screen indicator == 1
 
+l_0abf:
 	jbsr	rst_18                            	| [$0abf: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x388c,a0                      	| [$0ac0: ld      hl,$388c] load HL with start of table data for kong
 	jbsr	l_004e                            	| [$0ac3: call    $004e] update kong's sprites
@@ -3381,6 +3405,7 @@ l_0A8A:
 
 * arrive from #0A79 when intro screen indicator == 2
 
+l_0ae8:
 	jbsr	l_306f                            	| [$0ae8: call    $306f] animate kong climbing up the ladder with girl under arm
 	move.b	kong_climbing_counter_62af,d0   	| [$0aeb: ld      a,(kong_climbing_counter_62af)] load A with kong climbing counter
 	and.b	#0x0f,d0                         	| [$0aee: and     $0f] mask bits, now between 0 and #F.  zero?
@@ -3398,11 +3423,12 @@ l_0A8A:
 	move.b	d0,waittimermsb_6009            	| [$0afb: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0afe: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b01: inc     (hl)] increase
-	STORE_RAM_ADDRESS		timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
+	STORE_RAM_ADDRESS		a0,timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
 	rts                                    	| [$0b05: ret] return
 
 * arrive from #0A79 when intro screen indicator == 4
 
+l_0b06:
 	move.b	framecounter_601a,d0            	| [$0b06: ld      a,(framecounter_601a)] load A with this clock counts down from #FF to 00 over and over...
 	ror.b	#1,d0                            	| [$0b09: rrca] rotate right.  carry bit?
 	bcc.b	0f                               	| [...]
@@ -3454,11 +3480,12 @@ l_0b38:
 	move.b	d0,waittimermsb_6009            	| [$0b5d: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0b60: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b63: inc     (hl)] increase
-	STORE_RAM_ADDRESS	timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS	a0,timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$0b67: ret] return
 
 * arrive from #0A79 when intro screen indicator == 6
 
+l_0b68:
 	move.b	framecounter_601a,d0            	| [$0b68: ld      a,(framecounter_601a)] load A with this clock counts down from #FF to 00 over and over...
 	ror.b	#1,d0                            	| [$0b6b: rrca] rotate right.  carry bit set?
 	bcc.b	0f                               	| [...]
@@ -3510,6 +3537,7 @@ l_0b86:
 
 * arrive from #0A79 - last part of the intro to the game ?
 
+l_0bb3:
 	lea	sound_buffer_address_608a,a0   	| [$0bb3: ld      hl,sound_buffer_address_608a] load HL with music sound address
 	move.b	waittimermsb_6009,d0            	| [$0bb6: ld      a,(waittimermsb_6009)] load A with timer value
 	cmp.b	#0x90,d0                         	| [$0bb9: cp      $90] == #90 ?
@@ -3539,13 +3567,20 @@ l_0bd1:
 	addq.b	#1,(a0)                         	| [$0bd8: inc     (hl)] increase game mode2 (to 8?)
 	rts                                    	| [$0bd9: ret] return
 
+store_d2_in_video_ram:
+	exg	d2,d0
+	jbsr	osd_w_videoram
+	exg	d2,d0
+	rts
+	
+
 * called after kong jump on the girders at start of game ?
 * also after mario dies
 * how high can you get ?
 * draws goofy kongs and 25m, 50m, etc.
 * plays music
-l_0BDA:
-	jbsr	l_011c                            	| [$0bda: call    $011c] clear all sounds
+l_0bda:
+	jbsr	clear_all_sounds_011c                            	| [$0bda: call    $011c] clear all sounds
 	jbsr	rst_18                            	| [$0bdd: rst     $18] count down timer and only continue here if zero, else RET
 
 	jbsr	l_0874                            	| [$0bde: call    $0874] clear the screen and sprites
@@ -3586,22 +3621,22 @@ l_0c1f:
 	move.b	d0,current_screen_level_622f    	| [$0c1f: ld      (current_screen_level_622f),a] store A into current screen/level
 	move.b	number_of_goofys_to_draw_622e,d0	| [$0c22: ld      a,(number_of_goofys_to_draw_622e)] load A with number of goofys to draw
 	move.b	d0,d1                           	| [$0c25: ld      b,a] copy to B for use as loop counter, refer to #0C7E
-	lea	l_75bc,a0                      	| [$0c26: ld      hl,$75bc] load HL with screen location start for goofy kong
+	move.w	#0x75bc,d7                      	| [$0c26: ld      hl,$75bc] load HL with screen location start for goofy kong
 
 l_0c29:
 	move.b	#0x50,d2                        	| [$0c29: ld      c,$50] C := #50 = start graphic for goofy kong
 
 l_0c2b:
-	move.b	d2,(a0)                         	| [$0c2b: ld      (hl),c] draw part of goofy kong
+	bsr		store_d2_in_video_ram           	| [$0c2b: ld      (hl),c] draw part of goofy kong
 	addq.b	#1,d2                           	| [$0c2c: inc     c] next graphic
-	subq.w	#1,a0                           	| [$0c2d: dec     hl] next screen location
-	move.b	d2,(a0)                         	| [$0c2e: ld      (hl),c] draw part of goofy kong
+	subq.w	#1,d7                           	| [$0c2d: dec     hl] next screen location
+	bsr		store_d2_in_video_ram                         	| [$0c2e: ld      (hl),c] draw part of goofy kong
 	addq.b	#1,d2                           	| [$0c2f: inc     c] next graphic
-	subq.w	#1,a0                           	| [$0c30: dec     hl] next screen location
-	move.b	d2,(a0)                         	| [$0c31: ld      (hl),c] draw part of goofy kong
+	subq.w	#1,d7                           	| [$0c30: dec     hl] next screen location
+	bsr		store_d2_in_video_ram                         	| [$0c31: ld      (hl),c] draw part of goofy kong
 	addq.b	#1,d2                           	| [$0c32: inc     c] next graphic
-	subq.w	#1,a0                           	| [$0c33: dec     hl] next screen location
-	move.b	d2,(a0)                         	| [$0c34: ld      (hl),c] draw part of goofy kong
+	subq.w	#1,d7                           	| [$0c33: dec     hl] next screen location
+	bsr		store_d2_in_video_ram                         	| [$0c34: ld      (hl),c] draw part of goofy kong
 	move.b	d2,d0                           	| [$0c35: ld      a,c] load A with graphic number
 	cmp.b	#0x67,d0                         	| [$0c36: cp      $67] == #67 ? (are we done?)
 	jeq	l_0c43                             	| [$0c38: jp      z,$0c43] yes, skip next 4 steps
@@ -3669,6 +3704,7 @@ l_0c43:
 * arrive here from #0701 when game mode = 9
 * clears screen, update timers, draws current screen, sets background music,
 
+l_0c91:
 	jbsr	rst_18                            	| [$0c91: rst     $18] count down WaitTimerMSB and only continue when 0
 
 * arrive here from #0776 during attract mode
@@ -3820,7 +3856,7 @@ l_0d3d:
 l_0d43:
 	move.w	#0x7687,d7                      	| [$0d43: ld      hl,$7687] load HL with screen location (left side)
 	jbsr	l_0d4c                            	| [$0d46: call    $0d4c] draw the bars
-	lea	l_7547,a0                      	| [$0d49: ld      hl,$7547] load HL with screen location (right side)
+	move.w	#0x7547,d7                      	| [$0d49: ld      hl,$7547] load HL with screen location (right side)
 l_0d4c:
 	move.b	#0x04,d1                        	| [$0d4c: ld      b,$04] for B = 1 to 4
 
@@ -4423,6 +4459,7 @@ l_101F:
 
 * arrive here when elevators starts
 
+l_1087:
 	lea	game_rom+0x3dec,a0                      	| [$1087: ld      hl,$3dec] load HL with start of table data
 	lea	unknown_6407,a1                	| [$108a: ld      de,unknown_6407] set destination ???
 	move.b	#0x05,d1                        	| [$108d: ld      bc,$051c] set counters 1308
@@ -4519,6 +4556,7 @@ l_1121:
 
 * arrive here when rivets starts from #0FCC
 
+l_1131:
 	lea	game_rom+0x3df0,a0                      	| [$1131: ld      hl,$3df0] load HL with start of table data
 	lea	unknown_6407,a1                	| [$1134: ld      de,unknown_6407] load DE with destination ?
 	move.b	#0x05,d1                        	| [$1137: ld      bc,$051c] set counters 1308
@@ -4730,6 +4768,7 @@ l_122e:
 
 * set initial mario sprite position and draw remaining lives and level
 
+l_123c:
 	jbsr	rst_18                            	| [$123c: rst     $18] count down WaitTimerMSB and only continue when 0
 	move.b	screen_number_6227,d0           	| [$123d: ld      a,(screen_number_6227)] load a with screen number
 	move.b	#0xe0,d1                        	| [$1242: ld      bc,$e016] B := #E0, C := #16.  used for X,Y coordinates 57366
@@ -4764,17 +4803,17 @@ l_124b:
 
 * jump here from #0701 when GameMode2 == #D
 * mario died ?
-l_127C:
+l_127c:
 	jbsr	l_1dbd                            	| [$127c: call    $1dbd] check for bonus items and jumping scores, rivets
 	move.b	death_indicator_639d,d0         	| [$127f: ld      a,(death_indicator_639d)] load A with this normally 0.  1 while mario dying, 2 when dead
 	jbsr	rst_28                            	| [$1282: rst     $28] jump based on A
 
-	.long	l_128B	| #128B         | 0 normal
-	.long	l_12AC	| #12AC         | 1 mario dying
-	.long	l_12DE	| #12DE         | 2 mario dead
+	.long	l_128b	| #128B         | 0 normal
+	.long	l_12ac	| #12AC         | 1 mario dying
+	.long	l_12de	| #12DE         | 2 mario dead
 	.long	0		| unused ?
 
-l_128B:
+l_128b:
 	jbsr	rst_18                            	| [$128b: rst     $18] count down WaitTimerMSB and only continue when 0
 	lea	mario_sprite_value_694d,a0     	| [$128c: ld      hl,mario_sprite_value_694d] load HL with mario sprite value
 	CLEAR_XC_FLAGS
@@ -4798,6 +4837,7 @@ l_128B:
 * arrive here when mario dies
 * animates mario
 
+l_12ac:
 	jbsr	rst_18                            	| [$12ac: rst     $18] count down WaitTimerMSB and only continue when 0
 	move.b	#0x08,d0                        	| [$12ad: ld      a,$08] load A with 8 frames of delay
 	move.b	d0,waittimermsb_6009            	| [$12af: ld      (waittimermsb_6009),a] store into timer for sound delays
@@ -4842,6 +4882,7 @@ l_12cb:
 
 * mario is completely dead
 
+l_12de:
 	jbsr	rst_18                            	| [$12de: rst     $18] count down WaitTimerMSB and only continue when 0
 	jbsr	l_30db                            	| [$12df: call    $30db] clear mario and elevator sprites from screen
 	lea	gamemode2_600a,a0              	| [$12e2: ld      hl,gamemode2_600a] set HL to game mode2
@@ -4860,8 +4901,8 @@ l_12ed:
 * jump here from #0701
 * player 1 died
 * clear sounds, decrease life, check for and handle game over
-l_12F2:
-	jbsr	l_011c                            	| [$12f2: call    $011c] clear all sounds
+l_12f2:
+	jbsr	clear_all_sounds_011c                            	| [$12f2: call    $011c] clear all sounds
 	clr.b	d0                               	| [$12f5: xor     a] A := 0
 	move.b	d0,game_start_flag_622c         	| [$12f6: ld      (game_start_flag_622c),a] store into game start flag
 	lea	number_of_lives_remaining_6228,a0	| [$12f9: ld      hl,number_of_lives_remaining_6228] load HL with address for number of lives remaining
@@ -4913,7 +4954,8 @@ l_133f:
 * arrive from #0701 when GameMode2 == #F
 * clear sounds, clear game start flag, draw game over if needed, set game mode2 accordingly
 
-	jbsr	l_011c                            	| [$1344: call    $011c] clear all sounds
+l_1344:
+	jbsr	clear_all_sounds_011c                            	| [$1344: call    $011c] clear all sounds
 	clr.b	d0                               	| [$1347: xor     a] A := 0
 	move.b	d0,game_start_flag_622c         	| [$1348: ld      (game_start_flag_622c),a] store into game start flag
 	lea	number_of_lives_remaining_6228,a0	| [$134b: ld      hl,number_of_lives_remaining_6228] load HL with number of lives remaining
@@ -4958,6 +5000,7 @@ l_138a:
 * arrive from #0701 when GameMode2 == #10
 * when 2 player game has ended
 
+l_138f:
 	jbsr	rst_18                            	| [$138f: rst     $18] count down timer and only continue here if zero, else RET
 	move.b	#0x17,d2                        	| [$1390: ld      c,$17] C := #17
 	move.b	p2numlives_6048,d0              	| [$1392: ld      a,(p2numlives_6048)] load A with number of lives for player 2
@@ -4977,6 +5020,7 @@ l_139c:
 
 * arrive from #0701 when GameMode2 == #11
 
+l_13a1:
 	jbsr	rst_18                            	| [$13a1: rst     $18] count down timer and only continue here if zero, else RET
 	move.b	#0x17,d2                        	| [$13a2: ld      c,$17] C := #17
 	move.b	p1numlives_6040,d0              	| [$13a4: ld      a,(p1numlives_6040)] load A with number of lives remaining for player1
@@ -4986,6 +5030,7 @@ l_139c:
 * arrive from #0701 when GameMode2 == 12
 * flip screen if needed, reset game mode2 to zero, set player 2
 
+l_13aa:
 	move.b	uprightcab_6026,d0              	| [$13aa: ld      a,(uprightcab_6026)] load A with upright/cocktail
 	move.b	d0,reg_flipscreen               	| [$13ad: ld      (reg_flipscreen),a] store into hardware screen flip
 	clr.b	d0                               	| [$13b0: xor     a] A := 0
@@ -4998,6 +5043,7 @@ l_139c:
 * arrive from #0701 when GameMode2 == 13
 * set player 1, reset game mode2 to zero, set screen flip to not flipped
 
+l_13bb:
 	clr.b	d0                               	| [$13bb: xor     a] A := 0
 	move.b	d0,playerturna_600d             	| [$13bc: ld      (playerturna_600d),a] set for player 1
 	move.b	d0,playerturnb_600e             	| [$13bf: ld      (playerturnb_600e),a] store into current player number 1
@@ -5086,7 +5132,7 @@ l_13fc:
         * exchange the values in (HL) and (DE) for #19 bytes
         * this causes the high score to percolate up the high score list
 
-l_140A:
+l_140a:
 	move.b	(a0),d2                         	| [$140a: ld      c,(hl)] C := (HL)
 	move.b	(a1),d0                         	| [$140b: ld      a,(de)] A := (DE)
 	move.b	d0,(a0)                         	| [$140c: ld      (hl),a] (HL) := A
@@ -5095,7 +5141,7 @@ l_140A:
 	subq.w	#1,a0                           	| [$140f: dec     hl] next HL
 	subq.w	#1,a1                           	| [$1410: dec     de] next DE
 	subq.b	#1,d1                           	| [...]
-	jne		l_140A                               	| [$1411: djnz    #140A] Next B
+	jne		l_140a                               	| [$1411: djnz    #140A] Next B
 
 	move.w	#10,d1                        	| [$1413: ld      bc,$fff5] load BC with -#A 65525
 	sub.w	d1,a0                            	| [$1416: add     hl,bc] add to HL.  HL now has #A less than before
@@ -5112,6 +5158,7 @@ l_140A:
 * jump here from #0701 when GameMode2 == #14 (game is over)
 * draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
 
+l_141e:
 	jbsr	l_0616                            	| [$141e: call    $0616] draw credits on screen
 	jbsr	rst_18                            	| [$1421: rst     $18] count down timer and only continue here if zero, else RET
 
@@ -5189,6 +5236,7 @@ l_1475:
 * game is over - high score entry
 
 
+l_1486:
 	jbsr	l_0616                            	| [$1486: call    $0616] draw credits on screen
 	lea	waittimermsb_6009,a0           	| [$1489: ld      hl,waittimermsb_6009] load HL with timer
 	move.b	(a0),d0                         	| [$148c: ld      a,(hl)] load A with timer value
@@ -5468,6 +5516,7 @@ l_15fa:
 
 * arrive when GameMode2 == #16 (level completed).  called from #0701
 
+l_1615:
 	jbsr	l_30bd                            	| [$1615: call    $30bd] clear sprites
 	move.b	screen_number_6227,d0           	| [$1618: ld      a,(screen_number_6227)] load a with screen number
 	ror.b	#1,d0                            	| [$161b: rrca] roll right with carry.  is this the rivets or the conveyors?
@@ -5480,10 +5529,10 @@ l_15fa:
 
 	.long	l_1654 | #1654         | 0
 	.long	l_1670 | #1670         | 1
-	.long	l_168A | #168A         | 2
+	.long	l_168a | #168A         | 2
 	.long	l_1732 | #1732         | 3
 	.long	l_1757 | #1757         | 4
-	.long	l_178E | #178E         | 5
+	.long	l_178e | #178E         | 5
 
 l_162f:
 	ror.b	#1,d0                            	| [$162f: rrca] roll right again.  is this the rivets ?
@@ -5494,11 +5543,11 @@ l_162f:
 	move.b	end_of_level_counter_6388,d0    	| [$1633: ld      a,(end_of_level_counter_6388)] load A with this usually zero, counts from 1 to 5 when the level is complete
 	jbsr	rst_28                            	| [$1636: rst     $28] jump based on A
 
-	.long	l_16A3   | #16A3         | 0
-	.long	l_16BB   | #16BB         | 1
+	.long	l_16a3   | #16A3         | 0
+	.long	l_16bb   | #16BB         | 1
 	.long	l_1732   | #1732         | 2
 	.long	l_1757   | #1757         | 3
-	.long	l_178E   | #178E         | 4
+	.long	l_178e   | #178E         | 4
 
 * rivets
 
@@ -5508,12 +5557,12 @@ l_1641:
 
 	jbsr	rst_28                            	| [$1647: rst     $28] jump based on A
 
-	.long	l_17B6  | #17B6         | 0
+	.long	l_17b6  | #17B6         | 0
 	.long	l_3069  | #3069         | 1
 	.long	l_1839  | #1839         | 2
-	.long	l_186F  | #186F         | 3
+	.long	l_186f  | #186F         | 3
 	.long	l_1880  | #1880         | 4
-	.long	l_18C6  | #18C6         | 5
+	.long	l_18c6  | #18C6         | 5
 
 * jump here from #1622 when girders or elevators is finished.  step 1 of 6
 l_1654:
@@ -5536,6 +5585,7 @@ l_1662:
 
 * jump here from #1622 when girders or elevators is finished.  step 2 of 6
 
+l_1670:
 	jbsr	rst_18                            	| [$1670: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x3932,a0                      	| [$1671: ld      hl,$3932] load HL with start of kong's sprites table data
 	jbsr	l_004e                            	| [$1674: call    $004e] update kong's sprites
@@ -5553,6 +5603,7 @@ l_1662:
 
 * jump here from #1622 when girders or elevators is finished.  step 3 of 6
 
+l_168a:
 	jbsr	rst_18                            	| [$168a: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x388c,a0                      	| [$168b: ld      hl,$388c] load HL with start of table data for kong
 	jbsr	l_004e                            	| [$168e: call    $004e] update kong's sprites
@@ -5566,6 +5617,7 @@ l_1662:
 
 * jump here from #1622 when conveyors is finished.  step 1 of 5
 
+l_16a3:
 	jbsr	l_1708                            	| [$16a3: call    $1708] clear all sounds, draw heart sprite, redraw girl sprite, clear "help", play end of level sound
 	move.b	kongs_x_position_6910,d0        	| [$16a6: ld      a,(kongs_x_position_6910)] load A with kong's X position
 	sub.b	#0x3b,d0                         	| [$16a9: sub     $3b] subtract #3B
@@ -5580,6 +5632,7 @@ l_1662:
 
 * jump here from #1622 when conveyors is finished.  step 2 of 5
 
+l_16bb:
 	clr.b	d0                               	| [$16bb: xor     a] A := 0
 	move.b	d0,top_conveyor_counter_62a0    	| [$16bc: ld      (top_conveyor_counter_62a0),a] clear top conveyor counter
 	move.b	top_conveyor_direction_vector_63a3,d0	| [$16bf: ld      a,(top_conveyor_direction_vector_63a3)] load A with direction vector for top conveyor
@@ -5629,7 +5682,7 @@ l_16ee:
 * clears all sounds, draws heart sprite, redraws girl sprite, clear "help", play end of level sound
 
 l_1708:
-	jbsr	l_011c                            	| [$1708: call    $011c] clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$1708: call    $011c] clear all sounds
 	lea	heart_sprite_x_position_6a20,a0	| [$170b: ld      hl,heart_sprite_x_position_6a20] load HL with heart sprite
 	move.b	#0x80,(a0)                      	| [$170e: ld      (hl),$80] set heart sprite X position
 	addq.w	#1,a0                           	| [$1710: inc     hl] next
@@ -5643,7 +5696,7 @@ l_1708:
 	lea	l_75c4,a0                      	| [$171e: ld      hl,$75c4] load HL with VRAM screen address
 	move.w	#0x0020,d3                      	| [$1721: ld      de,$0020] DE := #20 32
 	move.b	#0x10,d0                        	| [$1724: ld      a,$10] A := #10
-	jbsr	l_0514                            	| [$1726: call    $0514] clear "help" that the girl yells
+	jbsr	clear_help_0514                            	| [$1726: call    $0514] clear "help" that the girl yells
 	lea	sound_buffer_address_608a,a0   	| [$1729: ld      hl,sound_buffer_address_608a] load sound address
 	move.b	#0x07,(a0)                      	| [$172c: ld      (hl),$07] play sound for end of level
 	addq.w	#1,a0                           	| [$172e: inc     hl] HL now has sound duration
@@ -5653,6 +5706,7 @@ l_1708:
 * jump here from #1622 when girders or elevators is finished.  step 4 of 6
 * jump here from #1622 when conveyors is finished.  step 3 of 5
 
+l_1732:
 	jbsr	l_306f                            	| [$1732: call    $306f] animate kong climbing up the ladder with girl under arm
 	move.b	kong_sprite_y_position_6913,d0  	| [$1735: ld      a,(kong_sprite_y_position_6913)] load A with kong sprite Y position
 	cmp.b	#0x2c,d0                         	| [$1738: cp      $2c] < #2C ? (level of the girl)
@@ -5679,6 +5733,7 @@ l_1708:
 * jump here from #1622 when girders or elevators is finished.  step 5 of 6
 * jump here from #1622 when conveyors is finished.  step 4 of 5
 
+l_1757:
 	jbsr	l_306f                            	| [$1757: call    $306f] animate kong climbing up the ladder with girl under arm
 	jbsr	l_176c                            	| [$175a: call    $176c] ???
 	addq.w	#1,a0                           	| [$175d: inc     hl]
@@ -5732,6 +5787,7 @@ l_1785:
 * jump here from #1622 when girders or elevators is finished.  step 6 of 6
 * jump here from #1622 when conveyors is finished.  step 5 of 5
 
+l_178e:
 	jbsr	rst_18                            	| [$178e: rst     $18] count down timer and only continue here if zero, else RET
 	LOAD_ROM_ADDRESS	store_622a,a0               	| [$178f: ld      hl,(store_622a)] load HL with address for this screen/level
 	addq.w	#1,a0                           	| [$1792: inc     hl] next screen
@@ -5755,11 +5811,12 @@ l_179d:
 	move.b	#0x08,(a0)                      	| [$17b3: ld      (hl),$08] set game mode2 to 8
 	rts                                    	| [$17b5: ret] return
 
+l_17b6:
 	nop                                    	| [$17b6: nop]
 
 * arrive when rivets is cleared
 
-	jbsr	l_011c                            	| [$17b7: call    $011c] clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$17b7: call    $011c] clear all sounds
 	lea	sound_buffer_address_608a,a0   	| [$17ba: ld      hl,sound_buffer_address_608a] load HL with sound address
 	move.b	#0x0e,(a0)                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
 	addq.w	#1,a0                           	| [$17bf: inc     hl] HL := #608B = sound duration
@@ -5767,9 +5824,9 @@ l_179d:
 	move.b	#0x10,d0                        	| [$17c2: ld      a,$10] A := #10 = code for clear space
 	move.w	#0x0020,d3                      	| [$17c4: ld      de,$0020] DE := #20 32
 	lea	l_7623,a0                      	| [$17c7: ld      hl,$7623] load HL with video RAM location
-	jbsr	l_0514                            	| [$17ca: call    $0514] clear "help" on left side of girl
+	jbsr	clear_help_0514                            	| [$17ca: call    $0514] clear "help" on left side of girl
 	lea	l_7583,a0                      	| [$17cd: ld      hl,$7583] load HL with video RAM location
-	jbsr	l_0514                            	| [$17d0: call    $0514] clear "help of right side of girl
+	jbsr	clear_help_0514                            	| [$17d0: call    $0514] clear "help of right side of girl
 	move.w	#0x76da,d7                      	| [$17d3: ld      hl,$76da] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17d6: call    $1826] clear screen area
 	lea	game_rom+0x3a47,a1                      	| [$17d9: ld      de,$3a47] load DE with start of table data
@@ -5827,6 +5884,7 @@ l_182f:
 
 * arrive from #1647 when #6388 == 2
 
+l_1839:
 	lea	timer_unknown_6390,a0          	| [$1839: ld      hl,timer_unknown_6390] load HL with timer ???
 	addq.b	#1,(a0)                         	| [$183c: inc     (hl)] increase.  at zero?
 	jeq	l_1859                             	| [$183d: jp      z,$1859] yes, skip ahead
@@ -5868,6 +5926,7 @@ l_1859:
 * rivets has been cleared and kong is falling upside down
 * arrive from #1647
 
+l_186f:
 	jbsr	rst_18                            	| [$186f: rst     $18] count down timer and only continue here if zero, else RET
 
 	lea	game_rom+0x3a1f,a0                      	| [$1870: ld      hl,$3a1f] start of table data for kong upside down
@@ -5880,6 +5939,7 @@ l_1859:
 
 * arrive from #1647 when #6388 == 4
 
+l_1880:
 	lea	kong_sprite_array_690b,a0      	| [$1880: ld      hl,kong_sprite_array_690b] load HL with kong start sprite
 	move.b	#0x01,d2                        	| [$1883: ld      c,$01] load C with 1 pixel to move
 	jbsr	rst_38                            	| [$1885: rst     $38] move kong
@@ -5920,6 +5980,7 @@ l_1859:
 
 * arrive from #1647 when level is complete, last of 5 steps
 
+l_18c6:
 	lea	kong_climbing_counter_62af,a0  	| [$18c6: ld      hl,kong_climbing_counter_62af] load HL with kong climbing counter address
 	subq.b	#1,(a0)                         	| [$18c9: dec     (hl)] decrease.  zero?
 	jeq	l_193d                             	| [$18ca: jp      z,$193d] yes, skip ahead, handle next level routine
@@ -6031,6 +6092,7 @@ l_194b:
 
 * arrive from jump table at #0701 when GameMode2 == #17
 
+l_196b:
 	jbsr	l_0852                            	| [$196b: call    $0852] clear screen and all sprites
 	move.b	playerturnb_600e,d0             	| [$196e: ld      a,(playerturnb_600e)] load A with current player number.  0 = player 1, 1 = player 2
 	add.b	#0x12,d0                         	| [$1971: add     a,$12] add #12
@@ -6039,10 +6101,12 @@ l_194b:
 
 * main routine
 
+l_1977:
 	jbsr	l_21ee                            	| [$1977: call    $21ee] used during attract mode only.  sets virtual input.
 
 * arrive here from #0701 when playing
 
+l_197a:
 	jbsr	l_1dbd                            	| [$197a: call    $1dbd] check for bonus items and jumping scores, rivets
 	jbsr	l_1e8c                            	| [$197d: call    $1e8c] do stuff for items hit with hammer
 	jbsr	l_1ac3                            	| [$1980: call    $1ac3] check for jumping
@@ -6080,7 +6144,7 @@ l_194b:
 
 * mario died
 
-	jbsr	l_011c                            	| [$19ca: call    $011c] no, mario died.  clear all sounds
+	jbsr	clear_all_sounds_011c                            	| [$19ca: call    $011c] no, mario died.  clear all sounds
 	lea	boom_sound_address_6082,a0     	| [$19cd: ld      hl,boom_sound_address_6082] load HL with boom sound address
 	move.b	#0x03,(a0)                      	| [$19d0: ld      (hl),$03] play boom sound for 3 units
 l_19d2:
@@ -6138,22 +6202,23 @@ l_1a07:
 	move.b	time_has_run_out_indicator_6386,d0	| [$1a07: ld      a,(time_has_run_out_indicator_6386)] load A with the location which tells if the timer has run out yet.
 	jbsr	rst_28                            	| [$1a0a: rst     $28] jump based on A
 
-	.long	l_1A1E| #1A1E if zero return immediately, bonus timer has not run out
-	.long	l_1A15| #1A15
-	.long	l_1A1F| #1A1F
-	.long	l_1A2A| #1A2A
+	.long	l_1a1e| #1A1E if zero return immediately, bonus timer has not run out
+	.long	l_1a15| #1A15
+	.long	l_1a1f| #1A1F
+	.long	l_1a2a| #1A2A
 	.long	0	| used
 
 * arrive from #1A0A
-l_1A15:
+l_1a15:
 	clr.b	d0                               	| [$1a15: xor     a] A := 0
 	move.b	d0,timer_address_6387           	| [$1a16: ld      (timer_address_6387),a] clear timer which counts down when the timer runs out
 	move.b	#0x02,d0                        	| [$1a19: ld      a,$02] A := 2
 	move.b	d0,time_has_run_out_indicator_6386	| [$1a1b: ld      (time_has_run_out_indicator_6386),a] store into the location which tells if the timer has run out yet.
+l_1a1e:
 	rts                                    	| [$1a1e: ret] return
 
 * arrive from #1A0A
-l_1A1F:
+l_1a1f:
 	lea	timer_address_6387,a0          	| [$1a1f: ld      hl,timer_address_6387] load HL with timer address
 	subq.b	#1,(a0)                         	| [$1a22: dec     (hl)] decreases the timer which counts down after time has run out. time out?
 	beq.b	0f                               	| [...]
@@ -6165,7 +6230,7 @@ l_1A1F:
 	rts                                    	| [$1a29: ret] return
 
 * we arrive here when the timer runs out
-l_1A2A:
+l_1a2a:
 	move.b	jumping_status_6216,d0          	| [$1a2a: ld      a,(jumping_status_6216)] load A with jump indicator
 	                               	| [$1a2d: and     a] is mario jumping ?
 	beq.b	0f                               	| [...]
@@ -6862,14 +6927,14 @@ l_1dbd:
 	move.b	bonus_indicator_6340,d0         	| [$1dbd: ld      a,(bonus_indicator_6340)] load A with #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 	jbsr	rst_28                            	| [$1dc0: rst     $28] jump based on A
 
-	.long	l_1E49| #1E49 = no item.  returns immediately
-	.long	l_1DC9| #1DC9 = item just picked up
-	.long	l_1E4A| #1E4A = bonus appears
+	.long	l_1e49| #1E49 = no item.  returns immediately
+	.long	l_1dc9| #1DC9 = item just picked up
+	.long	l_1e4a| #1E4A = bonus appears
 	.long	0| unused
 
 * an item was just picked up / jumped over / hit with hammer
 
-l_1DC9:
+l_1dc9:
 	move.b	#0x40,d0                        	| [$1dc9: ld      a,$40] A := #40
 	move.b	d0,timer_6341                   	| [$1dcb: ld      (timer_6341),a] store into timer
 	move.b	#0x02,d0                        	| [$1dce: ld      a,$02] A := 2
@@ -6928,7 +6993,7 @@ l_1e10:
 	move.b	#0x7f,d1                        	| [$1e10: ld      b,$7f] set sprite for 800 points
 	move.w	#0x0008,d3                      	| [$1e12: ld      de,$0008] set points at 800 8
 
-l_1E15:
+l_1e15:
 	jbsr	insert_task_309f                            	| [$1e15: call    $309f] insert task to add score
 
 * arrive here when bonus item picked up or smashed with hammer
@@ -6971,10 +7036,12 @@ l_1e36:
 	jbsr	rst_30                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
 	lea	play_sound_for_bonus_6085,a0   	| [$1e44: ld      hl,play_sound_for_bonus_6085] load HL with bonus sound address
 	move.b	#0x03,(a0)                      	| [$1e47: ld      (hl),$03] play bonus sound for 3 duration
+l_1e49:
 	rts                                    	| [$1e49: ret] return
 
 * arrive here from #1DC0 when bonus appears
 
+l_1e4a:
 	lea	timer_6341,a0                  	| [$1e4a: ld      hl,timer_6341] load HL with timer
 	subq.b	#1,(a0)                         	| [$1e4d: dec     (hl)] has it run out yet ?
 	beq.b	0f                               	| [...]
@@ -7063,12 +7130,12 @@ l_1e96:
 
 	jbsr	rst_28                            	| [$1e99: rst     $28] jump based on A
 
-	.long	l_1EA0	| 0       | #1EA0
-	.long	l_1F09	| 1       | #1F09
-	.long	l_1F23	| 2       | #1F23
+	.long	l_1ea0	| 0       | #1EA0
+	.long	l_1f09	| 1       | #1F09
+	.long	l_1f23	| 2       | #1F23
 
 * arrive right when an item is hit
-l_1EA0:
+l_1ea0:
 	move.b	unknown_6352,d0                 	| [$1ea0: ld      a,(unknown_6352)] load A with ???
 	cmp.b	#0x65,d0                         	| [$1ea3: cp      $65] == #65 ?
 	lea	start_of_pie_sprites_69b8,a0   	| [$1ea5: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
@@ -7151,6 +7218,7 @@ l_1ede_2:
 
 * item has been hit by hammer , phase 2 of 3
 
+l_1f09:
 	lea	timer_6346,a0                  	| [$1f09: ld      hl,timer_6346] load HL with timer
 	subq.b	#1,(a0)                         	| [$1f0c: dec     (hl)] count down.  zero ?
 	beq.b	0f                               	| [...]
@@ -7176,6 +7244,7 @@ l_1f1d:
 
 * arrive from jump at #1E99 when an item is hit with hammer (last step of 3)
 
+l_1f23:
 	lea	timer_6346,a0                  	| [$1f23: ld      hl,timer_6346] load HL with timer?
 	subq.b	#1,(a0)                         	| [$1f26: dec     (hl)] count down.  zero ?
 	beq.b	0f                               	| [...]
@@ -7722,7 +7791,7 @@ l_2219:
 	.long	l_2227  | #2227         A = 0   ladder is all the way up
 	.long	l_2259  | #2259         A = 1   ladder is moving down
 	.long	l_2299  | #2299         A = 2   ladder is all the way down
-	.long	l_22A2  | #22A2         A = 3   ladder is moving up
+	.long	l_22a2  | #22A2         A = 3   ladder is moving up
 
 * ladder is all the way up
 l_2227:
@@ -7773,6 +7842,7 @@ l_2257:
 
 * arrive from #221A when ladder is moving down
 
+l_2259:
 	move.l	(sp)+,a0                        	| [$2259: pop     hl] restore HL = ladder status
 	addq.w	#4,a0                           	| [$225a: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$225e: dec     (hl)] decrease.  at zero?
@@ -7827,6 +7897,7 @@ l_2295_2:
 
 * arrive from #221A when ladder is all the way down
 
+l_2299:
 	move.l	(sp)+,a0                        	| [$2299: pop     hl] restore HL
 	move.b	rngtimer1_6018,d0               	| [$229a: ld      a,(rngtimer1_6018)] load A with random timer
 	and.b	#0x3c,d0                         	| [$229d: and     $3c] mask bits.  result zero?
@@ -7841,6 +7912,7 @@ l_2295_2:
 * a rectractable ladder is moving up
 * HL popped from stack is either 6280 for left ladder or 6288 for right ladder
 
+l_22a2:
 	move.l	(sp)+,a0                        	| [$22a2: pop     hl] restore HL
 	addq.w	#4,a0                           	| [$22a3: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$22a7: dec     (hl)] decrease (HL).  zero?
@@ -7898,11 +7970,11 @@ l_22cb:
 	subq.b	#1,d0                           	| [$22d5: dec     a] decrement.  will be between 0 and 4
 	jbsr	rst_28                            	| [$22d6: rst     $28] jump based on A
 
-	.long	l_22F6  | #
-	.long	l_22F6  | #
+	.long	l_22f6  | #
+	.long	l_22f6  | #
 	.long	l_2303  | #
 	.long	l_2303  | #
-	.long	l_231A  | #
+	.long	l_231a  | #
 
 * arrive here when oil can is not yet lit
 * used for initial crazy barrel
@@ -7923,6 +7995,7 @@ l_22e1:
 
 * check for use with crazy barrels when difficulty is 1 or 2
 
+l_22f6:
 	move.b	rngtimer1_6018,d0               	| [$22f6: ld      a,(rngtimer1_6018)] load A with random timer value
 
 l_22f9:
@@ -7934,6 +8007,7 @@ l_22f9:
 
 * check for use with crazy barrels when difficulty is 3 or 4
 
+l_2303:
 	move.b	rngtimer1_6018,d0               	| [$2303: ld      a,(rngtimer1_6018)] load A with random timer value
 	move.b	d0,(0x11,a2)                    	| [$2306: ld      (ix+$11),a] store into +11
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2309: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
@@ -7951,6 +8025,7 @@ l_2316_2:
 
 * check for use with crazy barrels when difficulty is 5
 
+l_231a:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$231a: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	sub.b	(0x03,a2),d0                     	| [$231d: sub     (ix+$03)] subtract the barrel's X position
 	st.b	d2                                	| [$2320: ld      c,$ff] load C with #FF
@@ -9096,13 +9171,14 @@ l_286f:
 
 	.long	0| unused
 	.long	l_2880| #2880 - girders
-	.long	l_28B0| #28B0 - conveyors
-	.long	l_28E0| #28E0 - elevators
+	.long	l_28b0| #28B0 - conveyors
+	.long	l_28e0| #28E0 - elevators
 	.long	l_2901| #2901 - rivets
 
 
 * girders - check for collisions with barrels and fires and oil can
 
+l_2880:
 	move.l	(sp)+,a0                        	| [$2880: pop     hl] restore HL
 	move.b	#0x0a,d1                        	| [$2881: ld      b,$0a] B := #0A (10 decimal).  one for each barrel
 	move.b	d1,d0                           	| [$2883: ld      a,b] A := #0A
@@ -9126,6 +9202,7 @@ l_286f:
 
 * jump here from #3E8C when jumping/hammering ? on the pie factory
 
+l_28b0:
 	move.l	(sp)+,a0                        	| [$28b0: pop     hl] restore HL
 	move.b	#0x05,d1                        	| [$28b1: ld      b,$05] B := 5 fires
 	move.b	d1,d0                           	| [$28b3: ld      a,b] A := 5 fires
@@ -9149,6 +9226,7 @@ l_286f:
 
 * jump here from #2873 or #3E8C when on the elevators
 
+l_28e0:
 	move.l	(sp)+,a0                        	| [$28e0: pop     hl] restore HL
 	move.b	#0x05,d1                        	| [$28e1: ld      b,$05] B := 5
 	move.b	d1,d0                           	| [$28e3: ld      a,b] A := 5
@@ -9167,6 +9245,7 @@ l_286f:
 * jump here from #3E8C when on the rivets
 * check for collisions with firefoxes and squares next to kong
 
+l_2901:
 	move.l	(sp)+,a0                        	| [$2901: pop     hl] restore HL
 	move.b	#0x07,d1                        	| [$2902: ld      b,$07] B := 7
 	move.b	d1,d0                           	| [$2904: ld      a,b] A := 7
@@ -10674,6 +10753,7 @@ l_3064:
 
 * arrive from #0A79 when intro screen indicator == 3 or 5
 
+l_3069:
 	jbsr	rst_18                            	| [$3069: rst     $18] count down timer and only continue here if zero, else RET
 	LOAD_RAM_ADDRESS	timer_unknown_63c0,a0       	| [$306a: ld      hl,(timer_unknown_63c0)] load HL with timer ???
 	addq.b	#1,(a0)                         	| [$306d: inc     (hl)] increase
@@ -10824,7 +10904,7 @@ l_3103:
 
 	.long	l_3110  | 0       | #3110
 	.long	l_3110  | 1       | #3110
-	.long	l_311B  | 2       | #311B
+	.long	l_311b  | 2       | #311B
 	.long	l_3126  | 3       | #3126
 	.long	l_3126  | 4       | #3126
 	.long	l_3131  | 5       | #3131
@@ -10845,6 +10925,7 @@ l_3110:
 
 * internal difficulty == 2. Here the fireball movement routine is executed for 5 consecutive frames out of every 8 frames.
 
+l_311b:
 	move.b	framecounter_601a,d0            	| [$311b: ld      a,(framecounter_601a)] \  If the lowest 3 bits of timer are less than 5 (equal to 0, 1, 2, 3, or 4) then return and continue as
 	and.b	#0x07,d0                         	| [$311e: and     $07]| normal
 	cmp.b	#0x05,d0                         	| [$3120: cp      $05]|
@@ -10857,6 +10938,7 @@ l_3110:
 
 * difficulty == 3 or 4. Here the fireball movement routine is executed for 3 out of every 4 frames.
 
+l_3126:
 	move.b	framecounter_601a,d0            	| [$3126: ld      a,(framecounter_601a)] \  If the lowest 2 bits of the timer are not 11 then return and continue as normal
 	and.b	#0x03,d0                         	| [$3129: and     $03]|
 	cmp.b	#0x03,d0                         	| [$312b: cp      $03]|
@@ -10869,6 +10951,7 @@ l_3110:
 
 * difficulty == 5. Here the fireball movement routine is executed for 7 out of every 8 frames.
 
+l_3131:
 	move.b	framecounter_601a,d0            	| [$3131: ld      a,(framecounter_601a)] \  If the lowest 3 bits of the timer are not 111 then return and continue as normal
 	and.b	#0x07,d0                         	| [$3134: and     $07]|
 	cmp.b	#0x07,d0                         	| [$3136: cp      $07]|
@@ -11647,45 +11730,26 @@ l_351e:
 * called from #0525
 
 
-l_3529:
+item_scoring_table_3529:
 	.byte	0x00,0x00,0x00
-l_352C:
 	.byte	0x00,0x01,0x00
-l_352F:
 	.byte	0x00,0x02,0x00
-l_3532:
 	.byte	0x00,0x03,0x00
-l_3535:
 	.byte	0x00,0x04,0x00
-l_3538:
 	.byte	0x00,0x05,0x00
-l_353B:
 	.byte	0x00,0x06,0x00
-l_353E:
 	.byte	0x00,0x07,0x00
-l_3541:
 	.byte	0x00,0x08,0x00
-l_3544:
 	.byte	0x00,0x09,0x00
-l_3547:
 	.byte	0x00,0x00,0x00
-l_354A:
 	.byte	0x00,0x10,0x00
-l_354D:
 	.byte	0x00,0x20,0x00
-l_3550:
 	.byte	0x00,0x30,0x00
-l_3553:
 	.byte	0x00,0x40,0x00
-l_3556:
 	.byte	0x00,0x50,0x00
-l_3559:
 	.byte	0x00,0x60,0x00
-l_355C:
 	.byte	0x00,0x70,0x00
-l_355F:
 	.byte	0x00,0x80,0x00
-l_3562:
 	.byte	0x00,0x90,0x00
 
 *  table data .. loaded at #025A when game is powered on or reset
@@ -12682,14 +12746,15 @@ l_3e88:
 * data for above:
 
 	.long	0| unused
-	.long	l_3E99| #3E99 - girders
-	.long	l_28B0| #28B0 - pie
-	.long	l_28E0| #28E0 - elevator
+	.long	l_3e99| #3E99 - girders
+	.long	l_28b0| #28B0 - pie
+	.long	l_28e0| #28E0 - elevator
 	.long	l_2901| #2901 - rivets
 
 
 * checks for jumps over items on girders
 
+l_3e99:
 	move.l	(sp)+,a0                        	| [$3e99: pop     hl] restore HL
 	clr.b	d0                               	| [$3e9a: xor     a] A := 0
 	move.b	d0,numobstaclesjumped_6060      	| [$3e9b: ld      (numobstaclesjumped_6060),a] clear counter for barrels jumped
@@ -12812,19 +12877,13 @@ l_3f24:
 *
 
 
-l_3F30:
+l_3f30:
 	.byte	0x50,0x52,0x4F,0x47,0x52,0x41,0x4D,0x2C,0x57,0x45,0x20,0x57,0x4F,0x55,0x4C,0x44  |PROGRAM,WE WOULD
-l_3F40:
 	.byte	0x20,0x54,0x45,0x41,0x43,0x48,0x20,0x59,0x4F,0x55,0x2E,0x2A,0x2A,0x2A,0x2A,0x2A  | TEACH YOU.*****
-l_3F50:
 	.byte	0x54,0x45,0x4C,0x2E,0x54,0x4F,0x4B,0x59,0x4F,0x2D,0x4A,0x41,0x50,0x41,0x4E,0x20  |TEL.TOKYO-JAPAN
-l_3F60:
 	.byte	0x30,0x34,0x34,0x28,0x32,0x34,0x34,0x29,0x32,0x31,0x35,0x31,0x20,0x20,0x20,0x20  |044(244)2151
-l_3F70:
 	.byte	0x45,0x58,0x54,0x45,0x4E,0x54,0x49,0x4F,0x4E,0x20,0x33,0x30,0x34,0x20,0x20,0x20  |EXTENTION 304
-l_3F80:
 	.byte	0x53,0x59,0x53,0x54,0x45,0x4D,0x20,0x44,0x45,0x53,0x49,0x47,0x4E,0x20,0x20,0x20  |SYSTEM DESIGN
-l_3F90:
 	.byte	0x49,0x4B,0x45,0x47,0x41,0x4D,0x49,0x20,0x43,0x4F,0x2E,0x20,0x4C,0x49,0x4D,0x2E  |IKEGAMI CO. LIM.
 
 
@@ -12868,37 +12927,7 @@ l_3fc0:
 	addq.w	#2,a0                           	| [$3fc5: inc     l] * 2
 	rts                                    	| [$3fc7: ret] return
 
-* unknown
-* unused ???
 
-l_3FC8:
-	.byte	0x00,0x00,0x41,0x7F,0x7F,0x41,0x00,0x00
-l_3FD0:
-	.byte	0x00,0x7F,0x7F,0x18,0x3C,0x76,0x63,0x41
-l_3FD8:
-	.byte	0x00,0x00,0x7F,0x7F,0x49,0x49,0x49,0x41
-l_3FE0:
-	.byte	0x00,0x1C,0x3E,0x63,0x41,0x49,0x79,0x79
-l_3FE8:
-	.byte	0x00,0x7C,0x7E,0x13,0x11,0x13,0x7E,0x7C
-l_3FF0:
-	.byte	0x00,0x7F,0x7F,0x0E,0x1C,0x0E,0x7F,0x7F
-l_3FF8:
-	.byte	0x00,0x00,0x41,0x7F,0x7F,0x41,0x00,0x00
-
-
-
-*0000 0000 0100 0001 0111 1111 0111 1111 0100 0001 0000 0000 0000 0000
-*0111 1111 0111 1111 0001 1000 0011 1100 0111 0110 0110 0011 0100 0001
-*0000 0000 0111 1111 0111 1111 0100 1001 0100 1001 0100 1001 0100 0001
-*0001 1100 0011 1110 0110 0011 0100 0001 0100 1001 0111 1001 0111 1001
-*0111 1100
-*
-*
-*
-*
-*
-*
 *
 *
 *http://www.brasington.org/arcade/tech/dk/
