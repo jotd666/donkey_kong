@@ -1236,7 +1236,7 @@ donkey_kong_irq:
 	and.b	#0x01,d0                         	| [$0075: and     $01] is the Service button being pressed?
 	jne	l_4000                             	| [$0077: jp      nz,$4000] yes, jump to #4000 [??? this would cause a crash ???]
 
-	lea	l_0138,a0                      	| [$007a: ld      hl,$0138] load HL with start of table data
+	lea	game_rom+0x0138,a0                      	| [$007a: ld      hl,$0138] load HL with start of table data
 	jbsr	l_0141                            	| [$007d: call    $0141] refresh the P8257 Control registers / refresh sprites to hardware
 	move.b	nocredits_6007,d0               	| [$0080: ld      a,(nocredits_6007)] load the credit indicator
 	                               	| [$0083: and     a] are there credits present / is a game being played ?
@@ -1277,7 +1277,7 @@ l_00b5:
 	jbsr	l_0057                            	| [$00b9: call    $0057] update the random number gen
 	jbsr	l_017b                            	| [$00bc: call    $017b] check for credits being inserted and handle them
 	jbsr	l_00e0                            	| [$00bf: call    $00e0] update all sounds
-	lea	l_00d2,a0                      	| [$00c2: ld      hl,$00d2] load HL with return address
+	lea	game_rom+0x00d2,a0                      	| [$00c2: ld      hl,$00d2] load HL with return address
 
 	move.l	a0,-(sp)                        	| [$00c5: push    hl] push to stack so any RETs go there (#00D2)
 	move.b	gamemode1_6005,d0               	| [$00c6: ld      a,(gamemode1_6005)] load A with game mode1
@@ -1608,7 +1608,7 @@ l_0259:
 	move.b	#0x01,d0                        	| [$0253: ld      a,$01] A := 1
 l_0259_2:
 	move.b	d0,(a0)                         	| [$0259: ld      (hl),a] store into upright / cocktail
-	lea	l_3565,a0                      	| [$025a: ld      hl,$3565] source = #3565 = default high score table
+	lea	game_rom+0x3565,a0                      	| [$025a: ld      hl,$3565] source = #3565 = default high score table
 	lea	high_score_ram_6100,a1         	| [$025d: ld      de,high_score_ram_6100] dest = #6100 = high score RAM
 	move.w	#0xaa,d1                        	| [$0260: ld      bc,$00aa] byte counter = #AA 170
 	jbsr	ldir                              	| [$0263: ldir] copy high score table into RAM
@@ -1750,7 +1750,7 @@ l_02e3:
 l_02f6:
 	move.b	d0,the_task_pointer_60b1        	| [$02f6: ld      (the_task_pointer_60b1),a] store into the task pointer
 	move.b	d2,d0                           	| [$02f9: ld      a,c] load A with the 2nd byte of the task
-	lea	l_02bd,a0                      	| [$02fa: ld      hl,$02bd] load HL with return address
+	lea	game_rom+0x02bd,a0                      	| [$02fa: ld      hl,$02bd] load HL with return address
 
 	move.l	a0,-(sp)                        	| [$02fd: push    hl] push to stack so RET will go to #02BD = task list
 	lea	jump_table_0307,a0                      	| [$02fe: ld      hl,$0307] load HL with data from table below
@@ -2040,13 +2040,13 @@ l_0426:
 	and.b	#0x1f,d0                         	| [$0439: and     $1f] mask bits, now == 0 ?
 	jne	l_0486                             	| [$043b: jp      nz,$0486] no, skip ahead
 
-	lea	l_39cf,a0                      	| [$043e: ld      hl,$39cf] else load HL with start of table data
+	lea	game_rom+0x39cf,a0                      	| [$043e: ld      hl,$39cf] else load HL with start of table data
 	btst.b	#5,d1                           	| [$0441: bit     5,b] is bit 5 turned on timer ?  (1/8 chance???)
 	jne	l_0448                             	| [$0443: jr      nz,$0448] no, skip ahead
 
 * kong is beating his chest
 
-	lea	l_39f7,a0                      	| [$0445: ld      hl,$39f7] start of table data
+	lea	game_rom+0x39f7,a0                      	| [$0445: ld      hl,$39f7] start of table data
 l_0448:
 	jbsr	l_004e                            	| [$0448: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$044b: ld      a,$03] load sound duration of 3
@@ -2078,7 +2078,7 @@ l_0464:
 	                               	| [$046b: and     a] is a deployment in progress?
 	jne	l_0486                             	| [$046c: jp      nz,$0486] yes, jump ahead
 
-	lea	l_385c,a0                      	| [$046f: ld      hl,$385c] else load HL with start of table data for kongs sprites
+	lea	game_rom+0x385c,a0                      	| [$046f: ld      hl,$385c] else load HL with start of table data for kongs sprites
 	jbsr	l_004e                            	| [$0472: call    $004e] update kong's sprites
 	jra	l_0450                             	| [$0475: jp      $0450] jump back
 
@@ -2223,7 +2223,7 @@ l_0516:
 	add.b	d2,d0                            	| [$0523: add     a,c] triple
 	clr.w	d1                               	| [$0528: ld      b,$00] B := 0
 	move.b	d0,d1                           	| [$0524: ld      c,a] C is now 3 times A for use in the scoring table
-	lea	l_3529,a0                      	| [$0525: ld      hl,$3529] #3529 holds table data for scoring
+	lea	game_rom+0x3529,a0                      	| [$0525: ld      hl,$3529] #3529 holds table data for scoring
 	add.w	d1,a0                            	| [$052a: add     hl,bc] add offset for scoring table
  	tst.b	d0                               	| [$052b: and     a] clear carry flag
 	move.w	#3,d1                        	| [$052c: ld      b,$03] for B = 1 to 3
@@ -2430,7 +2430,7 @@ l_05e0:
 * called from #0306 with code for text to draw in A
 
 l_05e9:
-	lea	l_364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
+	lea	game_rom+0x364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
 	add.b	d0,d0                            	| [$05ec: add     a,a] double the parameter
 	scs		d7									| remember carry
 	move.w	d7,-(sp)                        	| [$05ed: push    af] save AF to stack
@@ -2531,7 +2531,7 @@ l_0640:
 	move.b	d0,reset_onscreen_timer_638c    	| [$064a: ld      (reset_onscreen_timer_638c),a] load on screen timer with result.  hex value converts to decimal.
 
 
-	lea	l_384a,a0                      	| [$064d: ld      hl,$384a] load HL with #384A - table data
+	lea	game_rom+0x384a,a0                      	| [$064d: ld      hl,$384a] load HL with #384A - table data
 	lea	l_7465,a1                      	| [$0650: ld      de,$7465] load DE with #7465 - screen location for bonus timer
 	move.b	#0x06,d0                        	| [$0653: ld      a,$06] For A = 1 to 6
 
@@ -2840,7 +2840,7 @@ l_07f4:
 
 * draws DONKEY KONG logo to screen
 
-	lea	l_3d08,a0                      	| [$07f7: ld      hl,$3d08] load HL with start of table data
+	lea	game_rom+0x3d08,a0                      	| [$07f7: ld      hl,$3d08] load HL with start of table data
 
 l_07fa:
 	move.b	#0xb0,d0                        	| [$07fa: ld      a,$b0] A := #B0 = code for girder on screen
@@ -2866,7 +2866,7 @@ l_0801:
 	jbsr	insert_task_309f                            	| [$080f: call    $309f] insert task to draw text
 	addq.w	#1,d3                           	| [$0812: inc     de] load task data for text "NINTENDO OF AMERICA"
 	jbsr	insert_task_309f                            	| [$0813: call    $309f] insert task to draw text
-	lea	l_39cf,a0                      	| [$0816: ld      hl,$39cf] load HL with table data for kong beating chest
+	lea	game_rom+0x39cf,a0                      	| [$0816: ld      hl,$39cf] load HL with table data for kong beating chest
 	jbsr	l_004e                            	| [$0819: call    $004e] update kong's sprites
 	jbsr	l_3f24                            	| [$081c: call    $3f24] draw TM logo onscreen [patch? orig japanese had 3 NOPs here]
 	nop                                    	| [$081f: nop] no operation
@@ -2950,7 +2950,7 @@ l_086b:
 * clears the screen and sprites
 
 l_0874:
-	lea	l_7404,a0                      	| [$0874: ld      hl,$7404] load HL with start of video RAM
+	move.w	#0x7404,d7                      	| [$0874: ld      hl,$7404] load HL with start of video RAM
 	move.b	#0x20,d2                        	| [$0877: ld      c,$20] For C = 1 to #20
 
 l_0879:
@@ -2959,16 +2959,16 @@ l_0879:
 	move.w	#0x0004,d3                      	| [$087d: ld      de,$0004] DE = 4, used as offset to add later 4
 
 l_0880:
-	move.b	d0,(a0)                         	| [$0880: ld      (hl),a] store into memory
-	addq.w	#1,a0                           	| [$0881: inc     hl] next memory
+	jbsr	osd_w_videoram                        	| [$0880: ld      (hl),a] store into memory
+	addq.w	#1,d7                           	| [$0881: inc     hl] next memory
 	subq.b	#1,d1                           	| [...]
 	jne	l_0880                             	| [$0882: djnz    $0880] Next B
 
-	add.w	d3,a0                            	| [$0884: add     hl,de] add offset of 4
+	add.w	d3,d7                            	| [$0884: add     hl,de] add offset of 4
 	subq.b	#1,d2                           	| [$0885: dec     c] decrease counter
 	jne	l_0879                             	| [$0886: jp      nz,$0879] loop until zero
 
-	lea	l_7522,a0                      	| [$0889: ld      hl,$7522] load HL with screen location
+	move.w	#0x7522,d7                      	| [$0889: ld      hl,$7522] load HL with screen location
 	move.w	#0x0020,d3                      	| [$088c: ld      de,$0020] load DE with offset to use 32
 	move.b	#0x02,d2                        	| [$088f: ld      c,$02] for C = 1 to 2
 	move.b	#0x10,d0                        	| [$0891: ld      a,$10] A := #10 = clear screen byte
@@ -2976,12 +2976,12 @@ l_0880:
 l_0893:
 	move.b	#0x0e,d1                        	| [$0893: ld      b,$0e] for B = 1 to #0E
 l_0895:
-	move.b	d0,(a0)                         	| [$0895: ld      (hl),a] clear the screen element
-	add.w	d3,a0                            	| [$0896: add     hl,de] add offset for next
+	jbsr	osd_w_videoram                         	| [$0895: ld      (hl),a] clear the screen element
+	add.w	d3,d7                            	| [$0896: add     hl,de] add offset for next
 	subq.b	#1,d1                           	| [...]
 	jne	l_0895                             	| [$0897: djnz    $0895] Next B
 
-	lea	l_7523,a0                      	| [$0899: ld      hl,$7523] load HL with next screen location
+	move.w	#0x7523,d7                      	| [$0899: ld      hl,$7523] load HL with next screen location
 	subq.b	#1,d2                           	| [$089c: dec     c] done ?
 	jne	l_0893                             	| [$089d: jp      nz,$0893] no, loop again
 
@@ -3006,7 +3006,7 @@ l_08ad:
 
 * jump from #00C9
 * arrive here when credits have been inserted, waiting for game to start
-
+l_08B2:
 	move.b	gamemode2_600a,d0               	| [$08b2: ld      a,(gamemode2_600a)] load A with game mode2
 
 * GameMode2 = 1 during attract mode, 7 during intro , A during how high can u get,
@@ -3095,7 +3095,7 @@ l_0919:
 	move.b	startinglives_6020,d0           	| [$0922: ld      a,(startinglives_6020)] load initial number of lives
 	move.b	d0,(a1)+                         	| [$0925: ld      (de),a] store into number of lives player 2
 											| [$0926: inc     e] DE := Unk6049
-	lea	l_095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
+	lea	game_rom+0x095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
 	move.w	#0x07,d1                        	| [$092a: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$092d: ldir] copy #095E into Unk6049 for 7 bytes
 	move.w  #0x0101,d3                      	| [$092f: ld      de,$0101] load task #1, parameter 1.  clears player 1 and 2 scores and displays them.
@@ -3111,7 +3111,7 @@ l_0938:
 	move.b	startinglives_6020,d0           	| [$0941: ld      a,(startinglives_6020)] number of initial lives set with dip switches (3, 4, 5, or 6)
 	move.b	d0,(a1)+                         	| [$0944: ld      (de),a] store into number of lives
 	                           	| [$0945: inc     e] DE := Unk6041
-	lea	l_095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
+	lea	game_rom+0x095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
 	move.w	#0x07,d1                        	| [$0949: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$094c: ldir] copy #095E into Unk6041 for 7 bytes
 	move.w  #0x0100,d3                      	| [$094e: ld      de,$0100] load task #1, parameter 0.  clears player 1 score and displays it
@@ -3337,7 +3337,7 @@ l_0A8A:
 	move.b	d0,reg_palette_a                	| [$0a8b: ld      (reg_palette_a),a] clear palette bank selector
 	addq.b	#1,d0                           	| [$0a8e: inc     a] A := 1
 	move.b	d0,reg_palette_b                	| [$0a8f: ld      (reg_palette_b),a] store into palette bank selector
-	lea	l_380d,a1                      	| [$0a92: ld      de,$380d] load DE with start of table data
+	lea	game_rom+0x380d,a1                      	| [$0a92: ld      de,$380d] load DE with start of table data
 	jbsr	l_0da7                            	| [$0a95: call    $0da7] draw the screen
 	move.b	#0x10,d0                        	| [$0a98: ld      a,$10] A := #10
 	WRITE_TO_SCREEN	0x76a3                       	| [$0a9a: ld      ($76a3),a] erase a graphic near top of screen
@@ -3346,9 +3346,9 @@ l_0A8A:
 	WRITE_TO_SCREEN	0x75aa                       	| [$0aa2: ld      ($75aa),a] draw a ladder at top of screen
 	clr.b	d0                               	| [$0aa5: xor     a] A := 0
 	move.b	d0,kong_climbing_counter_62af   	| [$0aa6: ld      (kong_climbing_counter_62af),a] store into kong climbing counter
-	lea	l_38b4,a0                      	| [$0aa9: ld      hl,$38b4] load HL with start of table data
+	lea	game_rom+0x38b4,a0                      	| [$0aa9: ld      hl,$38b4] load HL with start of table data
 	STORE_ROM_ADDRESS	a0,store_63c2                   	| [$0aac: ld      (store_63c2),hl] store
-	lea	l_38cb,a0                      	| [$0aaf: ld      hl,$38cb] load HL with start of table data
+	lea	game_rom+0x38cb,a0                      	| [$0aaf: ld      hl,$38cb] load HL with start of table data
 	STORE_ROM_ADDRESS	a0,unknown_63c4                 	| [$0ab2: ld      (unknown_63c4),hl] store
 	move.b	#0x40,d0                        	| [$0ab5: ld      a,$40] A := #40
 	move.b	d0,waittimermsb_6009            	| [$0ab7: ld      (waittimermsb_6009),a] set timer to #40
@@ -3359,7 +3359,7 @@ l_0A8A:
 * arrive from #0A79 when intro screen indicator == 1
 
 	jbsr	rst_18                            	| [$0abf: rst     $18] count down timer and only continue here if zero, else RET
-	lea	l_388c,a0                      	| [$0ac0: ld      hl,$388c] load HL with start of table data for kong
+	lea	game_rom+0x388c,a0                      	| [$0ac0: ld      hl,$388c] load HL with start of table data for kong
 	jbsr	l_004e                            	| [$0ac3: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$0ac6: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	#0x30,d2                        	| [$0ac9: ld      c,$30] load offset to add
@@ -3422,7 +3422,7 @@ l_0A8A:
 	rts                                    	| [$0b1d: ret] return
 
 l_0b1e:
-	lea	l_385c,a0                      	| [$0b1e: ld      hl,$385c] load HL with start of kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$0b1e: ld      hl,$385c] load HL with start of kong graphic table data
 	jbsr	l_004e                            	| [$0b21: call    $004e] update kong's sprites
 	lea	girls_head_sprite_6900,a1      	| [$0b24: ld      de,girls_head_sprite_6900] load destination with girl sprite
 	move.w	#0x08,d1                        	| [$0b27: ld      bc,$0008] set counter to 8 8
@@ -3442,7 +3442,7 @@ l_0b38:
 
 	move.b	#0x03,d0                        	| [$0b43: ld      a,$03] set boom sound duration
 	move.b	d0,boom_sound_address_6082      	| [$0b45: ld      (boom_sound_address_6082),a] play boom sound
-	lea	l_392c,a1                      	| [$0b48: ld      de,$392c] load DE with table data start for first angled girder
+	lea	game_rom+0x392c,a1                      	| [$0b48: ld      de,$392c] load DE with table data start for first angled girder
 	jbsr	l_0da7                            	| [$0b4b: call    $0da7] draw the angled girder
 	move.b	#0x10,d0                        	| [$0b4e: ld      a,$10] A := #10 = clear character
 
@@ -3483,11 +3483,11 @@ l_0b38:
 	rts                                    	| [$0b85: ret] return
 
 l_0b86:
-	lea	l_38cb,a0                      	| [$0b86: ld      hl,$38cb] load HL with start of table data
+	lea	game_rom+0x38cb,a0                      	| [$0b86: ld      hl,$38cb] load HL with start of table data
 	STORE_ROM_ADDRESS	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
 	move.b	#0x03,d0                        	| [$0b8c: ld      a,$03] set boom sound duration
 	move.b	d0,boom_sound_address_6082      	| [$0b8e: ld      (boom_sound_address_6082),a] play boom sound
-	lea	l_38dc,a0                      	| [$0b91: ld      hl,$38dc] load HL with start of table data
+	lea	game_rom+0x38dc,a0                      	| [$0b91: ld      hl,$38dc] load HL with start of table data
 	move.b	kong_bounce_counter_638d,d0     	| [$0b94: ld      a,(kong_bounce_counter_638d)] load A with kong bounce counter
 	subq.b	#1,d0                           	| [$0b97: dec     a] decrease
 	rol.b	#4,d0                            	| [$0b98: rlca] * 4
@@ -3544,7 +3544,7 @@ l_0bd1:
 * how high can you get ?
 * draws goofy kongs and 25m, 50m, etc.
 * plays music
-
+l_0BDA:
 	jbsr	l_011c                            	| [$0bda: call    $011c] clear all sounds
 	jbsr	rst_18                            	| [$0bdd: rst     $18] count down timer and only continue here if zero, else RET
 
@@ -3619,7 +3619,7 @@ l_0c43:
 	asl.b	#2,d0                            	| [$0c4b: sla     a] * 2
 
 	move.l	a0,-(sp)                        	| [$0c4f: push    hl] save HL
-	lea	l_3cf0,a0                      	| [$0c50: ld      hl,$3cf0] load HL with start of table data for 25m, 50m, etc.
+	lea	game_rom+0x3cf0,a0                      	| [$0c50: ld      hl,$3cf0] load HL with start of table data for 25m, 50m, etc.
 	movem.w	d1/d2,-(sp)                    	| [$0c53: push    bc] save BC
 	move.w	result_63a8,d7              	| [$0c54: ld      ix,(result_63a8)] load IX with screen VRAM address to draw number of meters
 	clr.w	d1                               	| [$0c59: ld      b,$00] B := 0
@@ -3700,7 +3700,7 @@ l_0c92:
 	move.b	#0x01,(a0)                      	| [$0cbc: ld      (hl),$01] set palette bank selector
 	move.b	#0x0b,d0                        	| [$0cbe: ld      a,$0b] load A with music code For rivets
 	move.b	d0,background_music_value_6089  	| [$0cc0: ld      (background_music_value_6089),a] set music
-	lea	l_3c8b,a1                      	| [$0cc3: ld      de,$3c8b] load DE with start of table data for rivets
+	lea	game_rom+0x3c8b,a1                      	| [$0cc3: ld      de,$3c8b] load DE with start of table data for rivets
 
 * other screens return here
 
@@ -3718,7 +3718,7 @@ l_0cc6:
 * girders from #0CAB
 
 l_0cd4:
-	lea	l_3ae4,a1                      	| [$0cd4: ld      de,$3ae4] Load DE with start of table data for girders
+	lea	game_rom+0x3ae4,a1                      	| [$0cd4: ld      de,$3ae4] Load DE with start of table data for girders
 	move.b	#0x08,d0                        	| [$0cd7: ld      a,$08] A := 8 = music code for girders
 	move.b	d0,background_music_value_6089  	| [$0cd9: ld      (background_music_value_6089),a] set music for girders
 	jra	l_0cc6                             	| [$0cdc: jp      $0cc6] jump back
@@ -3726,7 +3726,7 @@ l_0cd4:
 * conveyors from #0CAF
 
 l_0cdf:
-	lea	l_3b5d,a1                      	| [$0cdf: ld      de,$3b5d] load DE with start of table data for conveyors
+	lea	game_rom+0x3b5d,a1                      	| [$0cdf: ld      de,$3b5d] load DE with start of table data for conveyors
 	lea	reg_palette_a,a0               	| [$0ce2: ld      hl,reg_palette_a] load HL with palette bank selector
 	move.b	#0x01,(a0)                      	| [$0ce5: ld      (hl),$01] set palette bank selector
 	addq.w	#1,a0                           	| [$0ce7: inc     hl]
@@ -3741,14 +3741,14 @@ l_0cf2:
 	jbsr	l_0d27                            	| [$0cf2: call    $0d27] draw elevator cables
 	move.b	#0x0a,d0                        	| [$0cf5: ld      a,$0a] A := #A
 	move.b	d0,background_music_value_6089  	| [$0cf7: ld      (background_music_value_6089),a] set music for elevators
-	lea	l_3be5,a1                      	| [$0cfa: ld      de,$3be5] load DE with start of table data for the elevators
+	lea	game_rom+0x3be5,a1                      	| [$0cfa: ld      de,$3be5] load DE with start of table data for the elevators
 	jra	l_0cc6                             	| [$0cfd: jp      $0cc6] jump back
 
 * For the rivets level only  - draw the rivets
 
 l_0d00:
 	move.b	#0x08,d1                        	| [$0d00: ld      b,$08] for B = 1 to 8 rivets to draw
-	lea	l_0d17,a0                      	| [$0d02: ld      hl,$0d17] load HL with start of table data below
+	lea	game_rom+0x0d17,a0                      	| [$0d02: ld      hl,$0d17] load HL with start of table data below
 
 l_0d05:
 	move.b	#0xb8,d0                        	| [$0d05: ld      a,$b8] load A with #B8 = start code for rivet
@@ -3853,7 +3853,7 @@ l_0d5f:
 	move.b	#0x40,(a0)+                      	| [$0d68: ld      (hl),$40] set timer to #40
 	                           	| [$0d6a: inc     hl] HL := GameMode2
 	addq.b	#1,(a0)                         	| [$0d6b: inc     (hl)] increase game mode2
-	lea	l_385c,a0                      	| [$0d6c: ld      hl,$385c] load HL with start of kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$0d6c: ld      hl,$385c] load HL with start of kong graphic table data
 	jbsr	l_004e                            	| [$0d6f: call    $004e] update kong's sprites
 
 	lea	girls_head_sprite_6900,a1      	| [$0d72: ld      de,girls_head_sprite_6900] set destination to girl sprite
@@ -4224,7 +4224,7 @@ l_0f68:
 	subq.b	#1,d2                           	| [$0f6c: dec     c] Next C
 	jne	l_0f67                             	| [$0f6d: jr      nz,$0f67] loop until done
 
-	lea	l_3d9c,a0                      	| [$0f6f: ld      hl,$3d9c] source addr. = #3D9C - table data
+	lea	game_rom+0x3d9c,a0                      	| [$0f6f: ld      hl,$3d9c] source addr. = #3D9C - table data
 	lea	left_side_rectractable_ladder_6280,a1	| [$0f72: ld      de,left_side_rectractable_ladder_6280] Destination = #6280
 	move.w	#0x40,d1                        	| [$0f75: ld      bc,$0040] counter = #40 Bytes 64
 	jbsr	ldir                              	| [$0f78: ldir] copy
@@ -4326,29 +4326,29 @@ l_0fcb:
 
 * arrive here when playing girders
 l_0FD7:
-	lea	l_3ddc,a0                      	| [$0fd7: ld      hl,$3ddc] source - has the information about the barrel pile at #3DDC
+	lea	game_rom+0x3ddc,a0                      	| [$0fd7: ld      hl,$3ddc] source - has the information about the barrel pile at #3DDC
 	lea	extra_barrels_sprites_69a8,a1  	| [$0fda: ld      de,extra_barrels_sprites_69a8] destination = sprites
 	move.w	#0x10,d1                        	| [$0fdd: ld      bc,$0010] counter is #10 16
 	jbsr	ldir                              	| [$0fe0: ldir] draws the barrels pile next to kong
 
-	lea	l_3dec,a0                      	| [$0fe2: ld      hl,$3dec] set up a copy job from table in #3DEC
+	lea	game_rom+0x3dec,a0                      	| [$0fe2: ld      hl,$3dec] set up a copy job from table in #3DEC
 	lea	unknown_6407,a1                	| [$0fe5: ld      de,unknown_6407] destination in memory is #6407
 	move.b	#0x1c,d2                        	| [$0fe8: ld      c,$1c] #1C is a secondary counter
 	move.b	#0x05,d1                        	| [$0fea: ld      b,$05] #05 is a secondary counter
 	jbsr	l_122a                            	| [$0fec: call    $122a] copy
 
-	lea	l_3df4,a0                      	| [$0fef: ld      hl,$3df4] load HL with table data start for initial fire locations
+	lea	game_rom+0x3df4,a0                      	| [$0fef: ld      hl,$3df4] load HL with table data start for initial fire locations
 	jbsr	l_11fa                            	| [$0ff2: call    $11fa] ???
 
-	lea	l_3e00,a0                      	| [$0ff5: ld      hl,$3e00] source table at #3E00 = oil can
+	lea	game_rom+0x3e00,a0                      	| [$0ff5: ld      hl,$3e00] source table at #3E00 = oil can
 	lea	unknown_sprite_69fc,a1         	| [$0ff8: ld      de,unknown_sprite_69fc] destination sprite at #69FC
 	move.w	#0x04,d1                        	| [$0ffb: ld      bc,$0004] 4 bytes 4
 	jbsr	ldir                              	| [$0ffe: ldir] draw to screen
 
-	lea	l_3e0c,a0                      	| [$1000: ld      hl,$3e0c] load HL with table data for hammers on girders
+	lea	game_rom+0x3e0c,a0                      	| [$1000: ld      hl,$3e0c] load HL with table data for hammers on girders
 	jbsr	l_11a6                            	| [$1003: call    $11a6] ???
 
-	lea	l_101b,a0                      	| [$1006: ld      hl,$101b] set up copy job from table in #101B
+	lea	game_rom+0x101b,a0                      	| [$1006: ld      hl,$101b] set up copy job from table in #101B
 	lea	destination_6707,a1            	| [$1009: ld      de,destination_6707] set destination ?
 	move.b	#0x08,d1                        	| [$100c: ld      bc,$081c] set counters ? 2076
 	move.b	#0x1c,d2                        	| [$100c: ld      bc,$081c] set counters ? 2076
@@ -4371,7 +4371,7 @@ l_101b:
 * draws parts of the screen
 
 l_101F:
-	lea	l_3dec,a0                      	| [$101f: ld      hl,$3dec] set up a copy job from table in #3DEC
+	lea	game_rom+0x3dec,a0                      	| [$101f: ld      hl,$3dec] set up a copy job from table in #3DEC
 	lea	unknown_6407,a1                	| [$1022: ld      de,unknown_6407] desitnation in memory is #6407
 	move.b	#0x05,d1                        	| [$1025: ld      bc,$051c] counters are #05 and #1C 1308
 	move.b	#0x1c,d2                        	| [$1025: ld      bc,$051c] counters are #05 and #1C 1308
@@ -4379,7 +4379,7 @@ l_101F:
 
 	jbsr	l_1186                            	| [$102b: call    $1186]
 
-	lea	l_3e18,a0                      	| [$102e: ld      hl,$3e18] set up copy job from table in #3E18
+	lea	game_rom+0x3e18,a0                      	| [$102e: ld      hl,$3e18] set up copy job from table in #3E18
 	lea	destination_is_65a7_65a7,a1    	| [$1031: ld      de,destination_is_65a7_65a7] destination is #65A7
 	move.b	#0x06,d1                        	| [$1034: ld      bc,$060c] counters are #05 and #0C 1548
 	move.b	#0x0c,d2                        	| [$1034: ld      bc,$060c] counters are #05 and #0C 1548
@@ -4391,28 +4391,28 @@ l_101F:
 	move.b	#0x06,d1                        	| [$1044: ld      b,$06] B := 6
 	jbsr	l_11d3                            	| [$1046: call    $11d3]
 
-	lea	l_3dfa,a0                      	| [$1049: ld      hl,$3dfa] load HL with start of table data
+	lea	game_rom+0x3dfa,a0                      	| [$1049: ld      hl,$3dfa] load HL with start of table data
 	jbsr	l_11fa                            	| [$104c: call    $11fa] set fireball sprite
 
-	lea	l_3e04,a0                      	| [$104f: ld      hl,$3e04] set up copy job from table in #3E04 = oil can sprite
+	lea	game_rom+0x3e04,a0                      	| [$104f: ld      hl,$3e04] set up copy job from table in #3E04 = oil can sprite
 	lea	unknown_sprite_69fc,a1         	| [$1052: ld      de,unknown_sprite_69fc] destination is #69FC = sprite
 	move.w	#0x04,d1                        	| [$1055: ld      bc,$0004] four bytes to copy 4
 	jbsr	ldir                              	| [$1058: ldir] draw oil can
 
-	lea	l_3e1c,a0                      	| [$105a: ld      hl,$3e1c] load HL with start of table data
+	lea	game_rom+0x3e1c,a0                      	| [$105a: ld      hl,$3e1c] load HL with start of table data
 	lea	sprite_start_for_moving_ladders_6944,a1	| [$105d: ld      de,sprite_start_for_moving_ladders_6944] load DE with sprite start for moving ladders
 	move.w	#0x08,d1                        	| [$1060: ld      bc,$0008] set byte counter to 8 8
 	jbsr	ldir                              	| [$1063: ldir] draw moving ladders
 
-	lea	l_3e24,a0                      	| [$1065: ld      hl,$3e24] set source table data
+	lea	game_rom+0x3e24,a0                      	| [$1065: ld      hl,$3e24] set source table data
 	lea	start_of_pulley_sprites_69e4,a1	| [$1068: ld      de,start_of_pulley_sprites_69e4] set destination RAM sprites
 	move.w	#0x18,d1                        	| [$106b: ld      bc,$0018] set counter 24
 	jbsr	ldir                              	| [$106e: ldir] draw pulleys
 
-	lea	l_3e10,a0                      	| [$1070: ld      hl,$3e10] load HL with table data for hammers on conveyors
+	lea	game_rom+0x3e10,a0                      	| [$1070: ld      hl,$3e10] load HL with table data for hammers on conveyors
 	jbsr	l_11a6                            	| [$1073: call    $11a6] ???
 
-	lea	l_3e3c,a0                      	| [$1076: ld      hl,$3e3c] load HL with table data for bonus items on conveyors
+	lea	game_rom+0x3e3c,a0                      	| [$1076: ld      hl,$3e3c] load HL with table data for bonus items on conveyors
 	lea	start_of_bonus_items_6a0c,a1   	| [$1079: ld      de,start_of_bonus_items_6a0c] load DE with sprite destination
 	move.w	#0x0c,d1                        	| [$107c: ld      bc,$000c] 3 items x 4 bytes = 12 bytes (#0C) 12
 	jbsr	ldir                              	| [$107f: ldir] draw bonus item sprites
@@ -4423,7 +4423,7 @@ l_101F:
 
 * arrive here when elevators starts
 
-	lea	l_3dec,a0                      	| [$1087: ld      hl,$3dec] load HL with start of table data
+	lea	game_rom+0x3dec,a0                      	| [$1087: ld      hl,$3dec] load HL with start of table data
 	lea	unknown_6407,a1                	| [$108a: ld      de,unknown_6407] set destination ???
 	move.b	#0x05,d1                        	| [$108d: ld      bc,$051c] set counters 1308
 	move.b	#0x1c,d2                        	| [$108d: ld      bc,$051c] set counters 1308
@@ -4463,13 +4463,13 @@ l_10ad:
 * #6600 - 665F  = the 6 elevator values.  6610, 6620, 6630, 6640 ,6650 are starting values
 *       + 3 is the X position, + 5 is the Y position
 
-	lea	l_3e64,a0                      	| [$10b7: ld      hl,$3e64] start of table data
+	lea	game_rom+0x3e64,a0                      	| [$10b7: ld      hl,$3e64] start of table data
 	lea	destination_sprite_x_positions_6603,a1	| [$10ba: ld      de,destination_sprite_x_positions_6603] Destination sprite ? X positions ?
 	move.b	#0x06,d1                        	| [$10bd: ld      bc,$060e] Counter = #06, offset = #0E 1550
 	move.b	#0x0e,d2                        	| [$10bd: ld      bc,$060e] Counter = #06, offset = #0E 1550
 	jbsr	l_11ec                            	| [$10c0: call    $11ec] set items from data table
 
-	lea	l_3e60,a0                      	| [$10c3: ld      hl,$3e60] start of table data
+	lea	game_rom+0x3e60,a0                      	| [$10c3: ld      hl,$3e60] start of table data
 	lea	destination_sprite_6607,a1   	| [$10c6: ld      de,destination_sprite_6607] Destination sprite ?
 	move.b	#0x06,d1                        	| [$10c9: ld      bc,$060c] B = 6 is loop variable, C = offset ? 1548
 	move.b	#0x0c,d2                        	| [$10c9: ld      bc,$060c] B = 6 is loop variable, C = offset ? 1548
@@ -4481,7 +4481,7 @@ l_10ad:
 	move.w	#0x0010,d3                      	| [$10d8: ld      de,$0010] load offset with #10 16
 	jbsr	l_11d3                            	| [$10db: call    $11d3] ???
 
-	lea	l_3e48,a0                      	| [$10de: ld      hl,$3e48] source is data table for bonus items on elevators
+	lea	game_rom+0x3e48,a0                      	| [$10de: ld      hl,$3e48] source is data table for bonus items on elevators
 	lea	start_of_bonus_items_6a0c,a1   	| [$10e1: ld      de,start_of_bonus_items_6a0c] destination is RAM area for bonus items
 	move.w	#0x0c,d1                        	| [$10e4: ld      bc,$000c] counter set for #0C bytes 12
 	jbsr	ldir                              	| [$10e7: ldir] copy
@@ -4504,7 +4504,7 @@ l_10ad:
 	move.b	#0x60,(0x2f,a2)                 	| [$1111: ld      (ix+$2f),$60] set fire Y position
 
 	lea	sprites_used_at_top_and_bottom_of_elevators_6970,a1	| [$1115: ld      de,sprites_used_at_top_and_bottom_of_elevators_6970] destination #6970 (sprites used at top and bottom of elevators)
-	lea	l_1121,a0                      	| [$1118: ld      hl,$1121] source data at table below
+	lea	game_rom+0x1121,a0                      	| [$1118: ld      hl,$1121] source data at table below
 	move.w	#0x10,d1                        	| [$111b: ld      bc,$0010] byte counter at #10 16
 	jbsr	ldir                              	| [$111e: ldir] copy
 	rts                                    	| [$1120: ret] return
@@ -4519,22 +4519,22 @@ l_1121:
 
 * arrive here when rivets starts from #0FCC
 
-	lea	l_3df0,a0                      	| [$1131: ld      hl,$3df0] load HL with start of table data
+	lea	game_rom+0x3df0,a0                      	| [$1131: ld      hl,$3df0] load HL with start of table data
 	lea	unknown_6407,a1                	| [$1134: ld      de,unknown_6407] load DE with destination ?
 	move.b	#0x05,d1                        	| [$1137: ld      bc,$051c] set counters 1308
 	move.b	#0x1c,d2                        	| [$1137: ld      bc,$051c] set counters 1308
 
 	jbsr	l_122a                            	| [$113a: call    $122a] copy fire location data to screen?
 
-	lea	l_3e14,a0                      	| [$113d: ld      hl,$3e14] load HL with start of table data for hammer locations
+	lea	game_rom+0x3e14,a0                      	| [$113d: ld      hl,$3e14] load HL with start of table data for hammer locations
 	jbsr	l_11a6                            	| [$1140: call    $11a6] draw the hammers
 
-	lea	l_3e54,a0                      	| [$1143: ld      hl,$3e54] load HL with start of bonus items for rivets
+	lea	game_rom+0x3e54,a0                      	| [$1143: ld      hl,$3e54] load HL with start of bonus items for rivets
 	lea	start_of_bonus_items_6a0c,a1   	| [$1146: ld      de,start_of_bonus_items_6a0c] set destination sprite address
 	move.w	#0x0c,d1                        	| [$1149: ld      bc,$000c] set counter to #C bytes to copy 12
 	jbsr	ldir                              	| [$114c: ldir] draw purse, umbrella, hat to screen
  
-	lea	l_1182,a0                      	| [$114e: ld      hl,$1182] load HL with start of data table
+	lea	game_rom+0x1182,a0                      	| [$114e: ld      hl,$1182] load HL with start of data table
 	lea	destination_64a3,a1          	| [$1151: ld      de,destination_64a3] load DE with destination ?
 	move.b	#0x02,d1                        	| [$1154: ld      bc,$021e] set counters 542
 	move.b	#0x1e,d2                        	| [$1154: ld      bc,$021e] set counters 542
@@ -4542,7 +4542,7 @@ l_1121:
 
 * draws black squares next to kong???
 
-	lea	l_117e,a0                      	| [$115a: ld      hl,$117e] load HL with start of data table
+	lea	game_rom+0x117e,a0                      	| [$115a: ld      hl,$117e] load HL with start of data table
 	lea	set_destination_sprites_64a7,a1	| [$115d: ld      de,set_destination_sprites_64a7] set destination sprites
 	move.b	#0x02,d1                        	| [$1160: ld      bc,$021c] set counters B := 2, C := #1C 540
 	move.b	#0x1c,d2                        	| [$1160: ld      bc,$021c] set counters B := 2, C := #1C 540
@@ -4568,7 +4568,7 @@ l_117e:
 * called from #102B and #1093
 
 l_1186:
-	lea	l_11a2,a0                      	| [$1186: ld      hl,$11a2] load HL with start of data table
+	lea	game_rom+0x11a2,a0                      	| [$1186: ld      hl,$11a2] load HL with start of data table
 	lea	destination_6507,a1            	| [$1189: ld      de,destination_6507] load DE with destination
 	move.b	#0x0a,d1                        	| [$118c: ld      bc,$0a0c] set counters 2572
 	move.b	#0x0c,d2                        	| [$118c: ld      bc,$0a0c] set counters 2572
@@ -4595,7 +4595,7 @@ l_11a6:
 	move.b	#0x0e,d2                        	| [$11a9: ld      bc,$020e] B := 2 for the 2 hammers.  C := #E for ??? 526
 	jbsr	l_11ec                            	| [$11ac: call    $11ec]
 
-	lea	l_3e08,a0                      	| [$11af: ld      hl,$3e08] set source
+	lea	game_rom+0x3e08,a0                      	| [$11af: ld      hl,$3e08] set source
 	lea	unknown_6687,a1                	| [$11b2: ld      de,unknown_6687] set destination
 	move.b	#0x02,d1                        	| [$11b5: ld      bc,$020c] set counters 524
 	move.b	#0x0c,d2                        	| [$11b5: ld      bc,$020c] set counters 524
@@ -4764,7 +4764,7 @@ l_124b:
 
 * jump here from #0701 when GameMode2 == #D
 * mario died ?
-
+l_127C:
 	jbsr	l_1dbd                            	| [$127c: call    $1dbd] check for bonus items and jumping scores, rivets
 	move.b	death_indicator_639d,d0         	| [$127f: ld      a,(death_indicator_639d)] load A with this normally 0.  1 while mario dying, 2 when dead
 	jbsr	rst_28                            	| [$1282: rst     $28] jump based on A
@@ -4860,7 +4860,7 @@ l_12ed:
 * jump here from #0701
 * player 1 died
 * clear sounds, decrease life, check for and handle game over
-
+l_12F2:
 	jbsr	l_011c                            	| [$12f2: call    $011c] clear all sounds
 	clr.b	d0                               	| [$12f5: xor     a] A := 0
 	move.b	d0,game_start_flag_622c         	| [$12f6: ld      (game_start_flag_622c),a] store into game start flag
@@ -5162,7 +5162,7 @@ l_1459:
 	move.b	d0,waittimermsb_6009            	| [$1462: ld      (waittimermsb_6009),a] clear timer
 	lea	gamemode2_600a,a0              	| [$1465: ld      hl,gamemode2_600a] load HL with game mode2 address
 	addq.b	#1,(a0)                         	| [$1468: inc     (hl)] increase game mode2 to #15
-	lea	l_030d,a1                      	| [$1469: ld      de,$030d] load task data for text #D "NAME REGISTRATION"
+	lea	game_rom+0x030d,a1                      	| [$1469: ld      de,$030d] load task data for text #D "NAME REGISTRATION"
 	move.b	#0x0c,d1                        	| [$146c: ld      b,$0c] set counter for #0C items (12 decimal)
 
 l_146e:
@@ -5378,7 +5378,7 @@ l_158a:
 
 	move.b	#0x01,d0                        	| [$1598: ld      a,$01] A := 1
 	move.b	d0,hsblinktoggle_6031           	| [$159a: ld      (hsblinktoggle_6031),a] store into HSBlinkToggle
-	lea	l_01bf,a1                      	| [$159d: ld      de,$01bf]
+	lea	game_rom+0x01bf,a1                      	| [$159d: ld      de,$01bf]
 
 l_15a0:
 	LOAD_RAM_ADDRESS	unknown_ram_address_6038,a3             	| [$15a0: ld      iy,(unknown_ram_address_6038)] load IY with Unk6038
@@ -5447,7 +5447,7 @@ l_15fa:
 	move.l	a0,-(sp)                        	| [$15fb: push    hl] save HL
 	and.w	#0xFF,d2
 	asl.b	#1,d2                            	| [$15fc: sla     c]
-	lea	l_360f,a0                      	| [$15fe: ld      hl,$360f] start of table data
+	lea	game_rom+0x360f,a0                      	| [$15fe: ld      hl,$360f] start of table data
 	add.w	d2,a0                            	| [$1601: add     hl,bc]
 	exg	a1,a0                              	| [$1602: ex      de,hl]
 	lea	unknown_6974,a0                	| [$1603: ld      hl,unknown_6974]
@@ -5518,7 +5518,7 @@ l_1641:
 * jump here from #1622 when girders or elevators is finished.  step 1 of 6
 l_1654:
 	jbsr	l_1708                            	| [$1654: call    $1708] clear all sounds, draw heart sprite, redraw girl sprite, clear "help", play end of level sound
-	lea	l_385c,a0                      	| [$1657: ld      hl,$385c] load HL with start of kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$1657: ld      hl,$385c] load HL with start of kong graphic table data
 	jbsr	l_004e                            	| [$165a: call    $004e] update kong's sprites
 	move.b	#0x20,d0                        	| [$165d: ld      a,$20] A := #20
 	move.b	d0,waittimermsb_6009            	| [$165f: ld      (waittimermsb_6009),a] set timer to #20
@@ -5537,7 +5537,7 @@ l_1662:
 * jump here from #1622 when girders or elevators is finished.  step 2 of 6
 
 	jbsr	rst_18                            	| [$1670: rst     $18] count down timer and only continue here if zero, else RET
-	lea	l_3932,a0                      	| [$1671: ld      hl,$3932] load HL with start of kong's sprites table data
+	lea	game_rom+0x3932,a0                      	| [$1671: ld      hl,$3932] load HL with start of kong's sprites table data
 	jbsr	l_004e                            	| [$1674: call    $004e] update kong's sprites
 	move.b	#0x20,d0                        	| [$1677: ld      a,$20] A := #20
 	move.b	d0,waittimermsb_6009            	| [$1679: ld      (waittimermsb_6009),a] set timer to #20
@@ -5554,7 +5554,7 @@ l_1662:
 * jump here from #1622 when girders or elevators is finished.  step 3 of 6
 
 	jbsr	rst_18                            	| [$168a: rst     $18] count down timer and only continue here if zero, else RET
-	lea	l_388c,a0                      	| [$168b: ld      hl,$388c] load HL with start of table data for kong
+	lea	game_rom+0x388c,a0                      	| [$168b: ld      hl,$388c] load HL with start of table data for kong
 	jbsr	l_004e                            	| [$168e: call    $004e] update kong's sprites
 	move.b	#0x66,d0                        	| [$1691: ld      a,$66] A := #66
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$1693: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite
@@ -5569,7 +5569,7 @@ l_1662:
 	jbsr	l_1708                            	| [$16a3: call    $1708] clear all sounds, draw heart sprite, redraw girl sprite, clear "help", play end of level sound
 	move.b	kongs_x_position_6910,d0        	| [$16a6: ld      a,(kongs_x_position_6910)] load A with kong's X position
 	sub.b	#0x3b,d0                         	| [$16a9: sub     $3b] subtract #3B
-	lea	l_385c,a0                      	| [$16ab: ld      hl,$385c] load HL with kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$16ab: ld      hl,$385c] load HL with kong graphic table data
 	jbsr	l_004e                            	| [$16ae: call    $004e] update kong's sprites to default kong graphic
 	lea	start_of_kong_sprite_6908,a0   	| [$16b1: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	d0,d2                           	| [$16b4: ld      c,a] load C with offset computed above to move kong back where he was
@@ -5613,7 +5613,7 @@ l_16e1:
 	jra	l_16d5                             	| [$16eb: jp      $16d5] jump back
 
 l_16ee:
-	lea	l_388c,a0                      	| [$16ee: ld      hl,$388c] load HL with start of table data for kong
+	lea	game_rom+0x388c,a0                      	| [$16ee: ld      hl,$388c] load HL with start of table data for kong
 	jbsr	l_004e                            	| [$16f1: call    $004e] update kong's sprites
 	move.b	#0x66,d0                        	| [$16f4: ld      a,$66] A := #66
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$16f6: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite for climbing
@@ -5739,7 +5739,7 @@ l_1785:
 	cmp.b	#0x7f,d0                         	| [$1794: cp      $7f] at end ?
 	jne	l_179d                             	| [$1796: jp      nz,$179d] no, skip next 2 steps
 
-	lea	l_3a73,a0                      	| [$1799: ld      hl,$3a73] load HL with table for screens/levels for level 5+
+	lea	game_rom+0x3a73,a0                      	| [$1799: ld      hl,$3a73] load HL with table for screens/levels for level 5+
 	move.b	(a0),d0                         	| [$179c: ld      a,(hl)] load A with the screen
 
 l_179d:
@@ -5772,21 +5772,21 @@ l_179d:
 	jbsr	l_0514                            	| [$17d0: call    $0514] clear "help of right side of girl
 	move.w	#0x76da,d7                      	| [$17d3: ld      hl,$76da] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17d6: call    $1826] clear screen area
-	lea	l_3a47,a1                      	| [$17d9: ld      de,$3a47] load DE with start of table data
+	lea	game_rom+0x3a47,a1                      	| [$17d9: ld      de,$3a47] load DE with start of table data
 	jbsr	l_0da7                            	| [$17dc: call    $0da7] draw the screen
 	move.w	#0x76d5,d7                      	| [$17df: ld      hl,$76d5] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17e2: call    $1826] clear screen area
-	lea	l_3a4d,a1                      	| [$17e5: ld      de,$3a4d] load DE with start of table data
+	lea	game_rom+0x3a4d,a1                      	| [$17e5: ld      de,$3a4d] load DE with start of table data
 	jbsr	l_0da7                            	| [$17e8: call    $0da7] draw the screen
 	move.w	#0x76d0,d7                      	| [$17eb: ld      hl,$76d0] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17ee: call    $1826] clear screen area
-	lea	l_3a53,a1                      	| [$17f1: ld      de,$3a53] load DE with start of table data
+	lea	game_rom+0x3a53,a1                      	| [$17f1: ld      de,$3a53] load DE with start of table data
 	jbsr	l_0da7                            	| [$17f4: call    $0da7] draw the screen
 	move.w	#0x76cb,d7                      	| [$17f7: ld      hl,$76cb] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17fa: call    $1826] clear screen area
-	lea	l_3a59,a1                      	| [$17fd: ld      de,$3a59] load DE with start of table data
+	lea	game_rom+0x3a59,a1                      	| [$17fd: ld      de,$3a59] load DE with start of table data
 	jbsr	l_0da7                            	| [$1800: call    $0da7] draw the screen
-	lea	l_385c,a0                      	| [$1803: ld      hl,$385c] load HL with start of kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$1803: ld      hl,$385c] load HL with start of kong graphic table data
 	jbsr	l_004e                            	| [$1806: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$1809: ld      hl,start_of_kong_sprite_6908] load HL with start of kong sprites
 	move.b	#0x44,d2                        	| [$180c: ld      c,$44] load offset of #44
@@ -5839,11 +5839,11 @@ l_182f:
 
 * kong is beating his chest after rivets have been cleared
 
-	lea	l_39cf,a1                      	| [$1844: ld      de,$39cf] load DE with start of table data
+	lea	game_rom+0x39cf,a1                      	| [$1844: ld      de,$39cf] load DE with start of table data
 	btst.b	#3,(a0)                         	| [$1847: bit     3,(hl)] test bit 3.  True?
 	jne	l_184e                             	| [$1849: jr      nz,$184e] Yes, skip next step
 
-	lea	l_39f7,a1                      	| [$184b: ld      de,$39f7] else load DE with other table start
+	lea	game_rom+0x39f7,a1                      	| [$184b: ld      de,$39f7] else load DE with other table start
 
 l_184e:
 	exg	a1,a0                              	| [$184e: ex      de,hl] DE <> HL
@@ -5854,7 +5854,7 @@ l_184e:
 	rts                                    	| [$1858: ret] return
 
 l_1859:
-	lea	l_385c,a0                      	| [$1859: ld      hl,$385c] load HL with start of kong graphic table data
+	lea	game_rom+0x385c,a0                      	| [$1859: ld      hl,$385c] load HL with start of kong graphic table data
 	jbsr	l_004e                            	| [$185c: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$185f: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	#0x44,d2                        	| [$1862: ld      c,$44] C := #44
@@ -5870,7 +5870,7 @@ l_1859:
 
 	jbsr	rst_18                            	| [$186f: rst     $18] count down timer and only continue here if zero, else RET
 
-	lea	l_3a1f,a0                      	| [$1870: ld      hl,$3a1f] start of table data for kong upside down
+	lea	game_rom+0x3a1f,a0                      	| [$1870: ld      hl,$3a1f] start of table data for kong upside down
 	jbsr	l_004e                            	| [$1873: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$1876: ld      a,$03] A := 3
 	move.b	d0,play_sound_for_falling_bouncer_6084	| [$1878: ld      (play_sound_for_falling_bouncer_6084),a] play falling sound
@@ -5901,7 +5901,7 @@ l_1859:
 	move.b	#0xd8,(a0)+                      	| [$189d: ld      (hl),$d8] set sprite Y value
 	move.w	#0x76c6,d7                      	| [$189f: ld      hl,$76c6] load HL with start of screen location to clear
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$18a2: call    $1826] clear the top part of rivets
-	lea	l_3a5f,a1                      	| [$18a5: ld      de,$3a5f] load DE with table data for sections to clear after rivets done
+	lea	game_rom+0x3a5f,a1                      	| [$18a5: ld      de,$3a5f] load DE with table data for sections to clear after rivets done
 	jbsr	l_0da7                            	| [$18a8: call    $0da7] draw the top girder where mario and girl meet
 
 	move.w	#0x0004,d3                      	| [$18ab: ld      de,$0004] load counters 4
@@ -6010,7 +6010,7 @@ l_193d:
 	cmp.b	#0x7f,d0                         	| [$1942: cp      $7f] is this the end code ?
 	jne	l_194b                             	| [$1944: jp      nz,$194b] no, skip next 2 steps
 
-	lea	l_3a73,a0                      	| [$1947: ld      hl,$3a73] yes, load HL with #3A73 = start of table data for screens/levels for level 5+
+	lea	game_rom+0x3a73,a0                      	| [$1947: ld      hl,$3a73] yes, load HL with #3A73 = start of table data for screens/levels for level 5+
 	move.b	(a0),d0                         	| [$194a: ld      a,(hl)] load A with screen number from table
 
 l_194b:
@@ -6254,7 +6254,7 @@ l_1a7b:
 	ror.b	#1,d0                           	| [$1a8e: rra] rotate right.  carry?  (is this rivet on right side?)
 	jcs	l_1abd                             	| [$1a8f: jp      c,$1abd] yes, skip ahead and load HL with #012B and return to #1A95
 
-	lea	l_02cb,a0                      	| [$1a92: ld      hl,$02cb] else load HL with master offset for rivets
+	lea	game_rom+0x02cb,a0                      	| [$1a92: ld      hl,$02cb] else load HL with master offset for rivets
 
 l_1a95:
 	tst.b	d0                               	| [$1a95: and     a] A == 0 ?
@@ -6289,7 +6289,7 @@ l_1a9e:
 * arrive from #1A8F above
 
 l_1abd:
-	lea	l_012b,a0                      	| [$1abd: ld      hl,$012b] load HL with alternate master offset for rivets
+	lea	game_rom+0x012b,a0                      	| [$1abd: ld      hl,$012b] load HL with alternate master offset for rivets
 	jra	l_1a95                             	| [$1ac0: jp      $1a95] jump back to program and resume
 
 * check for jumping and other movements
@@ -8202,7 +8202,7 @@ l_2407:
 * called from #2B09
 
 l_241f:
-	lea	l_0100,a1                      	| [$241f: ld      de,$0100] DE:= #0100
+	lea	game_rom+0x0100,a1                      	| [$241f: ld      de,$0100] DE:= #0100
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2422: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
 	cmp.b	#0x16,d0                         	| [$2425: cp      $16] is this greater than #16 ?
 	bcc.b	0f                               	| [...]
@@ -8250,7 +8250,7 @@ l_241f:
 * 2.
 
 l_2441:
-	lea	l_3f0c,a0                      	| [$2441: ld      hl,$3f0c] load HL with ROM area that has NINTENDO written
+	lea	game_rom+0x3f0c,a0                      	| [$2441: ld      hl,$3f0c] load HL with ROM area that has NINTENDO written
 	move.b	#0x5e,d0                        	| [$2444: ld      a,$5e] A := #5E = constant so the checksum comes to zero
 	move.b	#0x06,d1                        	| [$2446: ld      b,$06] for B = 1 to 6
 
@@ -8269,18 +8269,18 @@ l_2448:
 l_2456:
 	move.b	screen_number_6227,d0           	| [$2456: ld      a,(screen_number_6227)] load A with screen number
 	subq.b	#1,d0                           	| [$2459: dec     a] is this the girders?
-	lea	l_3ae4,a0                      	| [$245a: ld      hl,$3ae4] load HL with start of table data for girders
+	lea	game_rom+0x3ae4,a0                      	| [$245a: ld      hl,$3ae4] load HL with start of table data for girders
 	jeq	l_2471                             	| [$245d: jp      z,$2471] if girders, skip ahead
 
 	subq.b	#1,d0                           	| [$2460: dec     a] else is this the conveyors?
-	lea	l_3b5d,a0                      	| [$2461: ld      hl,$3b5d] load HL with start of table data for conveyors
+	lea	game_rom+0x3b5d,a0                      	| [$2461: ld      hl,$3b5d] load HL with start of table data for conveyors
 	jeq	l_2471                             	| [$2464: jp      z,$2471] if conveyors, skip ahead
 
 	subq.b	#1,d0                           	| [$2467: dec     a] else is this the elevators?
-	lea	l_3be5,a0                      	| [$2468: ld      hl,$3be5] load HL with start of table data for elevators
+	lea	game_rom+0x3be5,a0                      	| [$2468: ld      hl,$3be5] load HL with start of table data for elevators
 	jeq	l_2471                             	| [$246b: jp      z,$2471] if elevators, skip ahead
 
-	lea	l_3c8b,a0                      	| [$246e: ld      hl,$3c8b] otherwise we're on rivets.  load HL with table data for rivets
+	lea	game_rom+0x3c8b,a0                      	| [$246e: ld      hl,$3c8b] otherwise we're on rivets.  load HL with table data for rivets
 
 l_2471:
 	lea	ladder_positions_6300,a2       	| [$2471: ld      ix,ladder_positions_6300] #6300 is used for ladder positions?
@@ -8994,7 +8994,7 @@ l_2808:
 	lea	mario_array_6200,a3            	| [$2808: ld      iy,mario_array_6200] load IY with start of mario sprite
 	move.b	return_without_taking_the_ladder_6205,d0	| [$280c: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$280f: ld      c,a] copy to C
-	lea	l_0407,a0                      	| [$2810: ld      hl,$0407] H := 4, L := 7
+	lea	game_rom+0x0407,a0                      	| [$2810: ld      hl,$0407] H := 4, L := 7
 	jbsr	l_286f                            	| [$2813: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
 	tst.b	d0                               	| [$2816: and     a] was there a collision ?
 	bne.b	0f                               	| [...]
@@ -9058,12 +9058,12 @@ l_2853:
 	move.b	d0,d2                           	| [$285c: ld      c,a] copy to C
 	move.b	inputstate_6010,d0              	| [$285d: ld      a,(inputstate_6010)] load A with copy of input (see RawInput). except when jump pressed, bit 7 is set momentarily.
 	and.b	#0x03,d0                         	| [$2860: and     $03] mask bits, now between 0 and 3
-	lea	l_0508,a0                      	| [$2862: ld      hl,$0508] H := #05, L := #08.  [H is the left-right window for jumping items, L is the up-down window?]
+	lea	game_rom+0x0508,a0                      	| [$2862: ld      hl,$0508] H := #05, L := #08.  [H is the left-right window for jumping items, L is the up-down window?]
 	jeq	l_286b                             	| [$2865: jp      z,$286b] if masked input was zero, skip next step
 
 * player moving joystick left or right while jumping
 
-	lea	l_1308,a0                      	| [$2868: ld      hl,$1308] H := #13 (19 decimal) , L := #08. [ why is L set again ???]  [H is the left-right window, increased if joystick moved left or right]
+	lea	game_rom+0x1308,a0                      	| [$2868: ld      hl,$1308] H := #13 (19 decimal) , L := #08. [ why is L set again ???]  [H is the left-right window, increased if joystick moved left or right]
 
 l_286b:
 	jbsr	l_3e88                            	| [$286b: call    $3e88] check for items being jumped based on which screen this is [seems like a patch ?  what was original code? CALL #286F ?]
@@ -9272,7 +9272,7 @@ l_2974:
 	lea	mario_array_6200,a3            	| [$2974: ld      iy,mario_array_6200] load IY with start of mario sprite values
 	move.b	return_without_taking_the_ladder_6205,d0	| [$2978: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$297b: ld      c,a] copy to C
-	lea	l_0408,a0                      	| [$297c: ld      hl,$0408] H := 4, L := 8
+	lea	game_rom+0x0408,a0                      	| [$297c: ld      hl,$0408] H := 4, L := 8
 	move.b	#0x02,d1                        	| [$297f: ld      b,$02] B := 2 for the 2 hammers (?)
 	move.w	#0x0010,d3                      	| [$2981: ld      de,$0010] offset for each hammer 16
 	lea	software_address_of_hammer_sprite_6680,a2	| [$2984: ld      ix,software_address_of_hammer_sprite_6680] load IX with start of hammer sprites ?
@@ -10076,7 +10076,7 @@ l_2d15:
 	jeq	l_2d51                             	| [$2d20: jp      z,$2d51] yes, jump ahead
 
 	move.b	d0,d2                           	| [$2d23: ld      c,a] else copy A to C
-	lea	l_3932,a0                      	| [$2d24: ld      hl,$3932] load HL with table data start
+	lea	game_rom+0x3932,a0                      	| [$2d24: ld      hl,$3932] load HL with table data start
 	move.b	crazy_blue_barrel_indicator_6382,d0	| [$2d27: ld      a,(crazy_blue_barrel_indicator_6382)] load A with crazy/blue barrel indicator
 	ror.b	#1,d0                            	| [$2d2a: rrca] Is this a crazy barrel?
 	jcs	l_2d2f                             	| [$2d2b: jp      c,$2d2f] yes, skip next step
@@ -10143,7 +10143,7 @@ l_2d70:
 * arrive here because this barrel is crazy from #2D4E
 
 l_2d83:
-	lea	l_39cc,a0                      	| [$2d83: ld      hl,$39cc] load HL with crazy barrel data
+	lea	game_rom+0x39cc,a0                      	| [$2d83: ld      hl,$39cc] load HL with crazy barrel data
 
         * 39CC  BB
         * 39CD  4D
@@ -10155,7 +10155,7 @@ l_2d83:
 * kong is releasing a barrel (?)
 
 l_2d8c:
-	lea	l_39c3,a0                      	| [$2d8c: ld      hl,$39c3] load HL with start of table data address
+	lea	game_rom+0x39c3,a0                      	| [$2d8c: ld      hl,$39c3] load HL with start of table data address
 	STORE_ROM_ADDRESS	a0,unknown_rom_address_62a8                 	| [$2d8f: ld      (unknown_rom_address_62a8),hl] store into ???
 	move.b	#0x01,(0x01,a2)                 	| [$2d92: ld      (ix+$01),$01] set crazy barrel indicator
 	move.b	crazy_blue_barrel_indicator_6382,d0	| [$2d96: ld      a,(crazy_blue_barrel_indicator_6382)] load A with crazy/blue barrel indicator
@@ -10182,7 +10182,7 @@ l_2da5:
 	addq.w	#3,a1                           	| [$2dc7: inc     de] * 3
 	move.b	(a1),d0                         	| [$2dca: ld      a,(de)] load A with kong hand Y position
 	move.b	d0,(0x05,a2)                    	| [$2dcb: ld      (ix+$05),a] store in barrel's Y position
-	lea	l_385c,a0                      	| [$2dce: ld      hl,$385c] load HL with table data start
+	lea	game_rom+0x385c,a0                      	| [$2dce: ld      hl,$385c] load HL with table data start
 	jbsr	l_004e                            	| [$2dd1: call    $004e] update kong's sprites
 	lea	kong_sprite_array_690b,a0      	| [$2dd4: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	move.b	#0xfc,d2                        	| [$2dd7: ld      c,$fc] load c with offset of -4
@@ -10331,7 +10331,7 @@ l_2e84:
 * arrive from #2E41
 
 l_2e9c:
-	lea	l_39aa,a0                      	| [$2e9c: ld      hl,$39aa] load HL with start of table data
+	lea	game_rom+0x39aa,a0                      	| [$2e9c: ld      hl,$39aa] load HL with start of table data
 	move.b	#0x03,d0                        	| [$2e9f: ld      a,$03] load sound duration of 3
 	move.b	d0,play_sound_for_bouncer_6083  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a] play sound for bouncer
 	jra	l_2e4b                             	| [$2ea4: jp      $2e4b] jump back
@@ -10354,7 +10354,7 @@ l_2ea7:
 	add.b	#0xf8,d0                         	| [$2ebf: add     a,$f8] add #F8 = result is now between #F8 and #07
 	move.b	d0,(0x03,a2)                    	| [$2ec1: ld      (ix+$03),a] store A into initial X position for bouncer sprite
 	move.b	#0x01,(a2)                 	| [$2ec4: ld      (ix+$00),$01] set sprite as active
-	lea	l_39aa,a0                      	| [$2ec8: ld      hl,$39aa] values #39 and #AA to be inserted below.  #39AA is the start of table data for Y offsets to add for each movement
+	lea	game_rom+0x39aa,a0                      	| [$2ec8: ld      hl,$39aa] values #39 and #AA to be inserted below.  #39AA is the start of table data for Y offsets to add for each movement
 	
 	move.b	#0xAA,(0x0e,a2)                    	| [$2ecb: ld      (ix+$0e),l]
 	move.b	#0x39,(0x0f,a2)                    	| [$2ece: ld      (ix+$0f),h] store HL into +E and +F
@@ -10831,6 +10831,7 @@ l_3103:
 
 * internal difficulty == 0 or 1. In this case, the fireball movement routine is only executed every other frame, so that fireballs move slowly.
 
+l_3110:
 	move.b	framecounter_601a,d0 				| LD      A,(FrameCounter)       | load A with this clock counts down from #FF to,0x00 over and over...
 	move.b	d1,d5                           	| [$3112: ld      h,b] load H with B == ??? from previous subroutine ???? [what is this doing here ?]
 	and.b	#0x01,d0                         	| [$3113: and     $01] \  If lowest bit of timer is 0 Return and continue as normal
@@ -11081,7 +11082,7 @@ l_3261:
 	move.b	d0,(0x13,a2)                    	| [$3261: ld      (ix+$13),a] Store updated index into Y-position adjustment table
 	clr.w	d3                               	| [$3264: ld      d,$00] \  Index the Y-position adjustment table using +#13 to get in A the amount to adjust the Y-position by to
 	move.b	d0,d3                           	| [$3266: ld      e,a]| make the fireball bob up and down
-	lea	l_3a7a,a0                      	| [$3267: ld      hl,$3a7a]|
+	lea	game_rom+0x3a7a,a0                      	| [$3267: ld      hl,$3a7a]|
 	add.w	d3,a0                            	| [$326a: add     hl,de]|
 	move.b	(a0),d0                         	| [$326b: ld      a,(hl)] /
 
@@ -11494,7 +11495,7 @@ l_3478:
 	tst.w	d5				| adc     hl,bc       |                   	|
 	jne	l_349a                             	| [$3484: jp      nz,$349a] /
 
-	lea	l_3aac,a0                      	| [$3487: ld      hl,$3aac] load HL with start of table data
+	lea	game_rom+0x3aac,a0                      	| [$3487: ld      hl,$3aac] load HL with start of table data
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$348a: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] \  Jump if Mario is on left side of the screen, in this case we spawn the fireball on the left
 	btst.b	#7,d0                           	| [$348d: bit     7,a]|
 	jeq	l_34a8                             	| [$348f: jp      z,$34a8] /
@@ -11538,7 +11539,7 @@ l_34b9:
 	btst.b	#7,d0                           	| [$34c2: bit     7,a]|
 	jne	l_34ed                             	| [$34c4: jp      nz,$34ed] /
 
-	lea	l_3ac4,a0                      	| [$34c7: ld      hl,$3ac4] Load HL with start of table data for spawning fireball on right side
+	lea	game_rom+0x3ac4,a0                      	| [$34c7: ld      hl,$3ac4] Load HL with start of table data for spawning fireball on right side
 
 * Possible X and Y positions to spawn a fireball on the right side of the screen
 * First value is X position, 2nd value is Y position
@@ -11586,7 +11587,7 @@ l_34ca:
 	rts                                    	| [$34ec: ret] return
 
 l_34ed:
-	lea	l_3ad4,a0                      	| [$34ed: ld      hl,$3ad4] Load HL with alternate start of table data for spawning fireball on left side.
+	lea	game_rom+0x3ad4,a0                      	| [$34ed: ld      hl,$3ad4] Load HL with alternate start of table data for spawning fireball on left side.
 	jra	l_34ca                             	| [$34f0: jp      $34ca] Jump back
 
 * update fires or firefoxes to hardware
