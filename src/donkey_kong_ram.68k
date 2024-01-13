@@ -14,6 +14,7 @@
 	.global reg_flipscreen
 	.global reg_palette_a
 	.global reg_palette_b
+	.global sprite_ram
 	.global reg_music
 	.global reg_sfx
 	.global	reg_sfx_death
@@ -33,12 +34,11 @@
 
 
 bg_videoram:
-CHARACTER_RAM:						| $8000
 	ds.b	0x400
 bg_colorram:
-ATTRIBUTE_RAM:						| $8400
 	ds.b	0x400
-
+sprite_ram:
+	ds.b	0x400
 reg_flipscreen:
 	ds.b	1
 reg_palette_a:

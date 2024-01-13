@@ -262,7 +262,7 @@ REG_PALETTE_B       = 0x7d87
 
 
 * Machine accepts no more than 90 credits (this is a BCD value)
-MAX_CREDITS     = 0x90
+max_credits     = 0x90
 
 RAM = 0x6000
 SPRITE_RAM      = 0x7000
@@ -1249,7 +1249,7 @@ donkey_kong_irq:
 	jne	l_0098                             	| [$008b: jp      nz,$0098] yes, jump ahead
 
 	                               	| [$0091: and     a] is this player 2 ?
-	move.b	in1,d0                          	| [$0092: ld      a,(in1)] load A with raw input from player 2
+	jbsr	osd_read_in_1                          	| [$0092: ld      a,(in1)] load A with raw input from player 2
 	tst.b	playerturnb_600e             	| [$008e: ld      a,(playerturnb_600e)] else load A with player number
 	jne	l_009b                             	| [$0095: jp      nz,$009b] yes, skip next step
 
@@ -1446,7 +1446,7 @@ l_0141:
 * checks for and handles credits
 
 l_017b:
-	move.b	in2,d0                          	| [$017b: ld      a,(in2)] load A with IN2
+	jbsr	osd_read_in_2                          	| [$017b: ld      a,(in2)] load A with IN2
 	btst.b	#7,d0                           	| [$017e: bit     7,a] is the coin switch active?
 	lea	coinswitch_6003,a0             	| [$0180: ld      hl,coinswitch_6003] load HL with pointer to coin switch indicator
 	jne	l_0189                             	| [$0183: jp      nz,$0189] yes, skip next 2 steps
@@ -1490,7 +1490,7 @@ l_019d:
 	subq.w	#1,a0                           	| [$01aa: dec     hl] HL := NumCredits
 	exg	a1,a0                              	| [$01ab: ex      de,hl] DE := NumCredits, HL := CreditsPerCoin
 	move.b	(a1),d0                         	| [$01ac: ld      a,(de)] load A with number of credits in BCD
-	cmp.b	max_credits,d0						| [cp      max_credits] is the number of credits already maxed out?
+	cmp.b	#max_credits,d0						| [cp      max_credits] is the number of credits already maxed out?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$01af: ret     nc] yes| return [...]
 0:
@@ -1540,7 +1540,7 @@ l_01c3:
 * this sub reads and sets the dip switch settings, and creates the default high score table
 
 l_0207:
-	move.b	dsw1,d0                         	| [$0207: ld      a,(dsw1)] load A with Dip switch settings
+	jbsr	osd_read_dsw_1                         	| [$0207: ld      a,(dsw1)] load A with Dip switch settings
 	move.b	d0,d2                           	| [$020a: ld      c,a] copy to C
 	lea	startinglives_6020,a0          	| [$020b: ld      hl,startinglives_6020] set destination address to initial number of lives
 	and.b	#0x03,d0                         	| [$020e: and     $03] mask bits, now between 0 and 3 inclusive
@@ -1600,7 +1600,7 @@ l_0247:
 	                           	| [$024c: inc     hl] HL := CreditsPerCoin
 	move.b	d2,(a0)+                         	| [$024d: ld      (hl),c] store DE and BC into coins/credits
 	                           	| [$024e: inc     hl] HL := UprightCab = memory for upright/cocktail
-	move.b	dsw1,d0                         	| [$024f: ld      a,(dsw1)] load A with dipswitch settings
+	jbsr	osd_read_dsw_1                         	| [$024f: ld      a,(dsw1)] load A with dipswitch settings
 	rol.b	#1,d0                            	| [$0252: rlca] rotate left
 	jcs	l_0259                             	| [$0255: jp      c,$0259] if carry, skip next step
 	move.b	#0x01,d0                        	| [$0253: ld      a,$01] A := 1
@@ -1791,17 +1791,17 @@ l_0315:
 	jbsr	rst_08                            	| [$031c: rst     $8] if credits exist or someone is playing, continue.  else RET
 
 	move.b	playerturna_600d,d0             	| [$031d: ld      a,(playerturna_600d)] Load A with player # (0 for player 1, 1 for player 2)
-	jbsr	l_0347                            	| [$0320: call    $0347] Loads HL with location for score (either player 1 or 2)
-	move.w	#0xffe0,d4                      	| [$0323: ld      de,$ffe0] load DE with offset for each column
+	jbsr	load_score_location_0347                            	| [$0320: call    $0347] Loads HL with location for score (either player 1 or 2)
+	move.w	#0xffe0,d3                      	| [$0323: ld      de,$ffe0] load DE with offset for each column
 	btst.b	#4,d1                           	| [$0326: bit     4,b] test bit 4 of timer.  Is it zero ?
 	jeq	l_033e                             	| [$0328: jr      z,$033e] yes, skip ahead
 
 	move.b	#0x10,d0                        	| [$032a: ld      a,$10] A := #10 = blank character
-	move.b	d0,(a0)                         	| [$032c: ld      (hl),a] clear the text "1" from "1UP" or "2" from "2UP"
-	add.w	d3,a0                            	| [$032d: add     hl,de] add offset for next column
-	move.b	d0,(a0)                         	| [$032e: ld      (hl),a] clear the text "U" from "1UP"
-	add.w	d3,a0                            	| [$032f: add     hl,de] next column
-	move.b	d0,(a0)                         	| [$0330: ld      (hl),a] clear the text "P" from "1UP"
+	jbsr	osd_w_videoram                         	| [$032c: ld      (hl),a] clear the text "1" from "1UP" or "2" from "2UP"
+	add.w	d3,d7                            	| [$032d: add     hl,de] add offset for next column
+	jbsr	osd_w_videoram                         	| [$032e: ld      (hl),a] clear the text "U" from "1UP"
+	add.w	d3,d7                            	| [$032f: add     hl,de] next column
+	jbsr	osd_w_videoram                         	| [$0330: ld      (hl),a] clear the text "P" from "1UP"
 	move.b	twoplayergame_600f,d0           	| [$0331: ld      a,(twoplayergame_600f)] load A with # of players in game
 	                               	| [$0334: and     a] is this a 1 player game?
 	bne.b	0f                               	| [...]
@@ -1810,27 +1810,31 @@ l_0315:
 
 	move.b	playerturna_600d,d0             	| [$0336: ld      a,(playerturna_600d)] Load current player #
 	eor.b	#0x01,d0                         	| [$0339: xor     $01] change player from 1 to 2 or from 2 to 1
-	jbsr	l_0347                            	| [$033b: call    $0347] Loads HL with location for score (either player 1 or 2)
+	jbsr	load_score_location_0347                            	| [$033b: call    $0347] Loads HL with location for score (either player 1 or 2)
 
 l_033e:
 	addq.b	#1,d0                           	| [$033e: inc     a] increase A, now it has the number of the player
-	move.b	d0,(a0)                         	| [$033f: ld      (hl),a] draw player number on screen
-	add.w	d3,a0                            	| [$0340: add     hl,de] next column
-	move.b	#0x25,(a0)                      	| [$0341: ld      (hl),$25] draw "U" on screen
-	add.w	d3,a0                            	| [$0343: add     hl,de] next column
-	move.b	#0x20,(a0)                      	| [$0344: ld      (hl),$20] draw "P" on screen
+	jbsr	osd_w_videoram                         	| [$033f: ld      (hl),a] draw player number on screen
+	add.w	d3,d7                            	| [$0340: add     hl,de] next column
+	move.w	d0,-(a7)
+	move.b	#0x25,d0                      	| [$0341: ld      (hl),$25] draw "U" on screen
+	jbsr	osd_w_videoram
+	add.w	d3,d7                            	| [$0343: add     hl,de] next column
+	move.b	#0x20,d0                      	| [$0344: ld      (hl),$20] draw "P" on screen
+	jbsr	osd_w_videoram
+	move.w	(a7)+,d0
 	rts                                    	| [$0346: ret] return
 
 * called from #033B
 
-l_0347:
-	lea	l_7740,a0                      	| [$0347: ld      hl,$7740] for player 1 HL gets #7740 VRAM address
+load_score_location_0347:
+	move.w	#0x7740,d7                      	| [$0347: ld      hl,$7740] for player 1 HL gets #7740 VRAM address
 	tst.b	d0                               	| [$034a: and     a] is this player 2?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$034b: ret     z] no, then return [...]
 0:
 
-	lea	l_74e0,a0                      	| [$034c: ld      hl,$74e0] player 2 gets #74E0 location on screen
+	move.w	#0x74e0,d7                      	| [$034c: ld      hl,$74e0] player 2 gets #74E0 location on screen
 	rts                                    	| [$034f: ret] return
 
 * called from #02CA
@@ -2120,7 +2124,7 @@ l_04a1:
 	move.b	#0x10,d0                        	| [$04a1: ld      a,$10] A := #10
 
 l_04a3:
-	lea	l_75c4,a0                      	| [$04a3: ld      hl,$75c4] load HL with address of a location in video RAM where girl yells "HELP"
+	move.w	#0x75c4,d7                      	| [$04a3: ld      hl,$75c4] load HL with address of a location in video RAM where girl yells "HELP"
 	jbsr	clear_help_0514                            	| [$04a6: call    $0514] update girl yelling "HELP"
 	move.b	girls_sprite_6905,d0            	| [$04a9: ld      a,(girls_sprite_6905)] load A with girl's sprite
 
@@ -2538,19 +2542,22 @@ l_0640:
 
 
 	lea	game_rom+0x384a,a0                      	| [$064d: ld      hl,$384a] load HL with #384A - table data
-	lea	l_7465,a1                      	| [$0650: ld      de,$7465] load DE with #7465 - screen location for bonus timer
+	move.w	#0x7465,d7                      	| [$0650: ld      de,$7465] load DE with #7465 - screen location for bonus timer
 	move.b	#0x06,d0                        	| [$0653: ld      a,$06] For A = 1 to 6
 
 * draws timer box on screen with all zeros
 
 l_0655:
-	move.w	#0x001d,a2                      	| [$0655: ld      ix,$001d] load IX with #001D offset used for each column 29
-	move.w	#0x03,d1                        	| [$0659: ld      bc,$0003] counter := 3 3
-	jbsr	ldir                              	| [$065c: ldir] transfer (HL) to (DE) 3 times
-	add.w	d3,a2                            	| [$065e: add     ix,de] add offset DE to IX
-
-	move.l	a2,d3                        	| [$0660: push    ix]
-	                        	| [$0662: pop     de] load DE with IX
+	                      	| [$0655: ld      ix,$001d] load IX with #001D offset used for each column 29
+	move.w	#0x03-1,d1                        	| [$0659: ld      bc,$0003] counter := 3 3
+	move.w	D0,-(a7)
+0:
+	move.b	(a0)+,d0                              	| [$065c: ldir] transfer (HL) to (DE) 3 times
+	jbsr	osd_w_videoram
+	add.w	#0x1D,d7                            	| [$065e: add     ix,de] add offset DE to IX
+	dbf		d1,0b
+	move.w	(a7)+,d0											| [$0660: push    ix]
+												| [$0662: pop     de] load DE with IX
 	subq.b	#1,d0                           	| [$0663: dec     a] decrease counter
 	jne	l_0655                             	| [$0664: jp      nz,$0655] loop again if not zero
 
@@ -3069,7 +3076,7 @@ l_08e4:
 	jbsr	l_0616                            	| [$08f0: call    $0616] draw credits on screen
 
 l_08f3:
-	move.b	in2,d0                          	| [$08f3: ld      a,(in2)] load A with IN2 [Credit/Service/Start Info]
+	jbsr	osd_read_in_2                          	| [$08f3: ld      a,(in2)] load A with IN2 [Credit/Service/Start Info]
 	and.b	d1,d0                            	| [$08f6: and     b] mask bits with B
 	rts                                    	| [$08f7: ret] return
 
@@ -5693,7 +5700,7 @@ l_1708:
 	move.b	#0x20,(a0)                      	| [$1717: ld      (hl),$20] set heart sprite Y position
 	lea	girls_sprite_6905,a0           	| [$1719: ld      hl,girls_sprite_6905] load HL with girl's sprite
 	move.b	#0x13,(a0)                      	| [$171c: ld      (hl),$13] set girl's sprite
-	lea	l_75c4,a0                      	| [$171e: ld      hl,$75c4] load HL with VRAM screen address
+	move.w	#0x75c4,d7                      	| [$171e: ld      hl,$75c4] load HL with VRAM screen address
 	move.w	#0x0020,d3                      	| [$1721: ld      de,$0020] DE := #20 32
 	move.b	#0x10,d0                        	| [$1724: ld      a,$10] A := #10
 	jbsr	clear_help_0514                            	| [$1726: call    $0514] clear "help" that the girl yells
@@ -5823,9 +5830,9 @@ l_17b6:
 	move.b	#0x03,(a0)                      	| [$17c0: ld      (hl),$03] set duration to 3
 	move.b	#0x10,d0                        	| [$17c2: ld      a,$10] A := #10 = code for clear space
 	move.w	#0x0020,d3                      	| [$17c4: ld      de,$0020] DE := #20 32
-	lea	l_7623,a0                      	| [$17c7: ld      hl,$7623] load HL with video RAM location
+	move.w	#0x7623,d7                      	| [$17c7: ld      hl,$7623] load HL with video RAM location
 	jbsr	clear_help_0514                            	| [$17ca: call    $0514] clear "help" on left side of girl
-	lea	l_7583,a0                      	| [$17cd: ld      hl,$7583] load HL with video RAM location
+	move.w	#0x7583,d7                      	| [$17cd: ld      hl,$7583] load HL with video RAM location
 	jbsr	clear_help_0514                            	| [$17d0: call    $0514] clear "help of right side of girl
 	move.w	#0x76da,d7                      	| [$17d3: ld      hl,$76da] load HL with center area of video ram
 	jbsr	clear_sections_of_rivets_screen_1826                            	| [$17d6: call    $1826] clear screen area
@@ -10730,7 +10737,7 @@ l_3031:
 * rolls up kong's ladder during intro
 
 l_304a:
-	lea	l_ffe0,a1                      	| [$304a: ld      de,$ffe0] load DE with offset
+	move.w	#-0x20,d3                      	| [$304a: ld      de,$ffe0] load DE with offset
 	move.b	kong_ladder_climb_counter_638e,d0	| [$304d: ld      a,(kong_ladder_climb_counter_638e)] load A with kong ladder climb counter
 	clr.w	d1                               	| [$3051: ld      b,$00] B := 0
 	move.b	d0,d1                           	| [$3050: ld      c,a] copy to C
