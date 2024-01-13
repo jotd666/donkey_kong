@@ -15,27 +15,16 @@ AFB_68010 = 0
 AFB_68020 = 1
 NO68020 = 1
 
-
-BORDERBLANK = 1
+SPRITE_Y_CORRECTION = 0
 
 Y_MAX = 252
 
 BASE_BPLCON2_VALUE = 0x0024
-SCREEN_ADDRESS = 0x8000
+SCREEN_ADDRESS = 0x7400
 
-* set to 1 to block ground scrolling, see what's
-* going on with the game scrolling system
-FIX_GROUND_SCROLL = 0
 
-PANEL_MAX_Y = 48
-DYNAMIC_COPPER_ROWS = 192-PANEL_MAX_Y
 
-SPRITE_Y_CORRECTION = -24
-
-SCROLLABLE_TILE_Y_START = 24
-SCROLLABLE_STRIP_NB_COLS = 66
-NB_BYTES_PER_SCROLLABLE_STRIP_ROW = SCROLLABLE_STRIP_NB_COLS
-
+BORDERBLANK = 0
 SCORE_FILE_SIZE = 0x6
 
 * if the alloc_sprite & update_sprite routines
@@ -79,7 +68,7 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 _custom = 0xDFF000
 
 
-NB_PLAYFIELD_PLANES = 4
+NB_PLAYFIELD_PLANES = 5
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
 NB_BYTES_PER_ROW = 40
 NB_LINES = 256
@@ -179,7 +168,6 @@ start:
 		.global osd_read_dsw_1
 		.global osd_read_dsw_2
 		.global osd_read_in_1
-		.global osd_read_in_0
 		.global osd_read_in_2
 		.global osd_read_inputs
 		.global osd_read_high_scores
@@ -1780,52 +1768,13 @@ load_palette_in_copperlist:
 	lea		panel_tiles_colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
-	* pass through
-load_bobs_palette_in_playfield_copperlist:
-	movem.l	d0-d1/a0-a1,-(a7)
-	move.w	#TOTAL_NB_COLORS,d0
-	lea		bobs_palette(pc),a0
-	lea		playfield_colors,a1
-	bsr		load_palette
-	movem.l	(a7)+,d0-d1/a0-a1
-	
-	bsr		load_moonbase_palette	| TEMP
-	
-	rts
-	
-* moonbase is shown: set tiles palette low enough so it doesn't
-* interfere with mountains. Jeep is a sprite so it's not affected, and
-* no other bob is shown at this point. We keep being lucky :)
 
-load_moonbase_palette:
-	movem.l	d0-d1/a0-a1,-(a7)
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		tiles_palette+2(pc),a0
-	lea		moonbase_colors,a1
-	bsr		load_palette
-	movem.l	(a7)+,d0-d1/a0-a1
-	rts
 	
-* moonbase isn't shown anymore: reset colors to bob palette
-reset_moonbase_palette:
-	movem.l	d0-d1/a0-a1,-(a7)
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		bobs_palette+2(pc),a0
-	lea		moonbase_colors,a1
-	bsr		load_palette
-	movem.l	(a7)+,d0-d1/a0-a1
 	rts
 
-* when playfield isn't displayed, better use tiles palette
-* will save a lot of headaches trying to match bob & tiles palette
-load_tiles_palette_in_playfield_copperlist:
-	movem.l	d0-d1/a0-a1,-(a7)
-	move.w	#TOTAL_NB_COLORS,d0
-	lea		tiles_palette(pc),a0
-	lea		playfield_colors,a1
-	bsr		load_palette
-	movem.l	(a7)+,d0-d1/a0-a1
-	rts
+	
+
+
 
 * < A0: palette
 * < A1: copperlist
@@ -2038,11 +1987,6 @@ update_bg_tile:
 	move.w	d7,d3
 	lsr.w	#5,d3		| this is Y (tile)
 	
-	moveq	#0,d6		| standard copy mode
-	cmp.w	#COOKIE_CUT_TILE_Y_MIN,d3		| lower Y: remain in standard copy at all times (panel)
-	bcs.b	22f
-	jbsr	is_title_displayed
-	seq		d6
 22:
 	
 	and.w	#0x1F,d7	| this is X (tile)
@@ -2051,16 +1995,6 @@ update_bg_tile:
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
 	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 4 bitplanes for the panel
-	cmp.w	#PANEL_MAX_Y/8,d3
-	bcs.b	23f
-	* always wait for blitter operation before writing to chip with CPU
-	WAIT_BLIT
-23:
-
-	.ifeq	FIX_GROUND_SCROLL
-	cmp.w	#SCROLLABLE_TILE_Y_START,d3
-	bcc		update_scrollable_bottom
-	.endif
 	
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
@@ -2094,8 +2028,6 @@ update_bg_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-	tst.b	d6
-	jne		5f
 	
 	* just copy
 4:
@@ -2109,42 +2041,11 @@ update_bg_tile:
 0:
 	rts
 
-	* "cookie cut" of one char with mask except for
-	* last plane that doesn't need that (mountains use 3 first planes)
-5:
-	subq	#1,d4
-	lea		(NB_PLAYFIELD_PLANES*8,a0),a2		| mask source
-6:
-	move.l	a2,a3
-	.set	offset,0
-	.rept	8
-	move.b	(offset,a1),d1		| previous value
-	move.b	(a3)+,d2
-	not.b	d2
-	and.b	d2,d1
-	move.b	(a0)+,d2
-	or.b	d2,d1
-	move.b	d1,(offset,a1)	
-	.set	offset,offset+NB_BYTES_PER_ROW
-	.endr
-	* next plane
-	add.w	d5,a1
-	dbf		d4,6b
-
-	* last plane, plain copy to gain speed
-	.set	offset,0
-	.rept	8
-	move.b	(a0)+,(offset,a1)	
-	.set	offset,offset+NB_BYTES_PER_ROW
-	.endr
-
-	rts
 	
 	* clear tile
 
 11:
-	tst.b	d6
-	bne.b	2f		| cookie cut of empty char => do nothing
+
 111:
 	.set	offset,0
 	.rept	8
@@ -2161,102 +2062,6 @@ update_bg_tile:
 	**blitz
 	rts
 
-SCROLLABLE_PLANE_SIZE = SCROLLABLE_STRIP_NB_COLS*8*(32-SCROLLABLE_TILE_Y_START)
-
-update_scrollable_bottom:
-	lea		mulNB_BYTES_PER_SCROLLABLE_STRIP_ROW_table(pc),a0
-	lea		bg_scrollable_strip,a1		| backbuffer
-	* D3 = Y
-	move.w	#SCROLLABLE_PLANE_SIZE,d5
-
-	* recenter on 0
-	sub.w	#SCROLLABLE_TILE_Y_START,d3
-	add.w	d3,d3
-	move.w	(a0,d3.w),d3
-	lsl.w	#3,d3		| times 8
-	add.w	d3,a1
-	add.w	d7,a1
-
-	tst.b	d1
-	bne.b	23f
-	tst.w	d0	| empty character
-	jeq	11f
-23:
-	* optimization when a well-known
-	* uniform character is passed (standard charset)
-	*cmp.b	#0xF3,d0	| uniform ground
-	
-
-	lea		character_table,a0
-	add.w	d0,d0
-	add.w	d0,d0
-	move.l	(a0,d0.w),d0
-	jeq	2f
-	move.l	d0,a0		| pointer on clut table
-	* now we use d1 (attribute)
-	add.w	d1,d1
-	add.w	(a0,d1.w),a0
-	cmp.l	d0,a0
-	jeq		12f		| should not happen
-
-	* just copy
-4:
-	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
-	bcc		42f		| single copy
-41:
-	.set	offset,0
-	.rept	8
-	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)	
-	move.b	d0,(offset+32,a1)		| mirror
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,41b
-0:
-	rts
-42:
-	.set	offset,0
-	.rept	8
-	move.b	(a0)+,d0
-	move.b	d0,(offset,a1)	
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,42b
-	rts
-
-* clear tile(s)
-11:
-	cmp.w	#SCROLLABLE_STRIP_NB_COLS-2,d7
-	bcc		112f		| single clear
-	* mirror
-111:
-	.set	offset,0
-	.rept	8
-	clr.b	(offset,a1)
-	clr.b	(offset+32,a1)
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,111b
-2:
-	rts
-	* no mirror
-112:
-	.set	offset,0
-	.rept	8
-	clr.b	(offset,a1)
-	.set	offset,offset+NB_BYTES_PER_SCROLLABLE_STRIP_ROW
-	.endr
-	add.w	d5,a1
-	dbf		d4,12b
-	rts
-	
-12:
-	* clut/tile combo not declared as used
-	**blitz
-	rts
 			
 store_sprite_pos_16:
 	move.l	a1,-(a7)
@@ -2777,37 +2582,6 @@ handle_keyboard:
 	movem.l	(a7)+,d0/a0/a5
 	rts
 	
-* reset all 3 slots for each line
-reset_dynamic_colors:
-	movem.l	a0/d2-d3,-(a7)
-	lea	color_line_copper,a0
-	move.w	#DYNAMIC_COPPER_ROWS-1,d3
-	move.w	#0x1FE,d2
-0:
-	move.w	d2,(a0)
-	addq.w	#4,a0
-	move.w	d2,(a0)
-	addq.w	#4,a0
-	move.w	d2,(a0)
-	addq.w	#8,a0
-	dbf		d3,0b
-	movem.l	(a7)+,a0/d2-d3
-	rts
-
-* only reset first slot (the one for the mountains/city colors)
-reset_background_dynamic_colors:
-	movem.l	a0/d2-d3,-(a7)
-	lea	color_line_copper,a0
-	move.w	#DYNAMIC_COPPER_ROWS-1,d3
-	move.w	#0x1FE,d2
-0:
-	move.w	d2,(a0)
-	add.w	#16,a0
-	dbf		d3,0b
-	movem.l	(a7)+,a0/d2-d3
-	rts
-
-
 toggle_pause:
 	* pause only within game
 *	tst.b	gameplay_allowed_6054
@@ -2835,7 +2609,7 @@ beamdelay:
 
 	
 	MUL_TABLE	NB_BYTES_PER_ROW,256
-	MUL_TABLE	NB_BYTES_PER_SCROLLABLE_STRIP_ROW,256
+
 
 	.align	4		| leave this long word alignment
 program_args:	ds.l	64,0
@@ -2982,27 +2756,7 @@ bg_displayed_screen_ptr:
 
 
 	.include	"sound_entries.68k"
-	* continuing on sound table for guard step/climb sounds
-	* which are the same as the player, only less loud
-	.word	1,0
-	.long	guard_climb_sound | 15
 
-	.word	1,0
-	.long	guard_walk_sound | 16
-
-guard_climb_sound:
-    .long    player_climb_raw
-    .word   5136    | copied from player climb
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
-
-guard_walk_sound:
-    .long    player_walk_raw
-    .word   4467   | copied from player walk
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
 
 	
 _keyexit:
@@ -3141,28 +2895,6 @@ sprites:
  	.set    beampos,0x5401
     .word  beampos,0xFFFE
 
-playfield_colors:
-	DECL_COLORS	0,TOTAL_NB_COLORS
-
-
-	* now use the dynamic color changing technique to make up for the sudden
-	* loss of 8 (24 if we were considering using 32) colors thanks to cheap
-	* Commodore design unable to reproduce a 1982 game easily :)
-	* AGA could do this game in a breeze but with ECS we need to use our
-	* imagination...
-color_line_copper:
-	.rept	DYNAMIC_COPPER_ROWS
-	* room for 3 color registers to change dynamically each line
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.word	0x1FE,0
-	.set    beampos,beampos+0x100
-	.word	beampos,0xFFFE
-	.endr
-	* right after that, we leave room to be able to set palette to tiles palette again
-	* (for moon base at start only)
-moonbase_colors:
-	DECL_COLORS	1,TOTAL_NB_COLORS-1	| 15 colors, no bg color change
 
 	* then we should wait a bit, and set palette to tiles palette definitely
 	* so scrolling letters have the proper colors TODO
@@ -3193,11 +2925,6 @@ bg_screen_data_2:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
 	.endif
-	* draw the rows 24->31 in a buffer to be able
-	* to blit it with scroll effect afterwards
-	* double the buffer as we need to emulate revolving scroll
-bg_scrollable_strip:
-	ds.b	SCROLLABLE_PLANE_SIZE*NB_PLAYFIELD_PLANES
 	.align	8
 
 		

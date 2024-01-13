@@ -9,7 +9,7 @@ _base	SLAVE_HEADER					; ws_security + ws_id
 	dc.w	17					; ws_version (was 10)
 	dc.w	WHDLF_NoError
     IFD CHIP_ONLY
-	dc.l	$180000					; ws_basememsize
+	dc.l	$200000					; ws_basememsize
     ELSE
 	dc.l	$80000					; ws_expmem
     ENDC
