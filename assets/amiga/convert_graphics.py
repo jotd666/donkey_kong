@@ -129,40 +129,9 @@ sprite_config = dict()
 attached_sprites = set()
 jeep_cluts = {0,12}
 
-# jeep is made of sprites: 5 sprites needed, 6 color slots
-# so we can allow 2 more sprites but they must have same CLUT...
-# missile qualifies (made of 2 sprites)
-# tank qualifies (there can be 2 tanks at once)
 
-add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
-add_sprite_block(1,4,"jeep_part",jeep_cluts,True)
-add_sprite_block(5,8,"jeep_wheel",0,True)
-add_sprite_block(0x42,0x42,"saucer",7,False)
-add_sprite_block(0x43,0x44,"hole_making_ship",7,False)
-add_sprite_block(0x45,0x47,"ovoid_ship",7,False)
-add_sprite_block(0x38,0x38,"tank",7,True)
-add_sprite_block(0x3A,0x3B,"missile",9,True)
-add_sprite_block(0x7B,0x7C,"missile",9,True)
-add_sprite_block(0x7E,0x7E,"points",{14,15},False)  # 800,1000
-add_sprite_block(0x7D,0x7D,"points",{14,15},False)  # 300,500
+#add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
 
-add_sprite_block(0x31,0x34,"rock_ball",4,False)
-add_sprite_block(0x36,0x37,"rock_ball",4,False)
-add_sprite_block(0x40,0x41,"medium_explosion",1,False)
-add_sprite_block(0x2a,0x2c,"shot_explosion",7,False)
-add_sprite_block(0x2D,0x30,"rock",4,False)
-add_sprite_block(0x3E,0x3F,"explosion",7,False)
-add_sprite_block(0x48,0x4A,"ship_explosion",1,False)
-add_sprite_block(0x7A,0x7A,"small_explosion",1,False)
-add_sprite_block(0x61,0x6F,"ground_explosion",3,False)
-add_sprite_block(0x4B,0x4D,"ship_bomb",1,False)
-add_sprite_block(0x11,0x27,"jeep_explosion",{1,13},True)
-add_sprite_block(0x3D,0x3D,"mine",{3,10},False)
-add_sprite_block(0x39,0x39,"tank_shot",4,True)   # maybe wrong clut
-add_sprite_block(0x3C,0x3C,"missile_shot",4,False)   # maybe wrong clut
-add_sprite_block(0,0,"blank",0,False)   # maybe wrong clut
-add_sprite_block(0x28,0x28,"jeep_shot",14,False)   # maybe wrong clut
-add_sprite_block(0x35,0x35,"ground_digging_bomb",14,False)   # maybe wrong clut
 
 
 def switch_values(t,a,b):
@@ -171,7 +140,7 @@ def switch_values(t,a,b):
 
 tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
 
-tile_global_palette = sorted(tile_palette)
+tile_global_palette = sorted(set(tile_palette))
 # add fake colors until 32 ATM (maybe we'll use sprites & replicate the colors)
 tile_global_palette += [(12,13,14)]*(32-len(tile_global_palette))
 # dump cluts as RGB4 for sprites
@@ -182,8 +151,9 @@ tile_global_palette += [(12,13,14)]*(32-len(tile_global_palette))
 ##
 ##
 ##
-##with open(os.path.join(src_dir,"tiles_palette.68k"),"w") as f:
-##    bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+with open(os.path.join(src_dir,"palette.68k"),"w") as f:
+    bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+
 ##with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
 ##    bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 

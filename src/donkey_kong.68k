@@ -1061,6 +1061,14 @@ NumObstaclesJumped  = RAM+$60
 *
 
 donkey_kong_reset:
+	.ifndef	RELEASE
+	tst.b	break_at_startup_flag
+	beq.b	0f
+	* put anything here that you need to track addresses
+	
+	jbsr	osd_break
+	.endif
+0:
 l_0000:
 	clr.b	d0                               	| [$0000: ld   a,$00] A := 0
 	jbsr	osd_interrupt_control           	| [$0002: ld   (REG_VBLANK_ENABLED),a] disable interrupts
@@ -1134,19 +1142,9 @@ rst_28:
 	move.l	(sp)+,a0                        	| [$0029: pop     hl] load HL with address of jump table
 	clr.w	d3                               	| [$002b: ld      d,$00] D := 0
 	move.b	d0,d3                           	| [$002a: ld      e,a] load E with A
-	jra	l_0032                             	| [$002d: jp      $0032] skip ahead
+	                            	
+									| [$002d: jp      $0032] skip ahead
 
-*
-* RST #30
-*
-rst_30:
-	jra	l_0044                             	| [$0030: jr      $0044] this core sub is actually at #0044
-
-*
-* continuation of RST #28 from #002D above
-*
-
-l_0032:
 	add.w	d3,a0                            	| [$0032: add     hl,de] HL is now 2 more than it was
 	add.w	d3,a0                            	| [$0032: add     hl,de] (32 bits) HL is now 4 more than it was
 	move.l	(a0),a0                         	| [$0033: ld      e,(hl)] load E with low byte from the table
@@ -1154,6 +1152,31 @@ l_0032:
 											| [$0035: ld      d,(hl)] load D with high byte from table
 											| [$0036: ex      de,hl] DE <> HL
 	jra	(a0)                               	| [$0037: jp      (hl)] jump to the address in HL
+
+*
+* RST #30
+*
+only_continues_if_given_level_0030:
+	                             	| [$0030: jr      $0044] this core sub is actually at #0044
+* continuation of rst #30
+* used to check a screen number.  if it doesn't match, the 2nd level of subroutine is returned
+* A is preloaded with the check value, in binary
+
+	lea	screen_number_6227,a0          	| [$0044: ld      hl,screen_number_6227] Load HL with address of Screen #
+	move.b	(a0),d1                         	| [$0047: ld      b,(hl)] load B with Screen #, For B = 1 to screen # (1, 2, 3 or 4)
+
+l_0048:
+	ror.b	#1,d0                            	| [$0048: rrca] Rotate A right with carry
+	subq.b	#1,d1                           	| [...]
+	jne	l_0048                             	| [$0049: djnz    $0048] Next B
+
+	bcc.b	0f                               	| [...]
+	rts                                    	| [$004b: ret    c] return if carry [...]
+0:
+	move.l	(sp)+,a0                        	| [$004c: pop     hl] otherwise HL gets the stack = return to higher subroutine
+	rts                                    	| [$004d: ret] return
+									
+
 
 *
 * RST     #38
@@ -1168,32 +1191,15 @@ rst_38:
 	move.b	#0x0a,d1                        	| [$003b: ld      b,$0a] for B = 1 to #A (10 decimal)
 
 l_003d:
-	move.b	d2,d0                           	| [$003d: ld      a,c] Load A with C
-	add.b	(a0),d0                          	| [$003e: add     a,(hl)] Add the contents of HL into A
-	move.b	d0,(a0)                         	| [$003f: ld      (hl),a] put back into HL, this increases the value in HL by C
+	                           	| [$003d: ld      a,c] Load A with C
+	add.b	d2,(a0)                          	| [$003e: add     a,(hl)] Add the contents of HL into A
+										| [$003f: ld      (hl),a] put back into HL, this increases the value in HL by C
 	add.w	d3,a0                            	| [$0040: add     hl,de] next HL to do will be 4 more than previous
 	subq.b	#1,d1                           	| [...]
 	jne	l_003d                             	| [$0041: djnz    $003d] next B
 
 	rts                                    	| [$0043: ret] return
 
-* continuation of rst #30
-* used to check a screen number.  if it doesn't match, the 2nd level of subroutine is returned
-* A is preloaded with the check value, in binary
-
-l_0044:
-	lea	screen_number_6227,a0          	| [$0044: ld      hl,screen_number_6227] Load HL with address of Screen #
-	move.b	(a0),d1                         	| [$0047: ld      b,(hl)] load B with Screen #, For B = 1 to screen # (1, 2, 3 or 4)
-
-l_0048:
-	ror.b	#1,d0                            	| [$0048: rrca] Rotate A right with carry
-	jne	l_0048                             	| [$0049: djnz    $0048] Next B
-
-	bcc.b	0f                               	| [...]
-	rts                                    	| [$004b: ret    c] return if carry [...]
-0:
-	move.l	(sp)+,a0                        	| [$004c: pop     hl] otherwise HL gets the stack = return to higher subroutine
-	rts                                    	| [$004d: ret] return
 
 * HL is preloaded with source data of kong sprites values
 * this subroutine copies the memory values of HL to HL + #28 into #6908 through #6908 + #28
@@ -1279,13 +1285,12 @@ l_00b5:
 	jbsr	l_0057                            	| [$00b9: call    $0057] update the random number gen
 	jbsr	l_017b                            	| [$00bc: call    $017b] check for credits being inserted and handle them
 	jbsr	l_00e0                            	| [$00bf: call    $00e0] update all sounds
-	lea	game_rom+0x00d2,a0                      	| [$00c2: ld      hl,$00d2] load HL with return address
+										| [$00c2: ld      hl,$00d2] load HL with return address
 
-	move.l	a0,-(sp)                        	| [$00c5: push    hl] push to stack so any RETs go there (#00D2)
+	pea		l_00d2                        	| [$00c5: push    hl] push to stack so any RETs go there (#00D2)
 	move.b	gamemode1_6005,d0               	| [$00c6: ld      a,(gamemode1_6005)] load A with game mode1
 
 * GameMode1 is 0 when game is turned on, 1 when in attract mode.  2 when credits in waiting for start, 3 when playing game
-
      jbsr	rst_28             | jump based on above:
 
 	.long   l_01c3 | #01C3 = startup
@@ -1628,8 +1633,8 @@ l_026c:
 	move.b	d0,d2                           	| [$026c: ld      c,a] For C = 0 to #FF
 
 l_026d:
-	move.b	d0,(a0)                         	| [$026d: ld      (hl),a] store 0 into memory
-	addq.w	#1,a0                           	| [$026e: inc     hl] next location
+	move.b	d0,(a0)+                         	| [$026d: ld      (hl),a] store 0 into memory
+	                           	| [$026e: inc     hl] next location
 	subq.b	#1,d2                           	| [$026f: dec     c] Next C
 	jne	l_026d                             	| [$0270: jr      nz,$026d] Loop until done
 
@@ -1644,8 +1649,8 @@ l_0279:
 	move.b	d0,d2                           	| [$0279: ld      c,a] For C = 0 to #FF
 
 l_027a:
-	move.b	d0,(a0)                         	| [$027a: ld      (hl),a] Clear this memory
-	addq.w	#1,a0                           	| [$027b: inc     hl] next memory
+	move.b	d0,(a0)+                         	| [$027a: ld      (hl),a] Clear this memory
+	                           	| [$027b: inc     hl] next memory
 	subq.b	#1,d2                           	| [$027c: dec     c] Next C
 	jne	l_027a                             	| [$027d: jr      nz,$027a] loop until done
 
@@ -1677,8 +1682,8 @@ l_028a:
 	st.b	d0                                	| [$0296: ld      a,$ff] load A with code for no task
 
 l_0298:
-	move.b	d0,(a0)                         	| [$0298: ld      (hl),a] store into task location
-	addq.w	#1,a0                           	| [$0299: inc     hl] next location
+	move.b	d0,(a0)+                         	| [$0298: ld      (hl),a] store into task location
+										| [$0299: inc     hl] next location
 	subq.b	#1,d1                           	| [...]
 	jne	l_0298                             	| [$029a: djnz    $0298] Next B
 
@@ -1753,9 +1758,9 @@ l_02e3:
 l_02f6:
 	move.b	d0,the_task_pointer_60b1        	| [$02f6: ld      (the_task_pointer_60b1),a] store into the task pointer
 	move.b	d2,d0                           	| [$02f9: ld      a,c] load A with the 2nd byte of the task
-	lea	game_rom+0x02bd,a0                      	| [$02fa: ld      hl,$02bd] load HL with return address
+	pea		l_02bd                      	| [$02fa: ld      hl,$02bd] load HL with return address
 
-	move.l	a0,-(sp)                        	| [$02fd: push    hl] push to stack so RET will go to #02BD = task list
+	                        	| [$02fd: push    hl] push to stack so RET will go to #02BD = task list
 	lea	jump_table_0307,a0                      	| [$02fe: ld      hl,$0307] load HL with data from table below
 	add.w	d3,a0                            	| [$0301: add     hl,de] add the offset based on byte 1 of the task
 	add.w	d3,a0                            	| [$0301: add     hl,de] add the offset based on byte 1 of the task
@@ -1772,7 +1777,7 @@ jump_table_0307:
 	.long	l_051c                             | #051C | 0, for adding to score.  parameter is score in hundreds
 	.long	l_059b                             | #059B | 1, clears and displays scores.  parameter 0 for p1, 1 for p2
 	.long	l_05c6                             | #05C6 | 2, displays score.  0 for p1, 1 for p2, 2 for highscore
-	.long	l_05e9                             | #05E9 | 3, used to draw text.  parameter is code for text to draw
+	.long	draw_text_to_screen_05e9                             | #05E9 | 3, used to draw text.  parameter is code for text to draw
 	.long	l_0611                             | #0611 | 4, draws credits on screen if any are present
 	.long	l_062a                             | #062A | 5, parameter 0 adds bonus to player's score , parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 	.long	l_06b8                             | #06B8 | 6, draws remaining lives and level number.  parameter 1 to draw lives-1
@@ -1923,7 +1928,7 @@ l_03A1:
 
 l_03a2:
 	move.b	#0x03,d0                        	| [$03a2: ld      a,$03] A := 3 = 0011 binary
-	jbsr	rst_30                            	| [$03a4: rst     $30] only continue if level is girders or conveyors, else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$03a4: rst     $30] only continue if level is girders or conveyors, else RET
 
 	jbsr	rst_10                            	| [$03a5: rst     $10] if mario is alive, continue, else RET
 
@@ -2437,7 +2442,8 @@ l_05e0:
 * draws text to screen
 * called from #0306 with code for text to draw in A
 
-l_05e9:
+draw_text_to_screen_05e9:
+	**jbsr	osd_break
 	lea	game_rom+0x364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
 	add.b	d0,d0                            	| [$05ec: add     a,a] double the parameter
 	scs		d7									| remember carry
@@ -2451,34 +2457,38 @@ l_05e9:
 	                           	| [$05f5: inc     hl] next table entry
 	move.b	(a0),d3                         	| [$05f6: ld      d,(hl)] load D with 2nd byte from table
 	LOAD_D3_16_FROM_D3D4
-	exg	d3,a0                              	| [$05f7: ex      de,hl] DE <> HL
-	move.l	d3,a1
+	LOAD_ROM_ADDRESS	d3,a1
+	exg	a1,a0                              	| [$05f7: ex      de,hl] DE <> HL
 	
 	move.b	(a0)+,d4                         	| [$05f8: ld      e,(hl)] load E with 1st byte from dereferenced table
 	                           	| [$05f9: inc     hl] next table entry
 	move.b	(a0)+,d3                         	| [$05fa: ld      d,(hl)] load D with 2ndy byte from derefernced table
 	LOAD_D3_16_FROM_D3D4
-	move.w	d3,d7
+	move.w	d3,d5   | d5 has screen destination
 	                           	| [$05fb: inc     hl] next table entry
 	move.w	#0xffe0,d1                        	| [$05fc: ld      bc,$ffe0] load BC with offset to print characters across 65504
-	move.l	a0,a1                              	| [$05ff: ex      de,hl] DE <> HL.  HL now has screen destination, DE has table pointer
+	exg	a0,a1                              	| [$05ff: ex      de,hl] DE <> HL.  HL now has screen destination, DE has table pointer
 	
 l_0600:
 	move.b	(a1),d0                         	| [$0600: ld      a,(de)] load A with table data
 	cmp.b	#0x3f,d0                         	| [$0601: cp      $3f] end code reached?
 	jeq	l_0026                             	| [$0603: jp      z,$0026] yes, return to program.  This will effectively RET twice
-
+	move.w	d5,d7
 	jbsr	osd_w_videoram                         	| [$0606: ld      (hl),a] draw letter to screen
+
 	move.w	(sp)+,d7                        	| [$0607: pop     af] restore AF from stack.  is there a carry?
 	move.w	(sp)+,d7                        	| [$0607: pop     af] restore AF from stack.  is there a carry? twice
 	jeq	l_060c                             	| [$0608: jr      nc,$060c] no, skip next step
 
-	move.b	#0x10,(a0)                      	| [$060a: ld      (hl),$10] yes, write a blank space to the screen
+	move.w	d5,d7
+	move.b	#0x10,d0                      	| [$060a: ld      (hl),$10] yes, write a blank space to the screen
+	jbsr	osd_w_videoram
 
 l_060c:
-	move.w	d0,-(sp)                        	| [$060c: push    af] save AF
+	move.w	d7,-(sp)                        	| [$060c: push    af] save AF
+	move.w	d7,-(sp)                        	| [$060c: push    af] save AF
 	addq.w	#1,a1                           	| [$060d: inc     de] next table data
-	add.w	d1,a0                            	| [$060e: add     hl,bc] add screen offset for next column
+	add.w	d1,d5                            	| [$060e: add     hl,bc] add screen offset for next column
 	jra	l_0600                             	| [$060f: jr      $0600] loop again
 
 *
@@ -2498,7 +2508,7 @@ l_0611:
 
 l_0616:
 	move.b	#0x05,d0                        	| [$0616: ld      a,$05] load text code for "CREDIT"
-	jbsr	l_05e9                            	| [$0618: call    $05e9] draw to screen
+	jbsr	draw_text_to_screen_05e9                            	| [$0618: call    $05e9] draw to screen
 	lea	numcredits_6001,a0             	| [$061b: ld      hl,numcredits_6001] load HL with pointer to number of credits
 	move.w	#0xffe0,d3                      	| [$061e: ld      de,$ffe0] load DE with #ffe0 = offset for columns?
 	lea	0x74bf,a2                      	| [$0621: ld      ix,$74bf] load IX with screen address to draw
@@ -3072,7 +3082,7 @@ l_08e4:
 	jne	l_08f3                             	| [$08e9: jp      nz,$08f3] no, skip next 3 steps
 
 	move.b	d4,d0                           	| [$08ec: ld      a,e] yes, load A with E for code of text to draw, for buttons to press to start
-	jbsr	l_05e9                            	| [$08ed: call    $05e9] draw text to screen
+	jbsr	draw_text_to_screen_05e9                            	| [$08ed: call    $05e9] draw text to screen
 	jbsr	l_0616                            	| [$08f0: call    $0616] draw credits on screen
 
 l_08f3:
@@ -5583,7 +5593,7 @@ l_1662:
 	lea	end_of_level_counter_6388,a0   	| [$1662: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$1665: inc     (hl)] increase counter
 	move.b	#0x01,d0                        	| [$1666: ld      a,$01] A := 1 = code for girders
-	jbsr	rst_30                            	| [$1668: rst     $30] if girders, continue below.  else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$1668: rst     $30] if girders, continue below.  else RET
 
 	lea	kong_sprite_array_690b,a0      	| [$1669: ld      hl,kong_sprite_array_690b] load HL with start of kong sprite
 	move.b	#0xfc,d2                        	| [$166c: ld      c,$fc] set movement for -4 pixels
@@ -5601,7 +5611,7 @@ l_1670:
 	lea	end_of_level_counter_6388,a0   	| [$167c: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$167f: inc     (hl)] increase counter
 	move.b	#0x04,d0                        	| [$1680: ld      a,$04] A := 4 = 100 code for elevators
-	jbsr	rst_30                            	| [$1682: rst     $30] only continue here if elevators, else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$1682: rst     $30] only continue here if elevators, else RET
 
 	lea	kong_sprite_array_690b,a0      	| [$1683: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	move.b	#0x04,d2                        	| [$1686: ld      c,$04] set to move by 4
@@ -6252,7 +6262,7 @@ l_1a2a:
 
 l_1a33:
 	move.b	#0x08,d0                        	| [$1a33: ld      a,$08] A := 8 = 1000 binary = code for rivets
-	jbsr	rst_30                            	| [$1a35: rst     $30] continue here only on rivets, else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$1a35: rst     $30] continue here only on rivets, else RET
 
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1a36: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	cmp.b	#0x4b,d0                         	| [$1a39: cp      $4b] == #4B = the column the left rivets are on ?
@@ -7040,7 +7050,7 @@ l_1e36:
 	                           	| [$1e3f: inc     l] next
 	move.b	d2,(a0)                         	| [$1e40: ld      (hl),c] store Y position
 	move.b	#0x05,d0                        	| [$1e41: ld      a,$05] A := 5 = binary 0101
-	jbsr	rst_30                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
+	jbsr	only_continues_if_given_level_0030                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
 	lea	play_sound_for_bonus_6085,a0   	| [$1e44: ld      hl,play_sound_for_bonus_6085] load HL with bonus sound address
 	move.b	#0x03,(a0)                      	| [$1e47: ld      (hl),$03] play bonus sound for 3 duration
 l_1e49:
@@ -7778,7 +7788,7 @@ l_21ee:
 
 l_2207:
 	move.b	#0x02,d0                        	| [$2207: ld      a,$02] load A with 2 = 0010 binary
-	jbsr	rst_30                            	| [$2209: rst     $30] only continues here on conveyors, else returns from subroutine
+	jbsr	only_continues_if_given_level_0030                            	| [$2209: rst     $30] only continues here on conveyors, else returns from subroutine
 
 	move.b	framecounter_601a,d7            	| [$220a: ld      a,(framecounter_601a)] load A with this clock counts down from #FF to 00 over and over...
 	                           	| [$220d: rra] time to do this ?
@@ -8465,7 +8475,7 @@ l_24d0:
 
 l_24ea:
 	move.b	#0x02,d0                        	| [$24ea: ld      a,$02] check level for conveyors
-	jbsr	rst_30                            	| [$24ec: rst     $30] if not conveyors, RET, else continue
+	jbsr	only_continues_if_given_level_0030                            	| [$24ec: rst     $30] if not conveyors, RET, else continue
 	jbsr	l_2523                            	| [$24ed: call    $2523] check for deployment of new pies
 	jbsr	l_2591                            	| [$24f0: call    $2591] update all pies positions based on direction of trays, remove pies in fire or off edge
 	lea	start_of_pies_65a0,a2          	| [$24f3: ld      ix,start_of_pies_65a0] load IX with start of pies
@@ -8654,7 +8664,7 @@ l_25e7:
 
 l_25f2:
 	move.b	#0x02,d0                        	| [$25f2: ld      a,$02] load A with 2 = 0010 binary
-	jbsr	rst_30                            	| [$25f4: rst     $30] return if not conveyors
+	jbsr	only_continues_if_given_level_0030                            	| [$25f4: rst     $30] return if not conveyors
 
 	jbsr	l_2602                            	| [$25f5: call    $2602] handle top conveyor and pulleys
 	jbsr	l_262f                            	| [$25f8: call    $262f] handle middle conveyor and pulleys
@@ -8867,7 +8877,7 @@ l_26f8:
 
 l_26fa:
 	move.b	#0x04,d0                        	| [$26fa: ld      a,$04] A := 4 = 0100 binary
-	jbsr	rst_30                            	| [$26fc: rst     $30] only continue here if elevators, else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$26fc: rst     $30] only continue here if elevators, else RET
 
 * elevators only
 
@@ -9330,7 +9340,7 @@ l_294c:
 
 l_2954:
 	move.b	#0x0b,d0                        	| [$2954: ld      a,$0b] A := #0B = 1011 binary
-	jbsr	rst_30                            	| [$2956: rst     $30] if level is elevators RET from this sub now.  no hammers on elevators.
+	jbsr	only_continues_if_given_level_0030                            	| [$2956: rst     $30] if level is elevators RET from this sub now.  no hammers on elevators.
 	jbsr	l_2974                            	| [$2957: call    $2974] load A with 1 if hammer is grabbed, 0 if no grab
 	move.b	d0,mario_is_grabbing_the_hammer_until_he_lands_6218	| [$295a: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into hammer grabbing indicator
 	ror.b	#2,d0                            	| [$295d: rrca] * 2
@@ -9402,7 +9412,7 @@ l_29ac:
 
 l_29af:
 	move.b	#0x04,d0                        	| [$29af: ld      a,$04] A := 4 = 0100
-	jbsr	rst_30                            	| [$29b1: rst     $30] only continue here if we are on the elevators, else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$29b1: rst     $30] only continue here if we are on the elevators, else RET
 
 	lea	mario_array_6200,a3            	| [$29b2: ld      iy,mario_array_6200] load IY with mario's array
 	move.b	return_without_taking_the_ladder_6205,d0	| [$29b6: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
@@ -9924,7 +9934,7 @@ l_2bfd:
 
 l_2c03:
 	move.b	#0x01,d0                        	| [$2c03: ld      a,$01] \ Return if screen is not barrels
-	jbsr	rst_30                            	| [$2c05: rst     $30] /
+	jbsr	only_continues_if_given_level_0030                            	| [$2c05: rst     $30] /
 	jbsr	rst_10                            	| [$2c06: rst     $10] Return if Mario is not alive
 
 	move.b	barrel_deployment_indicator_6393,d0	| [$2c07: ld      a,(barrel_deployment_indicator_6393)] \  Return if we are already in the process of deploying a barrel, no need to deploy another one
@@ -10061,7 +10071,7 @@ l_2c86:
 
 l_2c8f:
 	move.b	#0x01,d0                        	| [$2c8f: ld      a,$01] A := 1 = code for girders
-	jbsr	rst_30                            	| [$2c91: rst     $30] if screen is girders, continue.  else RET
+	jbsr	only_continues_if_given_level_0030                            	| [$2c91: rst     $30] if screen is girders, continue.  else RET
 	jbsr	rst_10                            	| [$2c92: rst     $10] if mario is alive, continue.  else RET
 	move.b	barrel_deployment_indicator_6393,d0	| [$2c93: ld      a,(barrel_deployment_indicator_6393)] load A with barrel deployment indicator
 	ror.b	#1,d0                            	| [$2c96: rrca] is a barrel being deployed ?
@@ -10280,7 +10290,7 @@ l_2da5:
 
 l_2ddb:
 	move.b	#0x0a,d0                        	| [$2ddb: ld      a,$0a] A := binary 1010 = code for rivets and conveyors
-	jbsr	rst_30                            	| [$2ddd: rst     $30] returns immediately on girders and elevators, else continue
+	jbsr	only_continues_if_given_level_0030                            	| [$2ddd: rst     $30] returns immediately on girders and elevators, else continue
 
 	jbsr	rst_10                            	| [$2dde: rst     $10] only continue if mario alive
 	move.b	unknown_6380,d0                 	| [$2ddf: ld      a,(unknown_6380)] \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
@@ -10321,7 +10331,7 @@ l_2df1:
 
 l_2e04:
 	move.b	#0x04,d0                        	| [$2e04: ld      a,$04] A := 4 (0100 binary) to check for elevators screen
-	jbsr	rst_30                            	| [$2e06: rst     $30] if not elevators it will return to program
+	jbsr	only_continues_if_given_level_0030                            	| [$2e06: rst     $30] if not elevators it will return to program
 
 	jbsr	rst_10                            	| [$2e07: rst     $10] if mario is alive, continue, else RET
 
@@ -10451,7 +10461,7 @@ l_2ea7:
 
 l_2ed4:
 	move.b	#0x0b,d0                        	| [$2ed4: ld      a,$0b] B = # 1011 binary
-	jbsr	rst_30                            	| [$2ed6: rst     $30] continue here on girders, conveyors, rivets only.  elevators RET from this sub, it has no hammers.
+	jbsr	only_continues_if_given_level_0030                            	| [$2ed6: rst     $30] continue here on girders, conveyors, rivets only.  elevators RET from this sub, it has no hammers.
 	jbsr	rst_10                            	| [$2ed7: rst     $10] continue here only if mario is alive, otherwise RET from this sub
 
 	lea	hardware_address_of_hammer_sprite_6a18,a1	| [$2ed8: ld      de,hardware_address_of_hammer_sprite_6a18] load DE with hardware address of hammer sprite
@@ -10608,7 +10618,7 @@ l_2fbe:
 
 l_2fcb:
 	move.b	#0x0e,d0                        	| [$2fcb: ld      a,$0e] A := #E = 1110 binary
-	jbsr	rst_30                            	| [$2fcd: rst     $30] is this the girders?  if so, return immediately
+	jbsr	only_continues_if_given_level_0030                            	| [$2fcd: rst     $30] is this the girders?  if so, return immediately
 
 	lea	timer_62b4,a0                  	| [$2fce: ld      hl,timer_62b4] else load HL with timer
 	subq.b	#1,(a0)                         	| [$2fd1: dec     (hl)] count down timer.  at zero?
@@ -10818,7 +10828,7 @@ l_3098:
 * tasks are pushed into #60C0 through #60FF
 
 insert_task_309f:
-	move.w	d3,-(sp)
+	movem.w	d3/d4,-(sp)
 	LOAD_D3D4_FROM_D3_16
 	move.l	a0,-(sp)                        	| [$309f: push    hl] save HL
 	* jotd once again we emulate H/L, start address is known this is quite easy
@@ -10845,7 +10855,7 @@ l_30b8:
 
 l_30bb:
 	move.l	(sp)+,a0                        	| [$30bb: pop     hl] restore HL
-	move.w	(sp)+,d3
+	movem.w	(sp)+,d3/d4
 	rts                                    	| [$30bc: ret] return to program
 
 * arrive here from #1615 when rivets cleared
@@ -11412,7 +11422,7 @@ l_3399:
 
 l_33a1:
 	move.b	#0x07,d0                        	| [$33a1: ld      a,$07] \ Return if immediately we are on rivets, fireballs do not get stuck on the top in this case
-	jbsr	rst_30                            	| [$33a3: rst     $30] /
+	jbsr	only_continues_if_given_level_0030                            	| [$33a3: rst     $30] /
 
 	move.b	(0x0f,a2),d0                    	| [$33a4: ld      a,(ix+$0f)] \ Return if Y-position is >= 59 (i.e., fireball is not on the top girder)
 	cmp.b	#0x59,d0                         	| [$33a7: cp      $59]|
@@ -12905,7 +12915,7 @@ l_3fa0:
 
 l_3fa6:
 	move.b	#0x02,d0                        	| [$3fa6: ld      a,$02] A := 2
-	jbsr	rst_30                            	| [$3fa8: rst     $30] check to see if the level is pie factory.  If not, RET to #3FA3 [then jump to #0D5F]
+	jbsr	only_continues_if_given_level_0030                            	| [$3fa8: rst     $30] check to see if the level is pie factory.  If not, RET to #3FA3 [then jump to #0D5F]
 
 	move.b	#0x02,d1                        	| [$3fa9: ld      b,$02] for B = 1 to 2
 	move.w	#0x776c,d7                      	| [$3fab: ld      hl,$776c] load HL with video RAM address for top rectractable ladder

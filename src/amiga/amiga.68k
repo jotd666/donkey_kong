@@ -1711,6 +1711,7 @@ platform_init:
 	bsr		set_bitplanes
 	
 	bsr		load_palette_in_copperlist
+	jbsr	osd_break
 	
 	* set copperlist
 	move.l	#copperlist,cop1lc(a5)
@@ -1762,10 +1763,10 @@ platform_init:
 	
 load_palette_in_copperlist:
 	movem.l	d0-d1/a0-a1,-(a7)
-	lea		tiles_palette(pc),a0
+	lea		palette(pc),a0
 
 	move.w	#TOTAL_NB_COLORS,d0
-	lea		panel_tiles_colors,a1
+	lea		colors,a1
 	bsr		load_palette
 	movem.l	(a7)+,d0-d1/a0-a1
 
@@ -2426,7 +2427,9 @@ osd_read_inputs:
 0:
 	move.l	(a7)+,d2
 3:
-
+	* not inverted logic after all
+	not.b	d0
+	
 	movem.l	(a7)+,a0/d1
 	rts
 	
@@ -2790,11 +2793,9 @@ temp_filename_buffer:
 _end_of_ng_code:
 		
 	.align 2
-tiles_palette:
-	.include "tiles_palette.68k"
+palette:
+	.include "palette.68k"
 
-bobs_palette:
-	.include "bobs_palette.68k"
 	* sprites "individual" 4-color palettes
 sprite_cluts:
 	.include "palette_cluts.68k"
@@ -2852,6 +2853,9 @@ blank_sprite:
 	.long	0
 	.endr
 	
+	* ATM sprite colors are out of copperlist
+sprite_cols:
+	DECL_COLORS	16,16
 	
 	* main copperlist
 copperlist:
@@ -2860,10 +2864,8 @@ copperlist:
 
 panel_bitplanes:
 	DECL_BITPLANES	0,4
-panel_tiles_colors:
+colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
-sprite_cols:
-	DECL_COLORS	16,16
 sprites:
     * #0
     .word    sprpt+0,0

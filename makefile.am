@@ -54,7 +54,7 @@ $(MAIN): $(OBJS)
 
 $(PROGNAME).o: $(PROGNAME).68k $(PROGNAME).inc $(PROGNAME)_ram.68k $(PROGNAME)_game_ram.68k
 	$(ASM) $(PROGNAME).68k -o $(PROGNAME).o
-amiga.o: $(AMIGASRC)/amiga.68k $(AMIGASRC)/sound_entries.68k $(PROGNAME).inc $(AMIGASRC)/ReadJoyPad.i $(AMIGASRC)/tiles_palette.68k $(AMIGASRC)/bobs_palette.68k
+amiga.o: $(AMIGASRC)/amiga.68k $(AMIGASRC)/sound_entries.68k $(PROGNAME).inc $(AMIGASRC)/ReadJoyPad.i
 	$(ASM) -Iamiga $(AMIGASRC)/amiga.68k -o amiga.o
 vbr.o: $(AMIGASRC)/vbr.68k
 	$(ASM_020) -Iamiga $(AMIGASRC)/vbr.68k -o vbr.o
