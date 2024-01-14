@@ -44,15 +44,37 @@ if dump_sprites:
 NB_POSSIBLE_SPRITES = 128
 NB_BOB_PLANES = 4
 
-rw_json = os.path.join(this_dir,"used_cluts.json")
-if os.path.exists(rw_json):
-    with open(rw_json) as f:
-        used_cluts = json.load(f)
-    # key as integer, list as set for faster lookup (not that it matters...)
-    used_cluts = {int(k):set(v) for k,v in used_cluts.items()}
-else:
-    print(f"Warning: no {rw_json} file, no tile/clut filter, expect BIG graphics.68k file")
-    used_cluts = None
+def guess_cluts():
+
+    # the palette scheme is bizarre and I don't want to dig into MAME source to undestand it so
+    # I'm booting the game with palettes 0, 1, 2, 3 set with a girder containing 3 colors instead
+    # of empty char, and I snapshot the pics. The girder is a nice tile: it contains all 3 nonblack colors
+    # (else it would fails) and even better, it contains them in the first column of the tile. So scanning only
+    # one LINE of the image is enough to collect the colors
+
+    rval = []
+    for i in range(0,4):
+        bank = f"palettes/bank_{i:02}.png"
+        img = Image.open(bank)
+        x_start = img.size[0]-8
+        row_cols = []
+        for y_start in range(0,img.size[1],8):
+            clut_order = iter([3,1,2])
+            non_black_colors = [(0,0,0)]*4
+            non_black_colors_set = set()
+            for y in range(8):
+                color = img.getpixel((x_start,y_start+y))
+                # collect non-black colors, preserving order. The girder tile starts by color 3
+                # (dotted lines), then color 2 (line) then color 1 (cross bars)
+                # first row palette CLUT entry is 0, last row entry is 3
+
+                if len(non_black_colors_set) < 3 and color != (0,0,0) and color not in non_black_colors_set:
+                    non_black_colors_set.add(color)
+                    non_black_colors[next(clut_order)] = color
+            row_cols.append(non_black_colors)
+        rval.append(row_cols)
+    return rval
+
 
 
 
@@ -140,45 +162,52 @@ def switch_values(t,a,b):
 
 tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
 
-tile_global_palette = sorted(set(tile_palette))
-# add fake colors until 32 ATM (maybe we'll use sprites & replicate the colors)
-tile_global_palette += [(12,13,14)]*(32-len(tile_global_palette))
+bobs_palette = sorted(set(tile_palette))
+
+rval = guess_cluts()
 # dump cluts as RGB4 for sprites
-##with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
-##    for clut in sprite_cluts:
-##        rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
-##        bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
-##
-##
-##
+with open(os.path.join(src_dir,"row_colors.68k"),"w") as f:
+    # 4 palette configs
+    f.write("palette_table:\n")
+    for i in range(4):
+        f.write(f"\t.long\tpalette_{i}\n")
+    f.write("\n")
+
+    for i,config in enumerate(rval):
+        f.write(f"palette_{i}:\n")
+        for row in config:
+            rgb4 = [bitplanelib.to_rgb4_color(x) for x in row[1:]]  # don't dump black
+            bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
+
+
+
+# only 1 4 color palette, all rows use 4 colors per row
+fake_4_color_palette = [(0,0,0),(255,0,0),(0,255,0),(0,0,255)]
+
+
+
 with open(os.path.join(src_dir,"palette.68k"),"w") as f:
-    bitplanelib.palette_dump(tile_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+    bitplanelib.palette_dump(bobs_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
 ##with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
 ##    bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
-character_codes_list = []
+character_codes = []
 
 if True:
     for k,chardat in enumerate(block_dict["tile"]["data"]):
         img = Image.new('RGB',(8,8))
 
-        character_codes = list()
+        d = iter(chardat)
+        for i in range(8):
+            for j in range(8):
+                v = next(d)
+                img.putpixel((j,i),fake_4_color_palette[v])
+        character_codes.append(bitplanelib.palette_image2raw(img,None,fake_4_color_palette))
 
-        for cidx,colors in enumerate([tile_palette[i:i+4] for i in range(0,256,4)]):
-            if not used_cluts or (k in used_cluts and cidx in used_cluts[k]):
-                d = iter(chardat)
-                for i in range(8):
-                    for j in range(8):
-                        v = next(d)
-                        img.putpixel((j,i),colors[v])
-                character_codes.append(bitplanelib.palette_image2raw(img,None,tile_global_palette))
-            else:
-                character_codes.append(None)
-            if dump_tiles:
-                scaled = ImageOps.scale(img,5,0)
-                scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}_{cidx}.png"))
-        character_codes_list.append(character_codes)
+        if dump_tiles:
+            scaled = ImageOps.scale(img,5,0)
+            scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}.png"))
 
 
 
@@ -295,26 +324,12 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tbob_table\n")
 
     f.write("character_table:\n")
-    for i,c in enumerate(character_codes_list):
-        # c is the list of the same character with 11 different cluts
+    for i,c in enumerate(character_codes):
+        f.write(f"\t.long\tchar_{i}\n")
+    for i,c in enumerate(character_codes):
         if c is not None:
-            f.write(f"\t.long\tchar_{i}\n")
-        else:
-            f.write("\t.long\t0\n")
-    for i,c in enumerate(character_codes_list):
-        if c is not None:
-            f.write(f"char_{i}:\n")
-            # this is a table
-            for j,cc in enumerate(c):
-                if cc is None:
-                    f.write(f"\t.word\t0\n")
-                else:
-                    f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
-
-            for j,cc in enumerate(c):
-                if cc is not None:
-                    f.write(f"char_{i}_{j}:")
-                    bitplanelib.dump_asm_bytes(cc,f,mit_format=True)
+            f.write(f"char_{i}:")
+            bitplanelib.dump_asm_bytes(c,f,mit_format=True)
 
 ##    f.write("sprite_table:\n")
 ##

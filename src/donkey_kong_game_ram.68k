@@ -1,0 +1,801 @@
+	.global	ram_6000
+	.global	numcredits_6001
+	.global	coinswitch_6003
+	.global	gamemode1_6005
+	.global	nocredits_6007
+	.global	waittimerlsb_6008
+	.global	waittimermsb_6009
+	.global	gamemode2_600a
+	.global	playerturna_600d
+	.global	playerturnb_600e
+	.global	twoplayergame_600f
+	.global	inputstate_6010
+	.global	rawinput_6011
+	.global	rngtimer1_6018
+	.global	rngtimer2_6019
+	.global	timer_constantly_counts_down_601a
+	.global	framecounter_601a
+	.global	startinglives_6020
+	.global	extralifethreshold_6021
+	.global	coinspercredit_6022
+	.global	coinspercredit2_6024
+	.global	uprightcab_6026
+	.global	hscursordelay_6030
+	.global	hsblinktoggle_6031
+	.global	hsblinktimer_6032
+	.global	hstimer_6034
+	.global	hscursorpos_6035
+	.global	hsinitialpos_6036
+	.global	unknown_ram_address_6038
+	.global	unknown_ram_address_603a
+	.global	p1numlives_6040
+	.global	p2numlives_6048
+	.global	numobstaclesjumped_6060
+	.global	walking_sound_buffer_6080
+	.global	sound_buffer_address_for_jumping_6081
+	.global	boom_sound_address_6082
+	.global	play_sound_for_bouncer_6083
+	.global	play_sound_for_falling_bouncer_6084
+	.global	play_sound_for_bonus_6085
+	.global	play_death_sound_6088
+	.global	background_music_value_6089
+	.global	sound_buffer_address_608a
+	.global	music_timer_608b
+	.global	task_list_pointer_60b0
+	.global	the_task_pointer_60b1
+	.global	player_1_score_address_60b2
+	.global	address_for_player_1_score_60b3
+	.global	player_1_score_60b4
+	.global	player_2_score_address_60b5
+	.global	address_of_player_2_score_60b6
+	.global	player_2_score_60b7
+	.global	high_score_60b8
+	.global	high_score_60ba
+	.global	start_of_task_list_60c0
+	.global	high_score_ram_6100
+	.global	address_of_high_score_indicator_611c
+	.global	lowest_high_score_address_61a5
+	.global	unknown_61b1
+	.global	address_for_unknown_61c6
+	.global	copy_of_player_score_61c7
+	.global	mario_array_6200
+	.global	put_back_6202
+	.global	jump_if_bit_7_of_mario_x_position_is_set_6203
+	.global	unknown_6204
+	.global	return_without_taking_the_ladder_6205
+	.global	unknown_6206
+	.global	mario_movement_indicator_sprite_value_6207
+	.global	mario_color_6208
+	.global	unknown_6209
+	.global	mario_jump_height_620c
+	.global	unknown_620e
+	.global	address_of_movement_indicator_620f
+	.global	mario_jump_direction_6210
+	.global	unknown_6211
+	.global	this_indicator_6212
+	.global	unknown_6213
+	.global	jump_counter_6214
+	.global	ladder_status_6215
+	.global	jumping_status_6216
+	.global	unknown_6217
+	.global	mario_is_grabbing_the_hammer_until_he_lands_6218
+	.global	store_1_into_status_indicator_6219
+	.global	moving_ladder_indicator_621a
+	.global	y_value_of_top_of_ladder_621c
+	.global	jump_coming_down_indicator_621e
+	.global	mario_jump_apex_621f
+	.global	falling_too_far_indicator_6220
+	.global	mario_falling_indicator_6221
+	.global	ladder_toggle_6222
+	.global	store_result_6224
+	.global	bonus_sound_indicator_6225
+	.global	screen_number_6227
+	.global	number_of_lives_remaining_6228
+	.global	level_number_6229
+	.global	store_622a
+	.global	game_start_flag_622c
+	.global	extra_life_indicator_622d
+	.global	number_of_goofys_to_draw_622e
+	.global	current_screen_level_622f
+	.global	left_side_rectractable_ladder_6280
+	.global	right_side_retractable_ladder_6288
+	.global	number_of_rivets_left_6290
+	.global	column_indicator_6291
+	.global	start_of_array_of_rivets_6292
+	.global	top_conveyor_counter_62a0
+	.global	master_direction_vector_for_top_conveyor_62a1
+	.global	master_direction_vector_for_upper_left_62a3
+	.global	this_counter_62a5
+	.global	master_direction_vector_for_lower_level_62a6
+	.global	elevator_counter_address_62a7
+	.global	unknown_rom_address_62a8
+	.global	barrel_start_address_62aa
+	.global	sprite_variable_start_62ac
+	.global	kong_climbing_counter_62af
+	.global	initial_clock_value_62b0
+	.global	bonus_timer_62b1
+	.global	blue_barrel_counter_62b2
+	.global	intial_timer_value_62b3
+	.global	timer_62b4
+	.global	this_counter_62b8
+	.global	fire_release_62b9
+	.global	timer_reset_62ba
+	.global	ladder_positions_6300
+	.global	unknown_6310
+	.global	bonus_indicator_6340
+	.global	timer_6341
+	.global	scoring_indicator_6342
+	.global	unknown_for_use_later_6343
+	.global	item_hit_phase_counter_address_6345
+	.global	timer_6346
+	.global	the_oil_can_is_on_fire_6348
+	.global	item_hit_indicator_unknown_6350
+	.global	unknown_6351
+	.global	unknown_6352
+	.global	unknown_6353
+	.global	unknown_6354
+	.global	unknown_6380
+	.global	timer_6381
+	.global	crazy_blue_barrel_indicator_6382
+	.global	memory_used_to_track_tasks_6383
+	.global	timer_address_6384
+	.global	intro_screen_counter_6385
+	.global	time_has_run_out_indicator_6386
+	.global	timer_address_6387
+	.global	end_of_level_counter_6388
+	.global	restored_when_hammer_runs_out_6389
+	.global	kong_intro_flash_counter_638a
+	.global	unknown_638b
+	.global	reset_onscreen_timer_638c
+	.global	kong_bounce_counter_638d
+	.global	kong_ladder_climb_counter_638e
+	.global	deployment_indicator_638f
+	.global	timer_unknown_6390
+	.global	indicator_6391
+	.global	barrel_deployment_indicator_6392
+	.global	barrel_deployment_indicator_6393
+	.global	hammer_timer_6394
+	.global	hammer_length_6395
+	.global	bouncer_release_6396
+	.global	elevator_status_6398
+	.global	deployment_indicator_639a
+	.global	pie_timer_for_next_pie_deployment_639b
+	.global	death_indicator_639d
+	.global	load_counter_639e
+	.global	unknown_63a0
+	.global	unknown_63a1
+	.global	unknown_63a2
+	.global	top_conveyor_direction_vector_63a3
+	.global	upper_left_pie_tray_vector_63a4
+	.global	upper_right_pie_tray_vector_63a5
+	.global	pie_direction_lower_level_63a6
+	.global	store_63a7
+	.global	result_63a8
+	.global	unknown_63ab
+	.global	unknown_63ad
+	.global	original_data_item__63af
+	.global	unknown_63b0
+	.global	result_63b1
+	.global	unknown_63b2
+	.global	original_data_item_63b3
+	.global	unknown_63b4
+	.global	unknown_63b5
+	.global	kongs_position_63b7
+	.global	mario_dead_flag_63b8
+	.global	counter_for_use_later_63b9
+	.global	timer_unknown_63c0
+	.global	store_63c2
+	.global	unknown_63c4
+	.global	address_of_fireball_slot_for_this_fireball_63c8
+	.global	state_of_attract_mode_63cc
+	.global	current_fireball_data_address_63e0
+	.global	start_of_fires_table_6400
+	.global	unknown_6407
+	.global	freezer_indicator_of_2nd_fire_6439
+	.global	freezer_indicator_of_4th_fire_6479
+	.global	address_of_black_square_sprite_start_64a0
+	.global	destination_64a3
+	.global	set_destination_sprites_64a7
+	.global	start_of_bouncer_memory_area_6500
+	.global	destination_6507
+	.global	start_of_pies_65a0
+	.global	destination_is_65a7_65a7
+	.global	elevator_array_start_6600
+	.global	destination_sprite_x_positions_6603
+	.global	destination_sprite_6607
+	.global	unknown_660d
+	.global	software_address_of_hammer_sprite_6680
+	.global	sprite_destination_address_unknown_6683
+	.global	unknown_6687
+	.global	second_hammer_sprite_6690
+	.global	oil_can_address_66a0
+	.global	start_of_barrel_info_table_6700
+	.global	destination_6707
+	.global	destination_6807
+	.global	girls_head_sprite_6900
+	.global	unknown_6901
+	.global	sprite_girl_table_data_y_position_6903
+	.global	girls_body_sprite_6904
+	.global	girls_sprite_6905
+	.global	start_of_kong_sprite_6908
+	.global	kongs_right_leg_address_sprite_6909
+	.global	kong_sprite_array_690b
+	.global	clear_kongs_top_right_sprite_690c
+	.global	kongs_x_position_6910
+	.global	kong_sprite_y_position_6913
+	.global	unknown_6919
+	.global	unknown_691b
+	.global	kongs_right_arm_address_sprite_691d
+	.global	kongs_right_arm_sprite_for_carrying_girl_6924
+	.global	girl_being_carried_sprite_692c
+	.global	sprite_of_girl_under_kongs_arms_692d
+	.global	girl_under_kongs_arm_y_position_692f
+	.global	sprite_start_for_moving_ladders_6944
+	.global	other_ladder_sprite_y_value_6947
+	.global	ladder_sprite_y_value_694b
+	.global	mario_sprite_x_position_694c
+	.global	mario_sprite_value_694d
+	.global	mario_sprite_y_value_694f
+	.global	start_of_hammers_6950
+	.global	elevator_sprites_6958
+	.global	sprites_used_at_top_and_bottom_of_elevators_6970
+	.global	unknown_6974
+	.global	start_of_sprite_memory_for_bouncers_6980
+	.global	extra_barrels_sprites_69a8
+	.global	start_of_pie_sprites_69b8
+	.global	start_of_firefox_sprites_69d0
+	.global	start_of_pulley_sprites_69e4
+	.global	middle_pulley_sprites_69ec
+	.global	unknown_69ed
+	.global	pulley_sprite_start_69f4
+	.global	unknown_sprite_69fc
+	.global	blank_space_sprite_6a00
+	.global	start_of_bonus_items_6a0c
+	.global	hardware_address_of_hammer_sprite_6a18
+	.global	hardware_address_of_2nd_hammer_sprite_6a1c
+	.global	heart_sprite_x_position_6a20
+	.global	heart_sprite_6a21
+	.global	heart_sprite_6a23
+	.global	sprite_address_used_for_kong_aching_head_lines_6a24
+	.global	unknown_6a25
+	.global	hardware_sprite_memory_for_same_fire_6a28
+	.global	sprite_for_fire_above_oil_can_6a29
+	.global	location_of_item_hit_6a2c
+	.global	sprite_graphic_6a2d
+	.global	unknown_6a30
+	.global	stack_pointer_6c00
+	
+ram_6000:
+	ds.b	1
+numcredits_6001:
+	ds.b	2
+coinswitch_6003:
+	ds.b	2
+gamemode1_6005:
+	ds.b	2
+nocredits_6007:
+	ds.b	1
+waittimerlsb_6008:
+	ds.b	1
+waittimermsb_6009:
+	ds.b	1
+gamemode2_600a:
+	ds.b	3
+playerturna_600d:
+	ds.b	1
+playerturnb_600e:
+	ds.b	1
+twoplayergame_600f:
+	ds.b	1
+inputstate_6010:
+	ds.b	1
+rawinput_6011:
+	ds.b	7
+rngtimer1_6018:
+	ds.b	1
+rngtimer2_6019:
+	ds.b	1
+timer_constantly_counts_down_601a:
+framecounter_601a:
+	ds.b	6
+startinglives_6020:
+	ds.b	1
+extralifethreshold_6021:
+	ds.b	1
+coinspercredit_6022:
+	ds.b	2
+coinspercredit2_6024:
+	ds.b	2
+uprightcab_6026:
+	ds.b	10
+hscursordelay_6030:
+	ds.b	1
+hsblinktoggle_6031:
+	ds.b	1
+hsblinktimer_6032:
+	ds.b	2
+hstimer_6034:
+	ds.b	1
+hscursorpos_6035:
+	ds.b	1
+hsinitialpos_6036:
+	ds.b	2
+unknown_ram_address_6038:
+	ds.b	2
+unknown_ram_address_603a:
+	ds.b	6
+p1numlives_6040:
+	ds.b	8
+p2numlives_6048:
+	ds.b	24
+numobstaclesjumped_6060:
+	ds.b	32
+walking_sound_buffer_6080:
+	ds.b	1
+sound_buffer_address_for_jumping_6081:
+	ds.b	1
+boom_sound_address_6082:
+	ds.b	1
+play_sound_for_bouncer_6083:
+	ds.b	1
+play_sound_for_falling_bouncer_6084:
+	ds.b	1
+play_sound_for_bonus_6085:
+	ds.b	3
+play_death_sound_6088:
+	ds.b	1
+background_music_value_6089:
+	ds.b	1
+sound_buffer_address_608a:
+	ds.b	1
+music_timer_608b:
+	ds.b	37
+task_list_pointer_60b0:
+	ds.b	1
+the_task_pointer_60b1:
+	ds.b	1
+player_1_score_address_60b2:
+	ds.b	1
+address_for_player_1_score_60b3:
+	ds.b	1
+player_1_score_60b4:
+	ds.b	1
+player_2_score_address_60b5:
+	ds.b	1
+address_of_player_2_score_60b6:
+	ds.b	1
+player_2_score_60b7:
+	ds.b	1
+high_score_60b8:
+	ds.b	2
+high_score_60ba:
+	ds.b	6
+start_of_task_list_60c0:
+	ds.b	64
+high_score_ram_6100:
+	ds.b	28
+address_of_high_score_indicator_611c:
+	ds.b	137
+lowest_high_score_address_61a5:
+	ds.b	12
+unknown_61b1:
+	ds.b	21
+address_for_unknown_61c6:
+	ds.b	1
+copy_of_player_score_61c7:
+	ds.b	57
+mario_array_6200:
+	ds.b	2
+put_back_6202:
+	ds.b	1
+jump_if_bit_7_of_mario_x_position_is_set_6203:
+	ds.b	1
+unknown_6204:
+	ds.b	1
+return_without_taking_the_ladder_6205:
+	ds.b	1
+unknown_6206:
+	ds.b	1
+mario_movement_indicator_sprite_value_6207:
+	ds.b	1
+mario_color_6208:
+	ds.b	1
+unknown_6209:
+	ds.b	3
+mario_jump_height_620c:
+	ds.b	2
+unknown_620e:
+	ds.b	1
+address_of_movement_indicator_620f:
+	ds.b	1
+mario_jump_direction_6210:
+	ds.b	1
+unknown_6211:
+	ds.b	1
+this_indicator_6212:
+	ds.b	1
+unknown_6213:
+	ds.b	1
+jump_counter_6214:
+	ds.b	1
+ladder_status_6215:
+	ds.b	1
+jumping_status_6216:
+	ds.b	1
+unknown_6217:
+	ds.b	1
+mario_is_grabbing_the_hammer_until_he_lands_6218:
+	ds.b	1
+store_1_into_status_indicator_6219:
+	ds.b	1
+moving_ladder_indicator_621a:
+	ds.b	2
+y_value_of_top_of_ladder_621c:
+	ds.b	2
+jump_coming_down_indicator_621e:
+	ds.b	1
+mario_jump_apex_621f:
+	ds.b	1
+falling_too_far_indicator_6220:
+	ds.b	1
+mario_falling_indicator_6221:
+	ds.b	1
+ladder_toggle_6222:
+	ds.b	2
+store_result_6224:
+	ds.b	1
+bonus_sound_indicator_6225:
+	ds.b	2
+screen_number_6227:
+	ds.b	1
+number_of_lives_remaining_6228:
+	ds.b	1
+level_number_6229:
+	ds.b	1
+store_622a:
+	ds.b	2
+game_start_flag_622c:
+	ds.b	1
+extra_life_indicator_622d:
+	ds.b	1
+number_of_goofys_to_draw_622e:
+	ds.b	1
+current_screen_level_622f:
+	ds.b	81
+left_side_rectractable_ladder_6280:
+	ds.b	8
+right_side_retractable_ladder_6288:
+	ds.b	8
+number_of_rivets_left_6290:
+	ds.b	1
+column_indicator_6291:
+	ds.b	1
+start_of_array_of_rivets_6292:
+	ds.b	14
+top_conveyor_counter_62a0:
+	ds.b	1
+master_direction_vector_for_top_conveyor_62a1:
+	ds.b	2
+master_direction_vector_for_upper_left_62a3:
+	ds.b	2
+this_counter_62a5:
+	ds.b	1
+master_direction_vector_for_lower_level_62a6:
+	ds.b	1
+elevator_counter_address_62a7:
+	ds.b	1
+unknown_rom_address_62a8:
+	ds.b	2
+barrel_start_address_62aa:
+	ds.b	2
+sprite_variable_start_62ac:
+	ds.b	3
+kong_climbing_counter_62af:
+	ds.b	1
+initial_clock_value_62b0:
+	ds.b	1
+bonus_timer_62b1:
+	ds.b	1
+blue_barrel_counter_62b2:
+	ds.b	1
+intial_timer_value_62b3:
+	ds.b	1
+timer_62b4:
+	ds.b	4
+this_counter_62b8:
+	ds.b	1
+fire_release_62b9:
+	ds.b	1
+timer_reset_62ba:
+	ds.b	70
+ladder_positions_6300:
+	ds.b	16
+unknown_6310:
+	ds.b	48
+bonus_indicator_6340:
+	ds.b	1
+timer_6341:
+	ds.b	1
+scoring_indicator_6342:
+	ds.b	1
+unknown_for_use_later_6343:
+	ds.b	2
+item_hit_phase_counter_address_6345:
+	ds.b	1
+timer_6346:
+	ds.b	2
+the_oil_can_is_on_fire_6348:
+	ds.b	8
+item_hit_indicator_unknown_6350:
+	ds.b	1
+unknown_6351:
+	ds.b	1
+unknown_6352:
+	ds.b	1
+unknown_6353:
+	ds.b	1
+unknown_6354:
+	ds.b	44
+unknown_6380:
+	ds.b	1
+timer_6381:
+	ds.b	1
+crazy_blue_barrel_indicator_6382:
+	ds.b	1
+memory_used_to_track_tasks_6383:
+	ds.b	1
+timer_address_6384:
+	ds.b	1
+intro_screen_counter_6385:
+	ds.b	1
+time_has_run_out_indicator_6386:
+	ds.b	1
+timer_address_6387:
+	ds.b	1
+end_of_level_counter_6388:
+	ds.b	1
+restored_when_hammer_runs_out_6389:
+	ds.b	1
+kong_intro_flash_counter_638a:
+	ds.b	1
+unknown_638b:
+	ds.b	1
+reset_onscreen_timer_638c:
+	ds.b	1
+kong_bounce_counter_638d:
+	ds.b	1
+kong_ladder_climb_counter_638e:
+	ds.b	1
+deployment_indicator_638f:
+	ds.b	1
+timer_unknown_6390:
+	ds.b	1
+indicator_6391:
+	ds.b	1
+barrel_deployment_indicator_6392:
+	ds.b	1
+barrel_deployment_indicator_6393:
+	ds.b	1
+hammer_timer_6394:
+	ds.b	1
+hammer_length_6395:
+	ds.b	1
+bouncer_release_6396:
+	ds.b	2
+elevator_status_6398:
+	ds.b	2
+deployment_indicator_639a:
+	ds.b	1
+pie_timer_for_next_pie_deployment_639b:
+	ds.b	2
+death_indicator_639d:
+	ds.b	1
+load_counter_639e:
+	ds.b	2
+unknown_63a0:
+	ds.b	1
+unknown_63a1:
+	ds.b	1
+unknown_63a2:
+	ds.b	1
+top_conveyor_direction_vector_63a3:
+	ds.b	1
+upper_left_pie_tray_vector_63a4:
+	ds.b	1
+upper_right_pie_tray_vector_63a5:
+	ds.b	1
+pie_direction_lower_level_63a6:
+	ds.b	1
+store_63a7:
+	ds.b	1
+result_63a8:
+	ds.b	3
+unknown_63ab:
+	ds.b	2
+unknown_63ad:
+	ds.b	2
+original_data_item__63af:
+	ds.b	1
+unknown_63b0:
+	ds.b	1
+result_63b1:
+	ds.b	1
+unknown_63b2:
+	ds.b	1
+original_data_item_63b3:
+	ds.b	1
+unknown_63b4:
+	ds.b	1
+unknown_63b5:
+	ds.b	2
+kongs_position_63b7:
+	ds.b	1
+mario_dead_flag_63b8:
+	ds.b	1
+counter_for_use_later_63b9:
+	ds.b	7
+timer_unknown_63c0:
+	ds.b	2
+store_63c2:
+	ds.b	2
+unknown_63c4:
+	ds.b	4
+address_of_fireball_slot_for_this_fireball_63c8:
+	ds.b	4
+state_of_attract_mode_63cc:
+	ds.b	20
+current_fireball_data_address_63e0:
+	ds.b	32
+start_of_fires_table_6400:
+	ds.b	7
+unknown_6407:
+	ds.b	50
+freezer_indicator_of_2nd_fire_6439:
+	ds.b	64
+freezer_indicator_of_4th_fire_6479:
+	ds.b	39
+address_of_black_square_sprite_start_64a0:
+	ds.b	3
+destination_64a3:
+	ds.b	4
+set_destination_sprites_64a7:
+	ds.b	89
+start_of_bouncer_memory_area_6500:
+	ds.b	7
+destination_6507:
+	ds.b	153
+start_of_pies_65a0:
+	ds.b	7
+destination_is_65a7_65a7:
+	ds.b	89
+elevator_array_start_6600:
+	ds.b	3
+destination_sprite_x_positions_6603:
+	ds.b	4
+destination_sprite_6607:
+	ds.b	6
+unknown_660d:
+	ds.b	115
+software_address_of_hammer_sprite_6680:
+	ds.b	3
+sprite_destination_address_unknown_6683:
+	ds.b	4
+unknown_6687:
+	ds.b	9
+second_hammer_sprite_6690:
+	ds.b	16
+oil_can_address_66a0:
+	ds.b	96
+start_of_barrel_info_table_6700:
+	ds.b	7
+destination_6707:
+	ds.b	256
+destination_6807:
+	ds.b	249
+girls_head_sprite_6900:
+	ds.b	1
+unknown_6901:
+	ds.b	2
+sprite_girl_table_data_y_position_6903:
+	ds.b	1
+girls_body_sprite_6904:
+	ds.b	1
+girls_sprite_6905:
+	ds.b	3
+start_of_kong_sprite_6908:
+	ds.b	1
+kongs_right_leg_address_sprite_6909:
+	ds.b	2
+kong_sprite_array_690b:
+	ds.b	1
+clear_kongs_top_right_sprite_690c:
+	ds.b	4
+kongs_x_position_6910:
+	ds.b	3
+kong_sprite_y_position_6913:
+	ds.b	6
+unknown_6919:
+	ds.b	2
+unknown_691b:
+	ds.b	2
+kongs_right_arm_address_sprite_691d:
+	ds.b	7
+kongs_right_arm_sprite_for_carrying_girl_6924:
+	ds.b	8
+girl_being_carried_sprite_692c:
+	ds.b	1
+sprite_of_girl_under_kongs_arms_692d:
+	ds.b	2
+girl_under_kongs_arm_y_position_692f:
+	ds.b	21
+sprite_start_for_moving_ladders_6944:
+	ds.b	3
+other_ladder_sprite_y_value_6947:
+	ds.b	4
+ladder_sprite_y_value_694b:
+	ds.b	1
+mario_sprite_x_position_694c:
+	ds.b	1
+mario_sprite_value_694d:
+	ds.b	2
+mario_sprite_y_value_694f:
+	ds.b	1
+start_of_hammers_6950:
+	ds.b	8
+elevator_sprites_6958:
+	ds.b	24
+sprites_used_at_top_and_bottom_of_elevators_6970:
+	ds.b	4
+unknown_6974:
+	ds.b	12
+start_of_sprite_memory_for_bouncers_6980:
+	ds.b	40
+extra_barrels_sprites_69a8:
+	ds.b	16
+start_of_pie_sprites_69b8:
+	ds.b	24
+start_of_firefox_sprites_69d0:
+	ds.b	20
+start_of_pulley_sprites_69e4:
+	ds.b	8
+middle_pulley_sprites_69ec:
+	ds.b	1
+unknown_69ed:
+	ds.b	7
+pulley_sprite_start_69f4:
+	ds.b	8
+unknown_sprite_69fc:
+	ds.b	4
+blank_space_sprite_6a00:
+	ds.b	12
+start_of_bonus_items_6a0c:
+	ds.b	12
+hardware_address_of_hammer_sprite_6a18:
+	ds.b	4
+hardware_address_of_2nd_hammer_sprite_6a1c:
+	ds.b	4
+heart_sprite_x_position_6a20:
+	ds.b	1
+heart_sprite_6a21:
+	ds.b	2
+heart_sprite_6a23:
+	ds.b	1
+sprite_address_used_for_kong_aching_head_lines_6a24:
+	ds.b	1
+unknown_6a25:
+	ds.b	3
+hardware_sprite_memory_for_same_fire_6a28:
+	ds.b	1
+sprite_for_fire_above_oil_can_6a29:
+	ds.b	3
+location_of_item_hit_6a2c:
+	ds.b	1
+sprite_graphic_6a2d:
+	ds.b	3
+unknown_6a30:
+	ds.b	464
+	.align	2
+	* we need a bigger stack!
+	ds.l	1000
+stack_pointer_6c00:
+

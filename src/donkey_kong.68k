@@ -1723,6 +1723,7 @@ l_0298:
 
 	move.b	d0,reg_palette_a                	| [$02a8: ld      (reg_palette_a),a] clear palette bank selector
 	move.b	d0,reg_palette_b                	| [$02ab: ld      (reg_palette_b),a] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	addq.b	#1,d0                           	| [$02ae: inc     a] A: = 1
 	move.b	d0,reg_flipscreen               	| [$02af: ld      (reg_flipscreen),a] set flip screen setting
 	lea     stack_pointer_6c00,sp				|  ld      sp,stack_pointer_6c00    | set Stack Pointer to #6C00
@@ -1784,7 +1785,7 @@ l_02e3:
 l_02f6:
 	move.b	d0,the_task_pointer_60b1        	| [$02f6: ld      (the_task_pointer_60b1),a] store into the task pointer
 	move.b	d2,d0                           	| [$02f9: ld      a,c] load A with the 2nd byte of the task
-	pea		l_02bd                      	| [$02fa: ld      hl,$02bd] load HL with return address
+	pea		l_02bd(pc)                     	| [$02fa: ld      hl,$02bd] load HL with return address
 
 	                        	| [$02fd: push    hl] push to stack so RET will go to #02BD = task list
 	lea	jump_table_0307,a0                      	| [$02fe: ld      hl,$0307] load HL with data from table below
@@ -2486,6 +2487,7 @@ draw_text_to_screen_05e9:
 	LOAD_ANY_ADDRESS	d3,a1
 	exg	a1,a0                              	| [$05f7: ex      de,hl] DE <> HL
 	
+	* screen address followed by text
 	move.b	(a0)+,d4                         	| [$05f8: ld      e,(hl)] load E with 1st byte from dereferenced table
 	                           	| [$05f9: inc     hl] next table entry
 	move.b	(a0)+,d3                         	| [$05fa: ld      d,(hl)] load D with 2ndy byte from derefernced table
@@ -2497,7 +2499,7 @@ draw_text_to_screen_05e9:
 	
 l_0600:
 	move.b	(a1),d0                         	| [$0600: ld      a,(de)] load A with table data
-	cmp.b	#0x3f,d0                         	| [$0601: cp      $3f] end code reached?
+	cmp.b	#0x3f,d0                         	| [$0601: cp      $3f] end of string reached?
 	jeq	l_0026                             	| [$0603: jp      z,$0026] yes, return to program.  This will effectively RET twice
 	move.w	d5,d7
 	jbsr	osd_w_videoram                         	| [$0606: ld      (hl),a] draw letter to screen
@@ -2741,12 +2743,12 @@ playing_game_06fe:
     .long	l_0a37                      | (5)  #0A37     | updates high score, player score, remaining lives, level, 1UP
     .long	l_0a63                      | (6)  #0A63     | clears screen and sprites, check for intro screen to run
     .long	l_0a76                      | (7)  #0A76     | kong clims ladders and scary music played
-    .long	l_0bda                      | (8)  #0BDA     | draw goofy kongs, how high can you get, play music
+    .long	height_pre_level_screen_0bda     | (8)  #0BDA     | draw goofy kongs, how high can you get, play music
     .long	0                           | (9)            | unused
     .long	l_0c91                      | (A)  #0C91     | clears screen, update timers, draws current screen, sets background music
     .long	l_123c                      | (B)  #123C     | set initial mario sprite position and draw remaining lives and level
     .long	l_197a                      | (C)  #197A     | for when playing a game.  this is the main routine
-    .long	l_127c                      | (D)  #127C     | mario died.  handle mario dying animations
+    .long	mario_died_127c                      | (D)  #127C     | mario died.  handle mario dying animations
     .long	l_12f2                      | (E)  #12F2     | clear sounds, decrease life, check for and handle game over
     .long	l_1344                      | (F)  #1344     | clear sounds, clear game start flag, draw game over if needed PL2, set game mode2 accordingly
     .long	l_138f                      | (10) #138F    | check for game over status on a 2 player game
@@ -2768,12 +2770,12 @@ attract_mode_073c:
 	move.b	(a0),d0                         	| [$0746: ld      a,(hl)] else load A with game mode2
 	jbsr	rst_28                            	| [$0747: rst     $28] jump based on A
 
-	.long	l_0779 | #0779         | clear screen, set color palettes, draw attract mode text and high score table,
+	.long	first_boot_screen_0779 | #0779         | clear screen, set color palettes, draw attract mode text and high score table,
 				  	          | [continued] increase game mode2, clear sprites, | draw "1UP" on screen , draws number of coins needed for play
 	.long	l_0763 | #0763         |
 	.long	l_123c | #123C         | set initial mario sprite position and draw remaining lives and level
 	.long	l_1977 | #1977         | set artificial input for demo play [change to #197A to enable playing in demo part 1/2]
-	.long	l_127c | #127C         | handle mario dying animations
+	.long	mario_died_127c | #127C         | handle mario dying animations
 	.long	l_07c3 | #07C3         | clears the screen and sprites and increase game mode2
 	.long	l_07cb | #07CB         | handle intro splash screen ?
 	.long	l_084b | #084B         | counts down a timer then resets game mode2 to 0
@@ -2804,13 +2806,14 @@ l_0763:
 * clear screen, set color palettes, draw attract mode text and high score table, increase game mode2, clear sprites, 
 * draw "1UP" on screen , draws number of coins needed for play
 
-l_0779:
+first_boot_screen_0779:
 	lea	reg_palette_a,a0               	| [$0779: ld      hl,reg_palette_a]
 	clr.b	(a0)+                             	| [$077c: ld      (hl),$00] clear palette bank selector
 	clr.b	(a0)                             	| [$077f: ld      (hl),$00] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	move.w  #0x031b,d3                      	| [$0781: ld      de,$031b] load task data for text "INSERT COIN"
 	jbsr	insert_task_309f                            	| [$0784: call    $309f] insert task to draw text
-	addq.b	#1,d3                           	| [$0787: inc     e] load task data for text "PLAYER    COIN"
+	addq.b	#1,d3                           	| [$0787: inc     e] load task data for text "PLAYER    COIN" (1C)
 	jbsr	insert_task_309f                            	| [$0788: call    $309f] insert task to draw text
 	jbsr	l_0965                            	| [$078b: call    $0965] draws credits on screen if any are present and displays high score table
 	lea	waittimermsb_6009,a0           	| [$078e: ld      hl,waittimermsb_6009] load HL with timer address
@@ -2892,6 +2895,7 @@ l_07eb:
 	move.b	#0x01,(a0)                      	| [$07f2: ld      (hl),$01] set pallete bank selector to 1
 
 l_07f4:
+	jbsr	osd_update_palette_bank
 	move.b	d0,unknown_638b                 	| [$07f4: ld      (unknown_638b),a] store A into ???
 
 * draws DONKEY KONG logo to screen
@@ -3089,6 +3093,7 @@ l_08BA:
 	move.b	d0,(a0)+                         	| [$08d2: ld      (hl),a] clear palette bank selector
 	                           	| [$08d3: inc     l] next pallete bank
 	move.b	d0,(a0)                         	| [$08d4: ld      (hl),a] clear palette bank selector
+	jbsr	osd_update_palette_bank
 
 * called from #08F8
 
@@ -3286,6 +3291,7 @@ l_09d6:
 	clr.b	d0                               	| [$09d6: xor     a] A := 0
 	move.b	d0,reg_palette_a                	| [$09d7: ld      (reg_palette_a),a] clear palette bank selector
 	move.b	d0,reg_palette_b                	| [$09da: ld      (reg_palette_b),a] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	move.w  #0x0302,d3                      	| [$09dd: ld      de,$0302] load task data for text #2 "PLAYER <I>"
 	jbsr	insert_task_309f                            	| [$09e0: call    $309f] insert task to draw
 	move.w  #0x0201,d3                      	| [$09e3: ld      de,$0201] load task #2, parameter 1 to display player 2 score
@@ -3325,6 +3331,7 @@ l_0a1b:
 	clr.b	d0                               	| [$0a1b: xor     a] A := 0
 	move.b	d0,reg_palette_a                	| [$0a1c: ld      (reg_palette_a),a] clear palette bank selector
 	move.b	d0,reg_palette_b                	| [$0a1f: ld      (reg_palette_b),a] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	move.w  #0x0303,d3                      	| [$0a22: ld      de,$0303] load task data for text #3 "PLAYER <II>"
 	jbsr	insert_task_309f                            	| [$0a25: call    $309f] insert task to draw text
 	move.w  #0x0201,d3                      	| [$0a28: ld      de,$0201] load task #2, parameter 1 to display player 2 score
@@ -3403,6 +3410,7 @@ l_0a8a:
 	move.b	d0,reg_palette_a                	| [$0a8b: ld      (reg_palette_a),a] clear palette bank selector
 	addq.b	#1,d0                           	| [$0a8e: inc     a] A := 1
 	move.b	d0,reg_palette_b                	| [$0a8f: ld      (reg_palette_b),a] store into palette bank selector
+	jbsr	osd_update_palette_bank
 	lea	game_rom+0x380d,a1                      	| [$0a92: ld      de,$380d] load DE with start of table data
 	jbsr	l_0da7                            	| [$0a95: call    $0da7] draw the screen
 	move.b	#0x10,d0                        	| [$0a98: ld      a,$10] A := #10
@@ -3622,7 +3630,7 @@ store_d2_in_video_ram:
 * how high can you get ?
 * draws goofy kongs and 25m, 50m, etc.
 * plays music
-l_0bda:
+height_pre_level_screen_0bda:
 	jbsr	clear_all_sounds_011c                            	| [$0bda: call    $011c] clear all sounds
 	jbsr	rst_18                            	| [$0bdd: rst     $18] count down timer and only continue here if zero, else RET
 
@@ -3635,6 +3643,7 @@ l_0bda:
 	move.b	#0x01,(a0)+                      	| [$0bed: ld      (hl),$01] set palette bank selector
 										| [$0bef: inc     hl] next pallete bank
 	clr.b	(a0)                             	| [$0bf0: ld      (hl),$00] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	lea	sound_buffer_address_608a,a0   	| [$0bf2: ld      hl,sound_buffer_address_608a] load HL with tune address
 	move.b	#0x02,(a0)+                      	| [$0bf5: ld      (hl),$02] play how high can you get sound?
 	                           	| [$0bf7: inc     hl] HL := #608B .  load HL with music timer ?
@@ -3762,6 +3771,7 @@ l_0c92:
 	clr.b	(a0)                             	| [$0ca2: ld      (hl),$00] clear palette bank selector
 	addq.w	#1,a0                           	| [$0ca4: inc     hl] next bank
 	move.b	#0x01,(a0)                      	| [$0ca5: ld      (hl),$01] set palette bank selector
+	jbsr	osd_update_palette_bank
 	move.b	screen_number_6227,d0           	| [$0ca7: ld      a,(screen_number_6227)] load A with screen number
 	subq.b	#1,d0                           	| [$0caa: dec     a] decrease by 1
 	jeq	l_0cd4                             	| [$0cab: jp      z,$0cd4] if zero jump to #0Cd4 - we were on girders - continue on #0CC6
@@ -3777,6 +3787,7 @@ l_0c92:
 	jbsr	l_0d43                            	| [$0cb6: call    $0d43] draws the blue vertical bars next to kong on rivets
 	lea	reg_palette_a,a0               	| [$0cb9: ld      hl,reg_palette_a] load HL with palette bank selector
 	move.b	#0x01,(a0)                      	| [$0cbc: ld      (hl),$01] set palette bank selector
+	jbsr	osd_update_palette_bank
 	move.b	#0x0b,d0                        	| [$0cbe: ld      a,$0b] load A with music code For rivets
 	move.b	d0,background_music_value_6089  	| [$0cc0: ld      (background_music_value_6089),a] set music
 	lea	game_rom+0x3c8b,a1                      	| [$0cc3: ld      de,$3c8b] load DE with start of table data for rivets
@@ -3810,6 +3821,7 @@ l_0cdf:
 	move.b	#0x01,(a0)                      	| [$0ce5: ld      (hl),$01] set palette bank selector
 	addq.w	#1,a0                           	| [$0ce7: inc     hl]
 	clr.b	(a0)                             	| [$0ce8: ld      (hl),$00] clear palette bank selector
+	jbsr	osd_update_palette_bank
 	move.b	#0x09,d0                        	| [$0cea: ld      a,$09] load A with conveyor music
 	move.b	d0,background_music_value_6089  	| [$0cec: ld      (background_music_value_6089),a] set music for conveyors
 	jra	l_0cc6                             	| [$0cef: jp      $0cc6] jump back
@@ -3999,7 +4011,7 @@ l_0da7:
 	move.b	d6,d2                           	| [$0db5: ld      c,l] copy to C
 	movem.w	d3/d4,-(sp)                    	| [$0db6: push    de] save DE
 	jbsr	convert_hl_into_vram_address_2ff0                            	| [$0db7: call    $2ff0] convert HL into VRAM address
-	movem.w	(sp)+,d3/d4                    	| [$0dba: pop     de] restore DE
+	movem.w	(sp)+,d3/d4                    	| [$0dba: pop     de] restore DE	
 	move.w	d7,unknown_63ab                 	| [$0dbb: ld      (unknown_63ab),hl] store the VRAM address into this location for later use.  starting point of whatever we are drawing
 	move.b	d1,d0                           	| [$0dbe: ld      a,b] A := B = original data item
 	and.b	#0x07,d0                         	| [$0dbf: and     $07] mask bits, now between 0 and 7
@@ -4846,7 +4858,7 @@ l_124b:
 
 * jump here from #0701 when GameMode2 == #D
 * mario died ?
-l_127c:
+mario_died_127c:
 	jbsr	l_1dbd                            	| [$127c: call    $1dbd] check for bonus items and jumping scores, rivets
 	move.b	death_indicator_639d,d0         	| [$127f: ld      a,(death_indicator_639d)] load A with this normally 0.  1 while mario dying, 2 when dead
 	jbsr	rst_28                            	| [$1282: rst     $28] jump based on A
@@ -5288,6 +5300,7 @@ l_1486:
 
 	move.b	d0,reg_palette_a                	| [$1491: ld      (reg_palette_a),a] set palette bank selector
 	move.b	d0,reg_palette_b                	| [$1494: ld      (reg_palette_b),a] set palette bank selector
+	jbsr	osd_update_palette_bank
 	move.b	#0x01,(a0)                      	| [$1497: ld      (hl),$01] set timer to 1
 	lea	hscursordelay_6030,a0          	| [$1499: ld      hl,hscursordelay_6030] load HL with HSCursorDelay
 	move.b	#0x0a,(a0)                      	| [$149c: ld      (hl),$0a]
@@ -10679,7 +10692,7 @@ l_2fcb:
 convert_hl_into_vram_address_2ff0:
 	move.b	d6,d0                           	| [$2ff0: ld      a,l] load A with Y position (inflated by 4)
 	CLEAR_XC_FLAGS
-	ror.b	#3,d0                            	| [$2ff1: rrca] Roll right 3 times * 3
+	ror.b	#3,d0                            	| [$2ff1: rrca] Roll right 3 times (divide Y by 8)
 	and.b	#0x1f,d0                         	| [$2ff4: and     $1f] mask out left 3 bits to zero (number has been divided by 8)
 	move.b	d0,d6                           	| [$2ff6: ld      l,a] Load L with this new position
 	move.b	d5,d0                           	| [$2ff7: ld      a,h] load A with barrel's X position
@@ -10689,14 +10702,22 @@ convert_hl_into_vram_address_2ff0:
 	clr.b	d0                               	| [$2ffc: xor     a] A := 0
 	move.b	d0,d5                           	| [$2ffd: ld      h,a] H := 0
 	roxl.b	#1,d4                           	| [$2ffe: rl      e] rotate E left
-	roxl.b	#1,d0                           	| [$3000: rla] Rotate A left [does nothing?  A is 0]
+	roxl.b	#1,d0                           	| [$3000: rla] Rotate A left [does nothing?  A is 0] clears carry!
 	roxl.b	#1,d4                           	| [$3001: rl      e] rotate E left again
 	roxl.b	#1,d0                           	| [$3003: rla] rotate A left again ?
 	add.b	#0x74,d0                         	| [$3004: add     a,$74] Add #74 to A.   A = #74 now ?
 	move.b	d0,d3                           	| [$3006: ld      d,a] Store this in D
+	LOAD_D3_16_FROM_D3D4
 	LOAD_D5_16_FROM_D5D6
 	add.w	d3,d5                            	| [$3007: add     hl,de] Add DE into HL
 	move.w	d5,d7
+	.ifndef	RELEASE
+	* check if in range
+	move.w	d0,-(a7)
+	jbsr	osd_r_videoram
+	move.b	d0,d0
+	move.w	(a7)+,d0
+	.endif
 	rts                                    	| [$3008: ret] return
 
 
