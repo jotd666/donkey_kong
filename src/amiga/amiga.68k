@@ -162,7 +162,6 @@ start:
 		.global osd_blitz		| for debug
 		.global osd_w_videoram_no_update
 		.global osd_w_videoram
-		.global osd_w_colorram
 		.global osd_r_videoram
 		.global osd_update_sprites
 		.global osd_read_dsw_1
@@ -1841,38 +1840,7 @@ decode_sprite_data:
 	move.b	d4,d0	| sprite Y (aka X on amiga)
 	rts
 
-* same was osd_w_videoram but without screen update
-* because we know that osd_w_colorram follows
-osd_w_videoram_no_update:
-    .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d7/a0-a3,-(a7)
-	
-
-	sub.w	#SCREEN_ADDRESS,d7
-	bcs.b	0f
-	cmp.w	#0x400,d7
-	bcs.b	1f
-0:
-	* should not happen
-	lea		write_videoram_out_of_range_error(pc),a0
-	jbsr	osd_break
-	nop	
-	bra.b	0f
-	
-1:
-	lea		bg_videoram,a1
-	add.w	d7,a1
-	
-
-	move.b	d0,(a1)	| update logical grid
-
-	movem.l	(a7)+,d0-d7/a0-a3
-    .endif | OPT_DISABLE_BG_LAYER
-	rts
-
-	
 * d7=screen address (preserved), d0=tile (preserved)
-* d7 starts at 0x8000 ends at 0x83FF
 * should preserve all registers
 
 osd_w_videoram:
@@ -1900,45 +1868,8 @@ osd_w_videoram:
 3:
 
 	move.b	d0,(a1)	| update logical grid
-	lea		bg_colorram,a1
-	move.b	(a1,d7.W),d1
-	
 
-	jbsr		update_bg_tile
-0:
-	movem.l	(a7)+,d0-d7/a0-a3
-    .endif | OPT_DISABLE_BG_LAYER
-	rts
 
-* d7=screen address (preserved), d0=attribute (preserved)
-* d7 starts at 0x8400 ends at 0x8800
-* should preserve all registers
-
-osd_w_colorram:
-    .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d7/a0-a3,-(a7)
-	sub.w	#SCREEN_ADDRESS+0x400,d7
-	bcs.b	0f
-	cmp.w	#0x400,d7
-	bcs.b	1f
-0:
-	* should not happen
-	lea		write_colorram_out_of_range_error(pc),a0
-	jbsr	osd_break
-	nop	
-	bra.b	0f
-1:
-	lea		bg_colorram,a1
-	add.w	d7,a1
-	cmp.b	(a1),d0
-	beq.b	0f		| already the proper value
-	
-
-	move.b	d0,(a1)	| update logical grid
-	move.b	d0,d1
-	lea		bg_videoram,a1
-	move.b	(a1,d7.W),d0
-	
 	jbsr		update_bg_tile
 0:
 	movem.l	(a7)+,d0-d7/a0-a3
@@ -1948,14 +1879,10 @@ osd_w_colorram:
 
 * d7: screen offset
 * d0: tile code
-* d1: attribute
 *
-* very straightforward linear tile layout 32v (30 visible) x 32h tiles
-* thanks to landscape unrotated display for once!
 
 update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
-	and.w	#0xFF,d1	| mask up to 255
 
 	
 	.ifne	OPT_ENABLE_LOGGING
@@ -1974,28 +1901,32 @@ update_bg_tile:
 	movem.w	(a7)+,d0-d1
 	.endif
 	
-	* is it upper part of bank ?
-	btst	#7,D1
-	beq.b	0f
-	* second part of tiles ("moon patrol" title...)
-	add.w	#0x100,d0
-0:
-
+	move.w	d0,d1
 
 	* color tile
-	and.w	#0xF,d1
+	* according to mame
+	* color = (m_color_codes[tile_index % 32 + 32 * (tile_index / 32 / 4)] & 0x0f) + 0x10 * m_palette_bank;
+	
+	and.b	#0x1F,d1		| tile_index % 32
+	cmp.w	#0x80,d0
+	bcs.b	0f
+	add.w	#0x20,d1		|  + 32 * (tile_index / 32 / 4)
+0:
+	* D1 ranges from 0 to 63
 	
 	move.w	d7,d3
-	lsr.w	#5,d3		| this is Y (tile)
-	
+	and.w	#0x1F,d3	| this is X (tile)
+	addq	#2,d3
 22:
 	
-	and.w	#0x1F,d7	| this is X (tile)
-	addq.w	#2,d7
+	lsr.w	#5,d7		| this is Y (tile)
+	not.w	d7
+	add.w	#0x20,d7
+
 
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
-	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 4 bitplanes for the panel
+	moveq	#NB_PLAYFIELD_PLANES-1,d4		| 5 bitplanes
 	
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
@@ -2011,11 +1942,8 @@ update_bg_tile:
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
-	tst.b	d1
-	bne.b	23f
-	tst.w	d0	| empty character
+	cmp.b	#0x10,d0
 	jeq	11f
-23:
 
 	lea		character_table,a0
 	add.w	d0,d0
@@ -2137,7 +2065,7 @@ HW_SpriteYTable_\height:
 
 set_bitplanes:
     move.l	bg_displayed_screen_ptr(pc),a0
-    moveq #4-1,d1
+    moveq #NB_PLAYFIELD_PLANES-1,d1
 	move.l	a0,d0
     lea	panel_bitplanes+2,a0
 	moveq	#0,d2
@@ -2863,7 +2791,7 @@ copperlist:
 
 
 panel_bitplanes:
-	DECL_BITPLANES	0,4
+	DECL_BITPLANES	0,NB_PLAYFIELD_PLANES
 colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
 sprites:

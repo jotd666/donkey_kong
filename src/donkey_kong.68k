@@ -76,6 +76,32 @@ RAM_END	= 0x7000
 	add.w	d7,\reg
 	.endm
 	
+	.macro	LOAD_ANY_ADDRESS	var_16bit,reg
+	move.w	\var_16bit,d7
+	cmp.w	#ROM_END,d7
+	bcs.b	110f
+	* maybe RAM
+	sub.w	#0x6000,d7
+	.ifndef		RELEASE
+	bpl.b	111f
+	add.w	#0x6000,d7
+	illegal
+111:
+	* > 0x6000, is that < ram end?
+	cmp.w	#0x900,d7
+	bcs.b	112f
+	illegal
+112:
+	* RAM
+	lea		ram_6000,\reg
+	bra.b	113f
+110:
+	.endif
+	lea		game_rom,\reg
+113:
+	add.w	d7,\reg
+	.endm
+	
 	.macro	STORE_ROM_ADDRESS	reg,var_16bit
 	move.l	\reg,d7
 	sub.l	#game_rom,d7
@@ -2440,10 +2466,9 @@ l_05e0:
 
 * task #3
 * draws text to screen
-* called from #0306 with code for text to draw in A
+* called from #0306 with code for text to draw in D0
 
 draw_text_to_screen_05e9:
-	**jbsr	osd_break
 	lea	game_rom+0x364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
 	add.b	d0,d0                            	| [$05ec: add     a,a] double the parameter
 	scs		d7									| remember carry
@@ -2457,7 +2482,8 @@ draw_text_to_screen_05e9:
 	                           	| [$05f5: inc     hl] next table entry
 	move.b	(a0),d3                         	| [$05f6: ld      d,(hl)] load D with 2nd byte from table
 	LOAD_D3_16_FROM_D3D4
-	LOAD_ROM_ADDRESS	d3,a1
+	* can be from ROM or RAM
+	LOAD_ANY_ADDRESS	d3,a1
 	exg	a1,a0                              	| [$05f7: ex      de,hl] DE <> HL
 	
 	move.b	(a0)+,d4                         	| [$05f8: ld      e,(hl)] load E with 1st byte from dereferenced table
@@ -2775,12 +2801,12 @@ l_0763:
 	jra	l_0c92                             	| [$0776: jp      $0c92] skip ahead
 
 * arrive from #0747 when GameMode2 == 0
-* clear screen, set color palettes, draw attract mode text and high score table, increase game mode2, clear sprites, | draw "1UP" on screen , draws number of coins needed for play
+* clear screen, set color palettes, draw attract mode text and high score table, increase game mode2, clear sprites, 
+* draw "1UP" on screen , draws number of coins needed for play
 
 l_0779:
 	lea	reg_palette_a,a0               	| [$0779: ld      hl,reg_palette_a]
-	clr.b	(a0)                             	| [$077c: ld      (hl),$00] clear palette bank selector
-	addq.w	#1,a0                           	| [$077e: inc     hl]
+	clr.b	(a0)+                             	| [$077c: ld      (hl),$00] clear palette bank selector
 	clr.b	(a0)                             	| [$077f: ld      (hl),$00] clear palette bank selector
 	move.w  #0x031b,d3                      	| [$0781: ld      de,$031b] load task data for text "INSERT COIN"
 	jbsr	insert_task_309f                            	| [$0784: call    $309f] insert task to draw text

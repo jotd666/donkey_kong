@@ -1,6 +1,5 @@
 
 	.global	bg_videoram
-	.global	bg_colorram
 
 	.global invincible_flag
 	.global start_level
@@ -35,8 +34,7 @@
 
 bg_videoram:
 	ds.b	0x400
-bg_colorram:
-	ds.b	0x400
+
 sprite_ram:
 	ds.b	0x400
 reg_flipscreen:

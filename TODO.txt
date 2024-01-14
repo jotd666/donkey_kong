@@ -2,10 +2,5 @@
 	int color = (m_color_codes[tile_index % 32 + 32 * (tile_index / 32 / 4)] & 0x0f)
 	+ 0x10 * m_palette_bank;
 
-draw_text_to_screen_05e9
-seems to work up to when D0=14: cond breakpoint with MAME & compare
 
-seq 4,1B,0/1C (check), 5, 14 => bug
-
-rotate display!
 fix color scheme
