@@ -1880,7 +1880,7 @@ osd_update_palette_bank:
 	move.l	(a0,d0.w),a0
 	
 	* dest copper lists
-	lea		color_line_copper,a1
+	lea		color_line_copper+4,a1
 	move.w	#NB_ROWS-1,d0			| number of rows
 1:
 	moveq	#2,d1
@@ -1904,11 +1904,11 @@ update_bg_tile:
 
 	
 	move.w	d7,d3
-	and.w	#0x1F,d3	| this is X (tile)
-	addq	#2,d3
+	and.w	#0x1F,d3	| this is Y (tile)
+	addq	#1,d3
 22:
 	
-	lsr.w	#5,d7		| this is Y (tile)
+	lsr.w	#5,d7		| this is X (tile)
 	not.w	d7
 	add.w	#0x20,d7
 
@@ -2794,14 +2794,14 @@ sprites:
     .word    sprpt+30,0
 
 color_line_copper:
- 	.set    beampos,0x1401
+ 	.set    beampos,0x2401
 	.rept	NB_ROWS
+	.word	beampos,0xFFFE
 	* 3 first color registers to change dynamically each 8 lines
 	.word	color+2,0
 	.word	color+4,0
 	.word	color+6,0
 	.set    beampos,beampos+0x800
-	.word	beampos,0xFFFE
 	.endr
 
 
