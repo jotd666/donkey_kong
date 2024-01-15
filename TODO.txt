@@ -1,8 +1,10 @@
-a lot of text not printed!
+- last copper lines not correct: debug with color 0 instead of color 3, go beyond PAL limit
+- implement sprites: log sprites that are displayed with clut (too many cluts)
+- demo doesn't seem to run (timer not decreasing)
+- implement insert coin
 
-1UP: OK
-HIGHSCORE: not printed
-CREDITS: not printed
-L=00???
-INSERT COIN + highscore table not printed (INSERT COIN looks ok when debugging...)
+
+
+- if possible, use 13-color BOB palette (black OK, then 3 varying colors that can't be used)
+
 

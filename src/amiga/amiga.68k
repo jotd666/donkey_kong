@@ -1671,7 +1671,7 @@ platform_init:
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1C99,diwstrt(a5)
 	*         VVHH
-    move.w #0x1C69,diwstop(a5)
+    move.w #0x2469,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
@@ -1907,12 +1907,12 @@ osd_update_palette_bank:
 update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 
-	
+
 	move.w	d7,d3
 	and.w	#0x1F,d3	| this is Y (tile)
 	addq	#1,d3
-	cmp.w	#NB_ROWS,d3
-	jcc		0f			| don't write
+*	cmp.w	#NB_ROWS+1,d3
+*	jcc		0f			| don't write
 22:
 	
 	lsr.w	#5,d7		| this is X (tile)

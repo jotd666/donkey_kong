@@ -24,8 +24,8 @@ def ensure_empty(sd):
         os.mkdir(sd)
 
 dump_tiles = False
-dump_sprites = False
-dump_palettes = True
+dump_sprites = True
+dump_palettes = False
 
 if dump_palettes:
     ensure_empty(dump_dir)
@@ -134,7 +134,8 @@ def replace_color(img,color,replacement_color):
     return rval
 
 def get_sprite_clut(clut_index):
-    return sprite_cluts[clut_index]
+    # simple slice of global palette
+    return tile_palette[clut_index*4:(clut_index+1)*4]
 
 # creating the sprite configuration in the code is more flexible than with a config file
 
@@ -148,8 +149,7 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite):
 
 
 sprite_config = dict()
-attached_sprites = set()
-jeep_cluts = {0,12}
+
 
 
 #add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
@@ -162,6 +162,7 @@ def switch_values(t,a,b):
 
 tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
 
+# unique colors, much smaller (18)
 bobs_palette = sorted(set(tile_palette))
 
 rval = guess_cluts()
@@ -189,8 +190,6 @@ fake_4_color_palette = [(0,0,0),(255,0,0),(0,255,0),(0,0,255)]
 with open(os.path.join(src_dir,"palette.68k"),"w") as f:
     bitplanelib.palette_dump(bobs_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
-##with open(os.path.join(src_dir,"bobs_palette.68k"),"w") as f:
-##    bitplanelib.palette_dump(bob_global_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
 character_codes = []
 
@@ -215,29 +214,24 @@ if True:
 bitplane_cache = dict()
 plane_next_index = 0
 
-if False:
+if True:
     for k,sprdat in enumerate(block_dict["sprite"]["data"]):
-        if k in attached_sprites:
-            sprites[k] = True   # note that sprite is legal but will be ignored
-            continue
 
         sprconf = sprite_config.get(k)
         if sprconf:
             clut_range = sprconf["cluts"]
             name = sprconf["name"]
             is_sprite = sprconf["is_sprite"]
-            vattached = sprconf.get("vattached")
         else:
-            clut_range = range(0,16)
+            clut_range = [0,1,2,3]
             name = f"unknown_{k:02x}"
             is_sprite = False
-            vattached = None
 
         for cidx in clut_range:
-            hsize = 32 if vattached else 16
-            img = Image.new('RGB',(16,hsize),transparent)
+            hsize = 16
+            img = Image.new('RGB',(16,hsize))
             spritepal = get_sprite_clut(cidx)
-            spritepal[0] = transparent
+
             d = iter(sprdat)
             for j in range(16):
                 for i in range(16):
@@ -246,14 +240,6 @@ if False:
                     if sprconf:
                         (sprites_used_colors if is_sprite else bobs_used_colors)[color] += 1
                     img.putpixel((i,j),color)
-            if vattached:
-                d = iter(vattached)
-                for j in range(16,32):
-                    for i in range(16):
-                        v = next(d)
-                        color = spritepal[v]
-                        (sprites_used_colors if is_sprite else bobs_used_colors)[color] += 1
-                        img.putpixel((i,j),color)
 
             # only consider sprites/cluts which are pre-registered
             if sprconf:

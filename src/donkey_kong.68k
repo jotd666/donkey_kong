@@ -2470,6 +2470,7 @@ l_05e0:
 * called from #0306 with code for text to draw in D0
 
 draw_text_to_screen_05e9:
+	moveq	#0,d7			| so move.w (sp)+,d7 sets the proper flag
 	lea	game_rom+0x364b,a0                      	| [$05e9: ld      hl,$364b] start of table data
 	add.b	d0,d0                            	| [$05ec: add     a,a] double the parameter
 	scs		d7									| remember carry
@@ -2496,7 +2497,6 @@ draw_text_to_screen_05e9:
 	                           	| [$05fb: inc     hl] next table entry
 	move.w	#0xffe0,d1                        	| [$05fc: ld      bc,$ffe0] load BC with offset to print characters across 65504
 	exg	a0,a1                              	| [$05ff: ex      de,hl] DE <> HL.  HL now has screen destination, DE has table pointer
-	
 l_0600:
 	move.b	(a1),d0                         	| [$0600: ld      a,(de)] load A with table data
 	cmp.b	#0x3f,d0                         	| [$0601: cp      $3f] end of string reached?
@@ -2508,10 +2508,12 @@ l_0600:
 	move.w	(sp)+,d7                        	| [$0607: pop     af] restore AF from stack.  is there a carry? twice
 	jeq	l_060c                             	| [$0608: jr      nc,$060c] no, skip next step
 
-	move.w	d5,d7
+	
+	exg	d5,d7
 	move.b	#0x10,d0                      	| [$060a: ld      (hl),$10] yes, write a blank space to the screen
 	jbsr	osd_w_videoram
-
+	exg	d5,d7
+	
 l_060c:
 	move.w	d7,-(sp)                        	| [$060c: push    af] save AF
 	move.w	d7,-(sp)                        	| [$060c: push    af] save AF
