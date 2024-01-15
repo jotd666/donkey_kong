@@ -2592,8 +2592,9 @@ l_0655:
 0:
 	move.b	(a0)+,d0                              	| [$065c: ldir] transfer (HL) to (DE) 3 times
 	jbsr	osd_w_videoram
-	add.w	#0x1D,d7                            	| [$065e: add     ix,de] add offset DE to IX
+	addq	#1,d7
 	dbf		d1,0b
+	add.w	#0x1d,d7                            	| [$065e: add     ix,de] add offset DE to IX
 	move.w	(a7)+,d0											| [$0660: push    ix]
 												| [$0662: pop     de] load DE with IX
 	subq.b	#1,d0                           	| [$0663: dec     a] decrease counter
