@@ -1271,7 +1271,7 @@ donkey_kong_irq:
 *	jne	l_4000                             	| [$0077: jp      nz,$4000] yes, jump to #4000 [??? this would cause a crash ???]
 
 	lea	game_rom+0x0138,a0                      	| [$007a: ld      hl,$0138] load HL with start of table data
-	jbsr	l_0141                            	| [$007d: call    $0141] refresh the P8257 Control registers / refresh sprites to hardware
+	jbsr	refresh_sprites_0141                            	| [$007d: call    $0141] refresh the P8257 Control registers / refresh sprites to hardware
 	move.b	nocredits_6007,d0               	| [$0080: ld      a,(nocredits_6007)] load the credit indicator
 	                               	| [$0083: and     a] are there credits present / is a game being played ?
 	jne	l_00b5                             	| [$0084: jp      nz,$00b5] No, jump ahead
@@ -1436,9 +1436,13 @@ l_012d:
 * called from #007D
 * HL is preloaded with #0138
 * This copies the sprite data from $6900 to $7000
-* Presumably the reason sprite data isn't stored in $7000 in the first place is to ensure it's updated only during vblank.
+* Presumably the reason sprite data isn't stored in $7000 in 
+* the first place is to ensure it's updated only during vblank.
 
-l_0141:
+refresh_sprites_0141:
+	lea		girls_head_sprite_6900,a0
+	jbsr	osd_update_sprites
+	
 *	clr.b	d0                               	| [$0141: xor     a] A := 0
 *	move.b	d0,reg_dma                      	| [$0142: ld      (reg_dma),a] store into P8257 DRQ DMA Request
 *	move.b	(a0),d0                         	| [$0145: ld      a,(hl)] load table data (#53)
@@ -2559,7 +2563,7 @@ l_062a:
 	                               	| [$0631: and     a] timer == 0 ?
 	jne	l_06a8                             	| [$0632: jp      nz,$06a8] no, jump ahead
 
-	move.b	mario_dead_flag_63b8,d0         	| [$0635: ld      a,(mario_dead_flag_63b8)] else load A with timer expired indicator
+	tst.b	mario_dead_flag_63b8         	| [$0635: ld      a,(mario_dead_flag_63b8)] else load A with timer expired indicator
 	                               	| [$0638: and     a] has timer expired ?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$0639: ret     nz] yes, return [...]
@@ -2661,8 +2665,8 @@ l_06a8:
 
 * timer at zero
 
-	lea	mario_dead_flag_63b8,a0        	| [$06ac: ld      hl,mario_dead_flag_63b8] load HL with mario dead flag
-	move.b	#0x01,(a0)                      	| [$06af: ld      (hl),$01] store 1 - mario will die soon on next timer click
+	move.b	#0x01,mario_dead_flag_63b8        	| [$06ac: ld      hl,mario_dead_flag_63b8] load HL with mario dead flag
+													| [$06af: ld      (hl),$01] store 1 - mario will die soon on next timer click
 
 l_06b1:
 	*daa                 | Decimal adjust
@@ -2751,7 +2755,7 @@ playing_game_06fe:
     .long	l_0c91                      | (A)  #0C91     | clears screen, update timers, draws current screen, sets background music
     .long	l_123c                      | (B)  #123C     | set initial mario sprite position and draw remaining lives and level
     .long	l_197a                      | (C)  #197A     | for when playing a game.  this is the main routine
-    .long	mario_died_127c                      | (D)  #127C     | mario died.  handle mario dying animations
+    .long	mario_died_127c             | (D)  #127C     | mario died.  handle mario dying animations
     .long	l_12f2                      | (E)  #12F2     | clear sounds, decrease life, check for and handle game over
     .long	l_1344                      | (F)  #1344     | clear sounds, clear game start flag, draw game over if needed PL2, set game mode2 accordingly
     .long	l_138f                      | (10) #138F    | check for game over status on a 2 player game
@@ -4867,8 +4871,8 @@ mario_died_127c:
 	jbsr	rst_28                            	| [$1282: rst     $28] jump based on A
 
 	.long	l_128b	| #128B         | 0 normal
-	.long	l_12ac	| #12AC         | 1 mario dying
-	.long	l_12de	| #12DE         | 2 mario dead
+	.long	mario_dying_12ac	| #12AC         | 1 mario dying
+	.long	mario_dead_12de	| #12DE         | 2 mario dead
 	.long	0		| unused ?
 
 l_128b:
@@ -4895,7 +4899,7 @@ l_128b:
 * arrive here when mario dies
 * animates mario
 
-l_12ac:
+mario_dying_12ac:
 	jbsr	rst_18                            	| [$12ac: rst     $18] count down WaitTimerMSB and only continue when 0
 	move.b	#0x08,d0                        	| [$12ad: ld      a,$08] load A with 8 frames of delay
 	move.b	d0,waittimermsb_6009            	| [$12af: ld      (waittimermsb_6009),a] store into timer for sound delays
@@ -4940,7 +4944,7 @@ l_12cb:
 
 * mario is completely dead
 
-l_12de:
+mario_dead_12de:
 	jbsr	rst_18                            	| [$12de: rst     $18] count down WaitTimerMSB and only continue when 0
 	jbsr	l_30db                            	| [$12df: call    $30db] clear mario and elevator sprites from screen
 	lea	gamemode2_600a,a0              	| [$12e2: ld      hl,gamemode2_600a] set HL to game mode2
@@ -6179,8 +6183,8 @@ l_197a:
 	jbsr	l_2ed4                            	| [$1998: call    $2ed4] do stuff for hammer
 	jbsr	l_2207                            	| [$199b: call    $2207] do stuff for conveyors
 	jbsr	l_1a33                            	| [$199e: call    $1a33] check for and handle running over rivets
-	jbsr	l_2a85                            	| [$19a1: call    $2a85] check for mario falling
-	jbsr	l_1f46                            	| [$19a4: call    $1f46] handle mario falling
+	jbsr	check_for_mario_falling_2a85        | [$19a1: call    $2a85] check for mario falling
+	jbsr	handle_mario_falling_1f46           | [$19a4: call    $1f46] handle mario falling
 	jbsr	l_26fa                            	| [$19a7: call    $26fa] do stuff for elevators
 	jbsr	l_25f2                            	| [$19aa: call    $25f2] handle conveyor directions, adjust Mario's speed based on conveyor directions
 	jbsr	l_19da                            	| [$19ad: call    $19da] check for mario picking up bonus item
@@ -6653,7 +6657,7 @@ l_1bf2:
 l_1c05:
 	jbsr	l_2b1c                            	| [$1c05: call    $2b1c] do stuff for jumping, load A with landing indicator ?
 	subq.b	#1,d0                           	| [$1c08: dec     a] decrease A.  mario landing ?
-	jeq	l_1c3a                             	| [$1c09: jp      z,$1c3a] yes, skip ahead to handle
+	jeq	mario_lands_1c3a                             	| [$1c09: jp      z,$1c3a] yes, skip ahead to handle
 
 	move.b	mario_jump_apex_621f,d0         	| [$1c0c: ld      a,(mario_jump_apex_621f)] else load A with #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 	subq.b	#1,d0                           	| [$1c0f: dec     a] decrease A.  at zero ?  is mario at apex or on way down ?
@@ -6692,7 +6696,7 @@ l_1c33:
 
 * arrive here when mario lands.  B is preloaded with a parameter
 
-l_1c3a:
+mario_lands_1c3a:
 	subq.b	#1,d1                           	| [$1c3a: dec     b] B == 1 ?
 	jeq	l_1c4f                             	| [$1c3b: jp      z,$1c4f] if so, skip ahead
 
@@ -7333,8 +7337,8 @@ l_1f34:
 
 * called from main routine at #19A4
 
-l_1f46:
-	move.b	mario_falling_indicator_6221,d0 	| [$1f46: ld      a,(mario_falling_indicator_6221)] load A with falling indicator.  also set when mario lands from jumping off elevator
+handle_mario_falling_1f46:
+	tst.b	mario_falling_indicator_6221 	| [$1f46: ld      a,(mario_falling_indicator_6221)] load A with falling indicator.  also set when mario lands from jumping off elevator
 	                               	| [$1f49: and     a] is mario falling?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1f4a: ret     z] no, return [...]
@@ -9655,7 +9659,7 @@ l_2a7d:
 
 * called from main routine at #19A1
 
-l_2a85:
+check_for_mario_falling_2a85:
 	move.b	ladder_status_6215,d0           	| [$2a85: ld      a,(ladder_status_6215)] load ladder status
 	                               	| [$2a88: and     a] is mario on a ladder ?
 	beq.b	0f                               	| [...]
@@ -9883,7 +9887,7 @@ l_2b9b:
 	cmp.b	#0x08,d0                         	| [$2ba8: cp      $08]
 	jcc	l_2bd9                             	| [$2baa: jp      nc,$2bd9] yes, skip ahead, set results to zero and return
 
-	move.b	(a0),d0                         	| [$2bad: ld      a,(hl)] load A with the screen item in VRAM
+	jbsr	osd_r_videoram                         	| [$2bad: ld      a,(hl)] load A with the screen item in VRAM
 	cmp.b	#0xc0,d0                         	| [$2bae: cp      $c0] == #C0 ?
 	jeq	l_2bd9                             	| [$2bb0: jp      z,$2bd9] yes, skip ahead, set results to zero and return
 
@@ -10265,16 +10269,16 @@ l_2d54:
 
 l_2d70:
 	addq.w	#1,a1                           	| [$2d70: inc     de] DE now has sprite value
-	move.b	d0,(a1)                         	| [$2d71: ld      (de),a] store new sprite
+	move.b	d0,(a1)+                         	| [$2d71: ld      (de),a] store new sprite
 	move.b	d0,(0x07,a2)                    	| [$2d72: ld      (ix+$07),a] store into barrel sprite value
 	move.b	(0x08,a2),d0                    	| [$2d75: ld      a,(ix+$08)] load A with barrel color
-	addq.w	#1,a1                           	| [$2d78: inc     de] DE now has sprite color value
-	move.b	d0,(a1)                         	| [$2d79: ld      (de),a] store color into sprite
+												| [$2d78: inc     de] DE now has sprite color value
+	move.b	d0,(a1)+                         	| [$2d79: ld      (de),a] store color into sprite
 	addq.w	#1,a0                           	| [$2d7a: inc     hl] increase HL.  EG #39CD for crazy barrel
-	move.b	(a0),d0                         	| [$2d7b: ld      a,(hl)] load A with this value.  EG #4D for crazy barrel
-	addq.w	#1,a1                           	| [$2d7c: inc     de] DE now has Y position
+	move.b	(a0)+,d0                         	| [$2d7b: ld      a,(hl)] load A with this value.  EG #4D for crazy barrel
+												| [$2d7c: inc     de] DE now has Y position
 	move.b	d0,(a1)                         	| [$2d7d: ld      (de),a] store into sprite Y position
-	addq.w	#1,a0                           	| [$2d7e: inc     hl] increase HL .  EG #39CE for crazy barrel
+												| [$2d7e: inc     hl] increase HL .  EG #39CE for crazy barrel
 	STORE_ROM_ADDRESS	a0,unknown_rom_address_62a8                 	| [$2d7f: ld      (unknown_rom_address_62a8),hl] store into 62A8.  EG 62A8 = CE, 62A9 = 39
 	rts                                    	| [$2d82: ret] return
 
@@ -10308,13 +10312,13 @@ l_2da5:
 	move.b	#0x01,(a2)                 	| [$2da5: ld      (ix+$00),$01] barrel is now active
 	move.b	#0x01,(0x0f,a2)                 	| [$2da9: ld      (ix+$0f),$01]
 	clr.b	d0                               	| [$2dad: xor     a] A := 0
-	move.b	d0,(0x10,a2)                    	| [$2dae: ld      (ix+$10),a] clear this indicator (???)
-	move.b	d0,(0x11,a2)                    	| [$2db1: ld      (ix+$11),a]
-	move.b	d0,(0x12,a2)                    	| [$2db4: ld      (ix+$12),a]
-	move.b	d0,(0x13,a2)                    	| [$2db7: ld      (ix+$13),a]
-	move.b	d0,(0x14,a2)                    	| [$2dba: ld      (ix+$14),a]
-	move.b	d0,barrel_deployment_indicator_6393	| [$2dbd: ld      (barrel_deployment_indicator_6393),a] clear barrel deployment indicator
-	move.b	d0,barrel_deployment_indicator_6392	| [$2dc0: ld      (barrel_deployment_indicator_6392),a] clear barrel deployment indicator
+	clr.b	(0x10,a2)                    	| [$2dae: ld      (ix+$10),a] clear this indicator (???)
+	clr.b	(0x11,a2)                    	| [$2db1: ld      (ix+$11),a]
+	clr.b	(0x12,a2)                    	| [$2db4: ld      (ix+$12),a]
+	clr.b	(0x13,a2)                    	| [$2db7: ld      (ix+$13),a]
+	clr.b	(0x14,a2)                    	| [$2dba: ld      (ix+$14),a]
+	clr.b	barrel_deployment_indicator_6393	| [$2dbd: ld      (barrel_deployment_indicator_6393),a] clear barrel deployment indicator
+	clr.b	barrel_deployment_indicator_6392	| [$2dc0: ld      (barrel_deployment_indicator_6392),a] clear barrel deployment indicator
 	move.b	(a1),d0                         	| [$2dc3: ld      a,(de)] load A with kong hand sprite X position
 	move.b	d0,(0x03,a2)                    	| [$2dc4: ld      (ix+$03),a] store in barrel's X position
 	addq.w	#3,a1                           	| [$2dc7: inc     de] * 3

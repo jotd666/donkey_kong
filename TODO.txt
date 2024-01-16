@@ -1,10 +1,8 @@
-- last copper lines not correct: debug with color 0 instead of color 3, go beyond PAL limit
-- implement sprites: log sprites that are displayed with clut (too many cluts)
-- demo doesn't seem to run (timer not decreasing)
+- log sprites that are displayed with clut (too many cluts): in progress
+- flip X (aka Y in game): kong uses that, configure flip per tile to save memory
+- demo: mario jumps & dies immediately from the fall! catch mario sprite when landing, see the code around
+  check mario_lands_1c3a
+- cookie cut doesn't seem to work for sprites or mask is bogus??
+- implement cookie cut erase for sprites (2 first bitplanes) then normal erase for the rest
 - implement insert coin
-
-
-
-- if possible, use 13-color BOB palette (black OK, then 3 varying colors that can't be used)
-
 

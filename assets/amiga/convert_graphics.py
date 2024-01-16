@@ -7,6 +7,12 @@ import collections
 
 transparent = (60,100,200)  # whatever is not a used RGB is ok
 
+
+# only 1 4 color palette, all rows use 4 colors per row
+# those colors can't be found in palette
+fake_4_color_palette = [(0,0,0),(0xE0,0,0),(0,0xE0,0),(0,0,0xE0)]
+
+
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/amiga")
 dump_dir = os.path.join(this_dir,"dumps")
@@ -42,7 +48,7 @@ if dump_sprites:
 
 
 NB_POSSIBLE_SPRITES = 128
-NB_BOB_PLANES = 4
+NB_BOB_PLANES = 5
 
 def guess_cluts():
 
@@ -54,7 +60,7 @@ def guess_cluts():
 
     rval = []
     for i in range(0,4):
-        bank = f"palettes/bank_{i:02}.png"
+        bank = os.path.join(this_dir,f"palettes/bank_{i:02}.png")
         img = Image.open(bank)
         x_start = img.size[0]-8
         row_cols = []
@@ -82,7 +88,38 @@ def dump_asm_bytes(*args,**kwargs):
     bitplanelib.dump_asm_bytes(*args,**kwargs,mit_format=True)
 
 
-sprites = dict()
+sprite_config = dict()
+
+def add_sprite_block(start,end,prefix,cluts,is_sprite=False):
+    if isinstance(cluts,int):
+        cluts = [cluts]
+    for i in range(start,end):
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
+def add_sprite(code,prefix,cluts,is_sprite=False):
+    add_sprite_block(code,code+1,prefix,cluts,is_sprite)
+
+add_sprite_block(0,0x10,"mario",2)
+add_sprite_block(0x12,0x15,"princess",9)
+add_sprite(0x10,"princess",9)
+add_sprite(0x11,"princess",10)
+add_sprite_block(0x15,0x19,"barrel",11)
+add_sprite(0x49,"oil_barrel",12)
+add_sprite_block(0x19,0x1C,"death_barrel",12)
+add_sprite_block(0x1E,0x20,"hammer",7)
+add_sprite_block(0x20,0x38,"kong",8)
+add_sprite(0x23,"kong",[7,8])
+add_sprite(0x70,"blank",[1,8,10])
+add_sprite(0x3A,"blank",15)
+
+
+
+add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
+add_sprite_block(0x3D,0x3F,"fireball",[1,13,15]) # clut?
+add_sprite_block(0x40,0x44,"flame",[1,13,15])
+
+add_sprite(0x44,"elevator",0x0) # clut?
+add_sprite(0x45,"conveyor",0x0) # clut?
+add_sprite(0x46,"moving_ladder",0x0) # clut?
 
 block_dict = {}
 
@@ -119,9 +156,6 @@ with open(os.path.join(this_dir,"..","dkong_gfx.c")) as f:
 # dict_keys(['palette', 'clut', 'tile', 'sprite'])
 
 
-# cluts
-#sprite_cluts = [[sprite_palette[i] for i in clut] for clut in block_dict['sprite_clut']["data"]]
-
 def replace_color(img,color,replacement_color):
     rval = Image.new("RGB",img.size)
     for x in range(img.size[0]):
@@ -133,9 +167,15 @@ def replace_color(img,color,replacement_color):
             rval.putpixel(c,rgb)
     return rval
 
+def swap(a,i,j):
+    a[j],a[i] = a[i],a[j]
+
 def get_sprite_clut(clut_index):
     # simple slice of global palette
-    return tile_palette[clut_index*4:(clut_index+1)*4]
+    rval = tile_palette[clut_index*4:(clut_index+1)*4]
+    # needs some reordering
+    swap(rval,1,2)
+    return rval
 
 # creating the sprite configuration in the code is more flexible than with a config file
 
@@ -147,8 +187,6 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite):
         sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
 
 
-
-sprite_config = dict()
 
 
 
@@ -163,7 +201,11 @@ def switch_values(t,a,b):
 tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
 
 # unique colors, much smaller (18)
-bobs_palette = sorted(set(tile_palette))
+# start by fake colors (black first, then 3 colors not in palette
+# to avoid 4 first tile colors=
+bobs_palette = fake_4_color_palette + sorted(set(tile_palette))[1:]
+bobs_palette += [fake_4_color_palette[0]]*(32-len(bobs_palette))
+
 
 rval = guess_cluts()
 # dump cluts as RGB4 for sprites
@@ -179,11 +221,6 @@ with open(os.path.join(src_dir,"row_colors.68k"),"w") as f:
         for row in config:
             rgb4 = [bitplanelib.to_rgb4_color(x) for x in row[1:]]  # don't dump black
             bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
-
-
-
-# only 1 4 color palette, all rows use 4 colors per row
-fake_4_color_palette = [(0,0,0),(255,0,0),(0,255,0),(0,0,255)]
 
 
 
@@ -209,14 +246,15 @@ if True:
             scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}.png"))
 
 
+bobs_used_colors = collections.Counter()
+sprites_used_colors = collections.Counter()
 
-
+sprites = dict()
 bitplane_cache = dict()
 plane_next_index = 0
 
 if True:
     for k,sprdat in enumerate(block_dict["sprite"]["data"]):
-
         sprconf = sprite_config.get(k)
         if sprconf:
             clut_range = sprconf["cluts"]
@@ -273,10 +311,11 @@ if True:
                     # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
                     # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                     # copper will put the proper color back again
-                    img_to_raw = replace_color(img,brown_rock_color,blue_dark_mountain_color)
-                    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+##                    img_to_raw = replace_color(img,brown_rock_color,blue_dark_mountain_color)
+##                    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
+                    img_to_raw = img
 
-                    bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bob_global_palette,forced_nb_planes=NB_BOB_PLANES,
+                    bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
                         palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
                     bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
 
@@ -346,60 +385,60 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 ##                f.write(f"{name}_{j}")
 ##                f.write("\n")
 ##
-##    f.write("bob_table:\n")
-##
-##    bob_names = [None]*NB_POSSIBLE_SPRITES
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        sprite = sprites.get(i)
-##        f.write("\t.long\t")
-##        if sprite:
-##            if sprite == True or sprite["is_sprite"]:
-##                f.write("-1")  # hardware sprite: ignore
-##            else:
-##                name = sprite["name"]
-##                bob_names[i] = name
-##                f.write(name)
-##
-##        else:
-##            f.write("0")
-##        f.write("\n")
-##
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        name = bob_names[i]
-##        if name:
-##            sprite = sprites.get(i)
-##            f.write(f"{name}:\n")
-##            csb = sprite["bitmap"]
-##            for j in range(16):
-##                b = csb.get(j)
-##                f.write("\t.long\t")
-##                if b:
-##                    f.write(f"{name}_{j}")
-##                else:
-##                    f.write("0")   # clut not active
-##                f.write("\n")
-##
-##    # blitter objects (bitplanes refs, can be in fastmem)
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        name = bob_names[i]
-##        if name:
-##            sprite = sprites.get(i)
-##            bitmap = sprite["bitmap"]
-##            for j in range(16):
-##                bm = bitmap.get(j)
-##                if bm:
-##                    sprite_label = f"{name}_{j}"
-##                    f.write(f"{sprite_label}:\n")
-##                    for plane_id in bm:
-##                        f.write("\t.long\t")
-##                        if plane_id is None:
-##                            f.write("0")
-##                        else:
-##                            f.write(f"plane_{plane_id}")
-##                        f.write("\n")
-##
-##    f.write("\t.section\t.datachip\n")
-##    # sprites
+    f.write("bob_table:\n")
+
+    bob_names = [None]*NB_POSSIBLE_SPRITES
+    for i in range(NB_POSSIBLE_SPRITES):
+        sprite = sprites.get(i)
+        f.write("\t.long\t")
+        if sprite:
+            if sprite == True or sprite["is_sprite"]:
+                f.write("-1")  # hardware sprite: ignore
+            else:
+                name = sprite["name"]
+                bob_names[i] = name
+                f.write(name)
+
+        else:
+            f.write("0")
+        f.write("\n")
+
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = bob_names[i]
+        if name:
+            sprite = sprites.get(i)
+            f.write(f"{name}:\n")
+            csb = sprite["bitmap"]
+            for j in range(16):
+                b = csb.get(j)
+                f.write("\t.long\t")
+                if b:
+                    f.write(f"{name}_{j}")
+                else:
+                    f.write("0")   # clut not active
+                f.write("\n")
+
+    # blitter objects (bitplanes refs, can be in fastmem)
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = bob_names[i]
+        if name:
+            sprite = sprites.get(i)
+            bitmap = sprite["bitmap"]
+            for j in range(16):
+                bm = bitmap.get(j)
+                if bm:
+                    sprite_label = f"{name}_{j}"
+                    f.write(f"{sprite_label}:\n")
+                    for plane_id in bm:
+                        f.write("\t.long\t")
+                        if plane_id is None:
+                            f.write("0")
+                        else:
+                            f.write(f"plane_{plane_id}")
+                        f.write("\n")
+
+    f.write("\t.section\t.datachip\n")
+    # sprites
 ##    for i in range(NB_POSSIBLE_SPRITES):
 ##        name = sprite_names[i]
 ##        if name:
@@ -410,9 +449,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 ##                sprite_label = f"{name}_{j}"
 ##                f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
 ##                bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
-##
-##    f.write("\n* bitplanes\n")
-##    # dump bitplanes
-##    for k,v in bitplane_cache.items():
-##        f.write(f"plane_{v}:")
-##        bitplanelib.dump_asm_bytes(k,f,mit_format=True)
+
+    f.write("\n* bitplanes\n")
+    # dump bitplanes
+    for k,v in bitplane_cache.items():
+        f.write(f"plane_{v}:")
+        bitplanelib.dump_asm_bytes(k,f,mit_format=True)

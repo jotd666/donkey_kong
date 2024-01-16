@@ -1,5 +1,6 @@
 
-
+	NB_HARDWARE_SPRITES = 76
+	
 ***    
 *** BUILD OPTIONS
 ***
