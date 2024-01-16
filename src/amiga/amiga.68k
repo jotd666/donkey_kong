@@ -1885,8 +1885,19 @@ osd_update_palette_bank:
 	move.l	(a0,d0.w),a0
 	
 	* dest copper lists
-	lea		color_line_copper+4,a1
-	move.w	#NB_ROWS-1,d0			| number of rows
+	lea		top_color_line_copper+4,a1
+	move.w	#NB_ROWS-5,d0			| number of rows
+1:
+	moveq	#2,d1
+0:
+	move.w	(a0)+,(2,a1)
+	addq.w	#4,a1
+	dbf		d1,0b
+	addq.w	#4,a1	| skip next wait instruction
+	dbf		d0,1b
+	
+	lea		bottom_color_line_copper+4,a1
+	move.w	#3,d0			| number of rows
 1:
 	moveq	#2,d1
 0:
@@ -1911,9 +1922,6 @@ update_bg_tile:
 	move.w	d7,d3
 	and.w	#0x1F,d3	| this is Y (tile)
 	addq	#1,d3
-*	cmp.w	#NB_ROWS+1,d3
-*	jcc		0f			| don't write
-22:
 	
 	lsr.w	#5,d7		| this is X (tile)
 	not.w	d7
@@ -1926,15 +1934,18 @@ update_bg_tile:
 	
 	move.w	#BG_SCREEN_PLANE_SIZE,d5
 	
+	* we update the drawed bitplanes and also the backbuffer
+	* that we use to erase the sprites with
 	move.l	bg_drawed_screen_ptr(pc),a1
+	lea		bg_background_data,a2
 	* D3 = Y
 
 	add.w	d3,d3
 	move.w	(a0,d3.w),d3
 	lsl.w	#3,d3		| times 8
-	add.w	d3,a1
+	add.w	d3,d7
 	add.w	d7,a1
-
+	add.w	d7,a2
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
@@ -1952,10 +1963,13 @@ update_bg_tile:
 4:
 	.set	offset,0
 	.rept	8
-	move.b	(a0)+,(offset,a1)	
+	move.b	(a0)+,d0
+	move.b	d0,(offset,a1)	
+	move.b	d0,(offset,a2)	
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
+	add.w	d5,a2
 	dbf		d4,4b
 0:
 	rts
@@ -1969,9 +1983,11 @@ update_bg_tile:
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
+	clr.b	(offset,a2)
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
+	add.w	d5,a2
 	dbf		d4,111b
 2:
 	rts
@@ -2800,28 +2816,35 @@ sprites:
     .word    sprpt+28,0
     .word    sprpt+30,0
 
-color_line_copper:
+top_color_line_copper:
+	* first colored rows
  	.set    beampos,0x2401
-	.rept	NB_ROWS
+	.rept	NB_ROWS-4
 	.word	beampos,0xFFFE
 	* 3 first color registers to change dynamically each 8 lines
 	.word	color+2,0
 	.word	color+4,0
 	.word	color+6,0
-	.set    beampos,(beampos+0x800)&0xFFFF  | wrongo
+	.set    beampos,beampos+0x800
 	.endr
 
 
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
-    .word  0x0401,0xFFFE
-	
-    .word   0x1C01,0xFFFE
-	.set    beampos,0x1E01
-	
- 	.word	beampos,0xFFFE
+ 	.set    beampos,0x0401		| more lines to align
+bottom_color_line_copper:
+	.rept	4
+	.word	beampos,0xFFFE
+	* the 4 last colored rows
+	.word	color+2,0
+	.word	color+4,0
+	.word	color+6,0
+	.set    beampos,beampos+0x800
+	.endr
+	* the line where "credits" is drawn
     .word	 intreq,0x8010	| no bobs from now on, get more drawing time
+	
     .long    -2					
 	.ascii	"ENDCPLST"
 
@@ -2830,6 +2853,9 @@ color_line_copper:
 	.align	8
 	
 		.section .bsschip
+bg_background_data:
+	ds.b	BG_SCREEN_SIZE
+	ds.b	NB_BYTES_PER_ROW*12*3
 bg_screen_data_1:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
