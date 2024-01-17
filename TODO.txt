@@ -1,7 +1,7 @@
 - log sprites that are displayed with clut (too many cluts): in progress
-- demo: mario jumps & dies immediately from the fall! catch mario sprite when landing, see the code around
-  check mario_lands_1c3a
-- implement cookie cut erase for sprites (2 first bitplanes) then normal erase for the rest
+- demo: mario jumps & dies immediately unless invincible? (re-test)
 - implement insert coin
 - center of kong trashed: check if blank tile at this position (test_sprites)
   skip blank tiles like 0x70, ...
+- bonus used to work now fails (big/little endian shit)
+- barrels fall off screen but continue falling / loop, then illegal/wrong address issue

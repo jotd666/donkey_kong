@@ -1672,7 +1672,7 @@ Init_0266:
 
 039C: 3E 05       ld      a,$05       ; otherwise A := 5
 
-039E: 32 80 63    ld      (unknown_6380),a   ; store result into difficulty
+039E: 32 80 63    ld      (difficulty_level_6380),a   ; store result into difficulty
 03A1: c9          ret                 ; return to #02DE
 
 ; called from #02DE
@@ -2184,7 +2184,7 @@ Init_0266:
 062A: A7          and     a           ; parameter == 0 ?
 062B: cA 91 06    jp      z,$0691     ; yes, skip ahead and add bonus to player's score
 
-062E: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; else load onscreen timer
+062E: 3A 8C 63    ld      a,(onscreen_timer_638c)   ; else load onscreen timer
 0631: A7          and     a           ; timer == 0 ?
 0632: c2 A8 06    jp      nz,$06a8    ; no, jump ahead
 
@@ -2206,7 +2206,7 @@ Init_0266:
 0647: 07          rlca                ; rotate left (x4)
 0648: 07          rlca                ; rotate left (x8)
 0649: 07          rlca                ; rotate left (x16)
-064A: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; load on screen timer with result.  hex value converts to decimal.
+064A: 32 8C 63    ld      (onscreen_timer_638c),a   ; load on screen timer with result.  hex value converts to decimal.
 
 
 064D: 21 4A 38    ld      hl,$384a    ; load HL with #384A - table data
@@ -2226,7 +2226,7 @@ Init_0266:
 
 ; check to see if timer is below 1000
 
-0667: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; load a with value from on screen timer
+0667: 3A 8C 63    ld      a,(onscreen_timer_638c)   ; load a with value from on screen timer
 
 066A: 4f          ld      c,a         ; copy to C
 066b: e6 0F       and     $0f         ; zeroes out left 4 bits
@@ -2260,7 +2260,7 @@ Init_0266:
 ; adds bonus to player's score
 ;
 
-0691: 3A 8C 63    ld      a,(reset_onscreen_timer_638c)   ; load A with timer value from #638C
+0691: 3A 8C 63    ld      a,(onscreen_timer_638c)   ; load A with timer value from #638C
 0694: 47          ld      b,a         ; copy to B
 0695: e6 0F       and     $0f         ; and with #0F - mask four left bits.  how has low byte of bonus
 0697: c5          push    bc          ; save BC
@@ -2286,7 +2286,7 @@ Init_0266:
 06Af: 36 01       ld      (hl),$01    ; store 1 - mario will die soon on next timer click
 
 06b1: 27          daa                 ; Decimal adjust
-06b2: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; store A into timer
+06b2: 32 8C 63    ld      (onscreen_timer_638c),a   ; store A into timer
 06b5: c3 6A 06    jp      $066a       ; jump back
 
 ;
@@ -2952,7 +2952,7 @@ Init_0266:
 0AA0: 3E D4       ld      a,$d4       ; A := #D4
 0AA2: 32 AA 75    ld      ($75aa),a   ; draw a ladder at top of screen
 0AA5: AF          xor     a           ; A := 0
-0AA6: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; store into kong climbing counter
+0AA6: 32 AF 62    ld      (kong_misc_counter_62af),a   ; store into kong climbing counter
 0AA9: 21 B4 38    ld      hl,$38b4    ; load HL with start of table data
 0AAC: 22 C2 63    ld      (store_63c2),hl  ; store
 0AAF: 21 CB 38    ld      hl,$38cb    ; load HL with start of table data
@@ -2989,7 +2989,7 @@ Init_0266:
 ; arrive from #0A79 when intro screen indicator == 2
 
 0AE8: CD 6F 30    call    $306f       ; animate kong climbing up the ladder with girl under arm
-0AEB: 3A AF 62    ld      a,(kong_climbing_counter_62af)   ; load A with kong climbing counter
+0AEB: 3A AF 62    ld      a,(kong_misc_counter_62af)   ; load A with kong climbing counter
 0AEE: E6 0F       and     $0f         ; mask bits, now between 0 and #F.  zero?
 0AF0: CC 4A 30    call    z,$304a     ; yes, roll up kong's ladder behind him
 
@@ -3253,7 +3253,7 @@ Init_0266:
 
 0C92: CD 74 08    call    $0874       ; clears the screen and sprites
 0C95: AF          xor     a           ; A := 0
-0C96: 32 8C 63    ld      (reset_onscreen_timer_638c),a   ; reset onscreen timer
+0C96: 32 8C 63    ld      (onscreen_timer_638c),a   ; reset onscreen timer
 0C99: 11 01 05    ld      de,$0501    ; load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 0C9C: CD 9F 30    call    $309f       ; insert task
 0C9F: 21 86 7D    ld      hl,reg_palette_a; load HL with palette bank selector
@@ -4950,7 +4950,7 @@ Init_0266:
 1696: AF          xor     a           ; A := 0
 1697: 32 24 69    ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a   ; clear the other side of kongs arm
 169A: 32 2C 69    ld      (girl_being_carried_sprite_692c),a   ; clear the girl sprite that kong is carrying
-169D: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; clear the kong climbing counter
+169D: 32 AF 62    ld      (kong_misc_counter_62af),a   ; clear the kong climbing counter
 16A0: C3 62 16    jp      $1662       ; jump back
 
 ; jump here from #1622 when conveyors is finished.  step 1 of 5
@@ -5005,7 +5005,7 @@ Init_0266:
 16F9: AF          xor     a           ; A := 0
 16FA: 32 24 69    ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a   ; clear kong's arm sprite
 16FD: 32 2C 69    ld      (girl_being_carried_sprite_692c),a   ; clear girl under kong's arm
-1700: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; clear kong climbing counter
+1700: 32 AF 62    ld      (kong_misc_counter_62af),a   ; clear kong climbing counter
 1703: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
 1706: 34          inc     (hl)        ; increase counter
 1707: C9          ret                 ; return
@@ -5274,7 +5274,7 @@ Init_0266:
 18B4: CD 3D 00    call    $003d       ; move the girl down
 
 18B7: 3E 00       ld      a,$00       ; A := 0 [why written this way?]
-18B9: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; store into kong climbing counter
+18B9: 32 AF 62    ld      (kong_misc_counter_62af),a   ; store into kong climbing counter
 18BC: 3E 03       ld      a,$03       ; set boom sound duration
 18BE: 32 82 60    ld      (boom_sound_address_6082),a   ; play boom sound
 18C1: 21 88 63    ld      hl,end_of_level_counter_6388    ; load HL with end of level counter
@@ -5283,7 +5283,7 @@ Init_0266:
 
 ; arrive from #1647 when level is complete, last of 5 steps
 
-18C6: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter address
+18C6: 21 AF 62    ld      hl,kong_misc_counter_62af    ; load HL with kong climbing counter address
 18C9: 35          dec     (hl)        ; decrease.  zero?
 18CA: CA 3D 19    jp      z,$193d     ; yes, skip ahead, handle next level routine
 
@@ -5304,7 +5304,7 @@ Init_0266:
 18E2: F6 20       or      $20         ; turn on bit 5
 18E4: 77          ld      (hl),a      ; store result
 
-18E5: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter
+18E5: 21 AF 62    ld      hl,kong_misc_counter_62af    ; load HL with kong climbing counter
 18E8: 7E          ld      a,(hl)      ; get value
 18E9: FE E0       cp      $e0         ; == #E0 ?
 18EB: C2 10 19    jp      nz,$1910    ; no, skip ahead
@@ -6803,7 +6803,7 @@ Init_0266:
 2184: BA          cp      d           ; is the barrel already below mario  ?
 2185: D8          ret     c           ; yes, return without taking ladder
 
-2186: 3A 80 63    ld      a,(unknown_6380)   ; else load A with difficulty from 1 to 5.  usually the level but increases during play
+2186: 3A 80 63    ld      a,(difficulty_level_6380)   ; else load A with difficulty from 1 to 5.  usually the level but increases during play
 2189: 1F          rra                 ; roll right (div 2) .  now can be 0, 1, or 2
 218A: 3C          inc     a           ; increment.  result is now 1, 2, or 3 based on skill level
 218B: 47          ld      b,a         ; store into B
@@ -7080,7 +7080,7 @@ Init_0266:
 22CE: A7          and     a           ; is the oil can lit ?
 22CF: CA E1 22    jp      z,$22e1     ; no , jump ahead
 
-22D2: 3A 80 63    ld      a,(unknown_6380)   ; else load A with difficulty
+22D2: 3A 80 63    ld      a,(difficulty_level_6380)   ; else load A with difficulty
 22D5: 3D          dec     a           ; decrement.  will be between 0 and 4
 22D6: EF          rst     $28         ; jump based on A
 
@@ -8819,7 +8819,7 @@ FF = Extra Mario Icon
 2C1E: cb 4f       bit     1,a         ; test bit 1 - is this the second barrel after the first crazy ?
 2C20: c2 86 2C    jp      nz,$2c86    ; if it is, then deploy normal barrel; this barrel is never crazy.
 
-2C23: 3A 80 63    ld      a,(unknown_6380)   ; if not, then load A with difficulty from 1 to 5
+2C23: 3A 80 63    ld      a,(difficulty_level_6380)   ; if not, then load A with difficulty from 1 to 5
 2C26: 47          ld      b,a         ; For B = 1 to difficulty
 2C27: 3A 1A 60    ld      a,(framecounter_601a) ; load A with timer value.  this clock counts down from #FF to 00 over and over...
 2C2A: E6 1F       and     $1f         ; zero out left 3 bits.  the result is between 0 and #1F
@@ -8994,7 +8994,7 @@ FF = Extra Mario Icon
 2D0D: DD 36 08 0C ld      (ix+$08),$0c; set sprite color to blue
 2D11: DD 36 15 01 ld      (ix+$15),$01; set blue barrel indicator
 
-2D15: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with deployment timer
+2D15: 21 AF 62    ld      hl,kong_misc_counter_62af    ; load HL with deployment timer
 2D18: 35          dec     (hl)        ; count it down.  is the timer expired?
 2D19: C0          ret     nz          ; no, return
 
@@ -9028,7 +9028,7 @@ FF = Extra Mario Icon
 2D42: C2 51 2D    jp      nz,$2d51    ; if indicator is not zero then jump ahead
 
 2D45: 3E 01       ld      a,$01       ; else A := 1
-2D47: 32 AF 62    ld      (kong_climbing_counter_62af),a   ; Store into ???
+2D47: 32 AF 62    ld      (kong_misc_counter_62af),a   ; Store into ???
 2D4A: 3A 82 63    ld      a,(crazy_blue_barrel_indicator_6382)   ; load A with crazy/blue barrel indicator
 2D4D: 0F          rrca                ; Is this a crazy barrel?
 2D4E: DA 83 2D    jp      c,$2d83     ; yes, jump ahead and load HL with #39CC and store into #62A8 and #62A9 and resume on #2D54
@@ -9119,7 +9119,7 @@ FF = Extra Mario Icon
 2DDD: F7          rst     $30         ; returns immediately on girders and elevators, else continue
 
 2DDE: D7          rst     $10         ; only continue if mario alive
-2DDF: 3A 80 63    ld      a,(unknown_6380)   ; \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
+2DDF: 3A 80 63    ld      a,(difficulty_level_6380)   ; \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
 2DE2: 3C          inc     a           ;  |
 2DE3: A7          and     a           ;  | clear carry flag
 2DE4: 1F          rra                 ;  |
@@ -9557,7 +9557,7 @@ FF = Extra Mario Icon
 
 ; called from 3 locations
 
-306F: 21 AF 62    ld      hl,kong_climbing_counter_62af    ; load HL with kong climbing counter
+306F: 21 AF 62    ld      hl,kong_misc_counter_62af    ; load HL with kong climbing counter
 3072: 34          inc     (hl)        ; increase
 3073: 7E          ld      a,(hl)      ; load A with the counter
 3074: E6 07       and     $07         ; mask bits.  now between 0 and 7.  zero?
@@ -9665,7 +9665,7 @@ FF = Extra Mario Icon
 ; short-circuits back to the main routine, the faster they will move.
 ; called from #30ED ABOVE
 
-30FA: 3A 80 63    ld      a,(unknown_6380)   ; \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
+30FA: 3A 80 63    ld      a,(difficulty_level_6380)   ; \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
 30FD: FE 06       cp      $06         ;  |
 30FF: 38 02       jr      c,$3103     ; /
 
@@ -9770,7 +9770,7 @@ FF = Extra Mario Icon
 3189: C2 95 31    jp      nz,$3195    ; /
 318C: 3A A1 63    ld      a,(unknown_63a1)   ; \  Return if current count of # of fires == internal difficulty, on conveyors we never have more fireballs
 318F: 4F          ld      c,a         ;  | on screen than the internal difficulty
-3190: 3A 80 63    ld      a,(unknown_6380)   ;  |
+3190: 3A 80 63    ld      a,(difficulty_level_6380)   ;  |
 3193: B9          cp      c           ;  |
 3194: C8          ret     z           ; /
 3195: 3A A0 63    ld      a,(unknown_63a0)   ; \  Jump back and don't deploy fire if fire deployment flag is not set
@@ -9818,7 +9818,7 @@ FF = Extra Mario Icon
 ; every 256 frames (note that this is 256 actual frames, not 256 fireball code execution frames).
 ; called from #31B1 above
 
-31DD: 3A 80 63    ld      a,(unknown_6380)   ; \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
+31DD: 3A 80 63    ld      a,(difficulty_level_6380)   ; \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
 31E0: FE 03       cp      $03         ;  |
 31E2: F8          ret     m           ; /
 

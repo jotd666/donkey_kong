@@ -64,7 +64,18 @@ RAM_END	= 0x7000
 	lsr.w	#8,d3
 	.endm
 
-	.macro	LOAD_ROM_ADDRESS	var_16bit,reg
+	* load/store 16-bit words as big and little endian
+	*
+	* as always it appeared a goooood idea to use big endian for
+	* all words, but as always it fails miserably because game ROM
+	* data contains tables with little endian addresses for various
+	* RAM & ROM locations. Fortunately, if wrong endianness is set it
+	* trips the non-release range checks!
+	*
+	* big endian is only used to load/store to/from a 16 bit HL-like register
+	* like D5
+	
+	.macro	LOAD_ROM_ADDRESS_BE	var_16bit,reg
 	move.w	\var_16bit,d7
 	.ifndef		RELEASE
 	cmp.w	#ROM_END,d7
@@ -76,8 +87,23 @@ RAM_END	= 0x7000
 	add.w	d7,\reg
 	.endm
 	
-	.macro	LOAD_ANY_ADDRESS	var_16bit,reg
+	.macro	LOAD_ROM_ADDRESS_LE	var_16bit,reg
 	move.w	\var_16bit,d7
+	rol.w	#8,d7		| little endian
+	.ifndef		RELEASE
+	cmp.w	#ROM_END,d7
+	bcs.b	110f
+	illegal
+110:
+	.endif
+	lea		game_rom,\reg
+	add.w	d7,\reg
+	.endm
+	
+	* this is big endian
+	.macro	LOAD_ANY_ADDRESS_BE	var_16bit,reg
+	move.w	\var_16bit,d7
+	
 	cmp.w	#ROM_END,d7
 	bcs.b	110f
 	* maybe RAM
@@ -102,7 +128,21 @@ RAM_END	= 0x7000
 	add.w	d7,\reg
 	.endm
 	
-	.macro	STORE_ROM_ADDRESS	reg,var_16bit
+	.macro	STORE_ROM_ADDRESS_LE	reg,var_16bit
+	move.l	\reg,d7
+	sub.l	#game_rom,d7
+	.ifndef		RELEASE
+	cmp.w	#ROM_END,d7
+	bcs.b	110f
+	illegal
+110:
+	.endif
+	
+	rol.w	#8,d7		| little endian
+	move.w	d7,\var_16bit
+	.endm
+	
+	.macro	STORE_ROM_ADDRESS_BE	reg,var_16bit
 	move.l	\reg,d7
 	sub.l	#game_rom,d7
 	.ifndef		RELEASE
@@ -115,8 +155,9 @@ RAM_END	= 0x7000
 	move.w	d7,\var_16bit
 	.endm
 	
-	.macro	LOAD_RAM_ADDRESS	var_16bit,reg
+	.macro	LOAD_RAM_ADDRESS_LE	var_16bit,reg
 	move.w	\var_16bit,d7
+	rol.w	#8,d7		| little endian
 	.ifndef		RELEASE
 	cmp.w	#RAM_END,d7
 	bcs.b	110f
@@ -134,7 +175,7 @@ RAM_END	= 0x7000
 	add.w	d7,\reg
 	.endm
 	
-	.macro	STORE_RAM_ADDRESS	reg,var_16bit
+	.macro	STORE_RAM_ADDRESS_LE	reg,var_16bit
 	move.l	\reg,d7
 	sub.l	#ram_6000,d7
 	.ifndef		RELEASE
@@ -146,6 +187,7 @@ RAM_END	= 0x7000
 110:
 	.endif
 	add.w	#RAM_START,d7
+	rol.w	#8,d7		| little endian
 	move.w	d7,\var_16bit
 	.endm
 	
@@ -1119,7 +1161,7 @@ rst_08:
 * RST     #10
 * if mario is alive, it returns.  if mario is dead, it returns to the higher subroutine.
 *
-rst_10:
+continue_only_if_mario_alive_0010:
 
 	move.b	mario_array_6200,d0             	| [$0010: ld      a,(mario_array_6200)] 1 when mario is alive, 0 when dead
 	ror.b	#1,d0                            	| [$0013: rrca] is mario alive?
@@ -1193,10 +1235,12 @@ only_continues_if_given_level_0030:
 
 l_0048:
 	ror.b	#1,d0                            	| [$0048: rrca] Rotate A right with carry
+	scs		d7
 	subq.b	#1,d1                           	| [...]
 	jne	l_0048                             	| [$0049: djnz    $0048] Next B
 
-	bcc.b	0f                               	| [...]
+	tst.b	d7
+	beq.b	0f                               	| [...]
 	rts                                    	| [$004b: ret    c] return if carry [...]
 0:
 	move.l	(sp)+,a0                        	| [$004c: pop     hl] otherwise HL gets the stack = return to higher subroutine
@@ -1231,7 +1275,7 @@ l_003d:
 * this subroutine copies the memory values of HL to HL + #28 into #6908 through #6908 + #28
 * used to set all the kong sprites
 
-l_004e:
+update_kong_sprites_004e:
 	lea	start_of_kong_sprite_6908,a1   	| [$004e: ld      de,start_of_kong_sprite_6908] Kong's Sprites start
 	move.w	#0x28,d1                        	| [$0051: ld      bc,$0028] #28 bytes to copy 40
 	jbsr	ldir                              	| [$0054: ldir] copy
@@ -1805,7 +1849,7 @@ l_02f6:
 * task table
 
 jump_table_0307:
-	.long	l_051c                             | #051C | 0, for adding to score.  parameter is score in hundreds
+	.long	add_to_score_051c                             | #051C | 0, for adding to score.  parameter is score in hundreds
 	.long	l_059b                             | #059B | 1, clears and displays scores.  parameter 0 for p1, 1 for p2
 	.long	l_05c6                             | #05C6 | 2, displays score.  0 for p1, 1 for p2, 2 for highscore
 	.long	draw_text_to_screen_05e9                             | #05E9 | 3, used to draw text.  parameter is code for text to draw
@@ -1951,7 +1995,7 @@ l_037f:
 	move.b	#0x05,d0                        	| [$039c: ld      a,$05] otherwise A := 5
 
 l_039e:
-	move.b	d0,unknown_6380                 	| [$039e: ld      (unknown_6380),a] store result into difficulty
+	move.b	d0,difficulty_level_6380                 	| [$039e: ld      (difficulty_level_6380),a] store result into difficulty
 l_03A1:
 	rts  | [ret] return to #02DE
 
@@ -1961,7 +2005,7 @@ l_03a2:
 	move.b	#0x03,d0                        	| [$03a2: ld      a,$03] A := 3 = 0011 binary
 	jbsr	only_continues_if_given_level_0030                            	| [$03a4: rst     $30] only continue if level is girders or conveyors, else RET
 
-	jbsr	rst_10                            	| [$03a5: rst     $10] if mario is alive, continue, else RET
+	jbsr	continue_only_if_mario_alive_0010                            	| [$03a5: rst     $10] if mario is alive, continue, else RET
 
 	move.b	item_hit_indicator_unknown_6350,d0	| [$03a6: ld      a,(item_hit_indicator_unknown_6350)] load A with 1 when an item has been hit with hammer
 	ror.b	#1,d0                            	| [$03a9: rrca] has an item been hit with the hammer ?
@@ -2091,7 +2135,7 @@ l_0426:
 
 	lea	game_rom+0x39f7,a0                      	| [$0445: ld      hl,$39f7] start of table data
 l_0448:
-	jbsr	l_004e                            	| [$0448: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0448: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$044b: ld      a,$03] load sound duration of 3
 	move.b	d0,boom_sound_address_6082      	| [$044d: ld      (boom_sound_address_6082),a] play boom sound using sound buffer
 
@@ -2122,7 +2166,7 @@ l_0464:
 	jne	l_0486                             	| [$046c: jp      nz,$0486] yes, jump ahead
 
 	lea	game_rom+0x385c,a0                      	| [$046f: ld      hl,$385c] else load HL with start of table data for kongs sprites
-	jbsr	l_004e                            	| [$0472: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0472: call    $004e] update kong's sprites
 	jra	l_0450                             	| [$0475: jp      $0450] jump back
 
 * arrive here from #0454 when on rivets and conveyors
@@ -2258,7 +2302,7 @@ l_0516:
 * parameter in A is the score to add in hundreds
 *
 
-l_051c:
+add_to_score_051c:
 	move.b	d0,d2                           	| [$051c: ld      c,a] copy score to C
 	jbsr	rst_08                            	| [$051d: rst     $8] only continue if credits exist or someone is playing, else RET
 	jbsr	l_055f                            	| [$051e: call    $055f] load DE with address of player score
@@ -2489,7 +2533,7 @@ draw_text_to_screen_05e9:
 	move.b	(a0),d3                         	| [$05f6: ld      d,(hl)] load D with 2nd byte from table
 	LOAD_D3_16_FROM_D3D4
 	* can be from ROM or RAM
-	LOAD_ANY_ADDRESS	d3,a1
+	LOAD_ANY_ADDRESS_BE	d3,a1
 	exg	a1,a0                              	| [$05f7: ex      de,hl] DE <> HL
 	
 	* screen address followed by text
@@ -2559,7 +2603,7 @@ l_062a:
 	tst.b	d0                               	| [$062a: and     a] parameter == 0 ?
 	jeq	l_0691                             	| [$062b: jp      z,$0691] yes, skip ahead and add bonus to player's score
 
-	move.b	reset_onscreen_timer_638c,d0    	| [$062e: ld      a,(reset_onscreen_timer_638c)] else load onscreen timer
+	move.b	onscreen_timer_638c,d0    	| [$062e: ld      a,(onscreen_timer_638c)] else load onscreen timer
 	                               	| [$0631: and     a] timer == 0 ?
 	jne	l_06a8                             	| [$0632: jp      nz,$06a8] no, jump ahead
 
@@ -2582,7 +2626,7 @@ l_0640:
 
 	move.b	d1,d0                           	| [$0645: ld      a,b] load a with the number of tens in the counter
 	rol.b	#4,d0                            	| [$0646: rlca] rotate left (x2) * 4
-	move.b	d0,reset_onscreen_timer_638c    	| [$064a: ld      (reset_onscreen_timer_638c),a] load on screen timer with result.  hex value converts to decimal.
+	move.b	d0,onscreen_timer_638c    	| [$064a: ld      (onscreen_timer_638c),a] load on screen timer with result.  hex value converts to decimal.
 
 
 	lea	game_rom+0x384a,a0                      	| [$064d: ld      hl,$384a] load HL with #384A - table data
@@ -2608,7 +2652,7 @@ l_0655:
 
 * check to see if timer is below 1000
 
-	move.b	reset_onscreen_timer_638c,d0    	| [$0667: ld      a,(reset_onscreen_timer_638c)] load a with value from on screen timer
+	move.b	onscreen_timer_638c,d0    	| [$0667: ld      a,(onscreen_timer_638c)] load a with value from on screen timer
 
 l_066a:
 	move.b	d0,d2                           	| [$066a: ld      c,a] copy to C
@@ -2642,24 +2686,23 @@ l_0689:
 *
 
 l_0691:
-	move.b	reset_onscreen_timer_638c,d0    	| [$0691: ld      a,(reset_onscreen_timer_638c)] load A with timer value from #638C
+	move.b	onscreen_timer_638c,d0    	| [$0691: ld      a,(onscreen_timer_638c)] load A with timer value from #638C
 	move.b	d0,d1                           	| [$0694: ld      b,a] copy to B
 	and.b	#0x0f,d0                         	| [$0695: and     $0f] and with #0F - mask four left bits.  how has low byte of bonus
 	movem.w	d1/d2,-(sp)                    	| [$0697: push    bc] save BC
-	jbsr	l_051c                            	| [$0698: call    $051c] add to score
+	jbsr	add_to_score_051c                            	| [$0698: call    $051c] add to score
 
 	movem.w	(sp)+,d1/d2                    	| [$069b: pop     bc] restore BC
 	move.b	d1,d0                           	| [$069c: ld      a,b] load A with timer
 	ror.b	#4,d0                            	| [$069d: rrca] rotate right 4 times * 4
 	and.b	#0x0f,d0                         	| [$06a1: and     $0f] mask four left bits to zero
 	add.b	#0x0a,d0                         	| [$06a3: add     a,$0a] add #0A (10 decimal) - this indicates scores of thousands to add
-	jra	l_051c                             	| [$06a5: jp      $051c] jump to add score (thousands) and RET
+	jra	add_to_score_051c                             	| [$06a5: jp      $051c] jump to add score (thousands) and RET
 
 * jump here from #0632
 
-l_06A8:
-	moveq	#1,d7
 l_06a8:
+	moveq	#1,d7
 	sbcd	d7,d0                        	| [$06a8: sub     $01] subtract 1 from bonus timer
 	jne	l_06b1                             	| [$06aa: jr      nz,$06b1] If not zero, skip next 2 steps
 
@@ -2670,7 +2713,7 @@ l_06a8:
 
 l_06b1:
 	*daa                 | Decimal adjust
-	move.b	d0,reset_onscreen_timer_638c    	| [$06b2: ld      (reset_onscreen_timer_638c),a] store A into timer
+	move.b	d0,onscreen_timer_638c    	| [$06b2: ld      (onscreen_timer_638c),a] store A into timer
 	jra	l_066a                             	| [$06b5: jp      $066a] jump back
 
 *
@@ -2934,7 +2977,7 @@ l_0801:
 	addq.w	#1,d3                           	| [$0812: inc     de] load task data for text "NINTENDO OF AMERICA"
 	jbsr	insert_task_309f                            	| [$0813: call    $309f] insert task to draw text
 	lea	game_rom+0x39cf,a0                      	| [$0816: ld      hl,$39cf] load HL with table data for kong beating chest
-	jbsr	l_004e                            	| [$0819: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0819: call    $004e] update kong's sprites
 	jbsr	l_3f24                            	| [$081c: call    $3f24] draw TM logo onscreen [patch? orig japanese had 3 NOPs here]
 	nop                                    	| [$081f: nop] no operation
 	lea	start_of_kong_sprite_6908,a0   	| [$0820: ld      hl,start_of_kong_sprite_6908] load HL with start of kong sprite X pos
@@ -3265,7 +3308,7 @@ l_09ab:
 	lea	number_of_lives_remaining_6228,a1	| [$09ae: ld      de,number_of_lives_remaining_6228] load DE with destination data location.  start with remaining lives
 	move.w	#0x08,d1                        	| [$09b1: ld      bc,$0008] byte counter set to 8 8
 	jbsr	ldir                              	| [$09b4: ldir] copy (HL) into (DE) from P1NumLives to P2NumLives into #6228 to #622F
-	LOAD_ROM_ADDRESS	store_622a,a0               	| [$09b6: ld      hl,(store_622a)] EG #3A65.  start of table data for screens/levels
+	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$09b6: ld      hl,(store_622a)] EG #3A65.  start of table data for screens/levels
 	move.b	(a0),d0                         	| [$09b9: ld      a,(hl)] load screen number from table
 	move.b	d0,screen_number_6227           	| [$09ba: ld      (screen_number_6227),a] store screen number
 	move.b	twoplayergame_600f,d0           	| [$09bd: ld      a,(twoplayergame_600f)] load A with number of players
@@ -3322,7 +3365,7 @@ l_09fe:
 	lea	number_of_lives_remaining_6228,a1	| [$0a01: ld      de,number_of_lives_remaining_6228] destination is player lives remaining plus other player variables
 	move.w	#0x08,d1                        	| [$0a04: ld      bc,$0008] byte counter set to 8 8
 	jbsr	ldir                              	| [$0a07: ldir] copy
-	LOAD_ROM_ADDRESS	store_622a,a0               	| [$0a09: ld      hl,(store_622a)] load HL with table for screens/levels
+	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$0a09: ld      hl,(store_622a)] load HL with table for screens/levels
 	move.b	(a0),d0                         	| [$0a0c: ld      a,(hl)] load A with screen number from table
 	move.b	d0,screen_number_6227           	| [$0a0d: ld      (screen_number_6227),a] store A into screen number
 	move.b	#0x78,d0                        	| [$0a10: ld      a,$78] A := #78
@@ -3426,11 +3469,11 @@ l_0a8a:
 	move.b	#0xd4,d0                        	| [$0aa0: ld      a,$d4] A := #D4
 	WRITE_TO_SCREEN	0x75aa                       	| [$0aa2: ld      ($75aa),a] draw a ladder at top of screen
 	clr.b	d0                               	| [$0aa5: xor     a] A := 0
-	move.b	d0,kong_climbing_counter_62af   	| [$0aa6: ld      (kong_climbing_counter_62af),a] store into kong climbing counter
+	move.b	d0,kong_misc_counter_62af   	| [$0aa6: ld      (kong_misc_counter_62af),a] store into kong climbing counter
 	lea	game_rom+0x38b4,a0                      	| [$0aa9: ld      hl,$38b4] load HL with start of table data
-	STORE_ROM_ADDRESS	a0,store_63c2                   	| [$0aac: ld      (store_63c2),hl] store
+	STORE_ROM_ADDRESS_LE	a0,store_63c2                   	| [$0aac: ld      (store_63c2),hl] store
 	lea	game_rom+0x38cb,a0                      	| [$0aaf: ld      hl,$38cb] load HL with start of table data
-	STORE_ROM_ADDRESS	a0,unknown_63c4                 	| [$0ab2: ld      (unknown_63c4),hl] store
+	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0ab2: ld      (unknown_63c4),hl] store
 	move.b	#0x40,d0                        	| [$0ab5: ld      a,$40] A := #40
 	move.b	d0,waittimermsb_6009            	| [$0ab7: ld      (waittimermsb_6009),a] set timer to #40
 	lea	intro_screen_counter_6385,a0   	| [$0aba: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
@@ -3442,7 +3485,7 @@ l_0a8a:
 l_0abf:
 	jbsr	rst_18                            	| [$0abf: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x388c,a0                      	| [$0ac0: ld      hl,$388c] load HL with start of table data for kong
-	jbsr	l_004e                            	| [$0ac3: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0ac3: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$0ac6: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	#0x30,d2                        	| [$0ac9: ld      c,$30] load offset to add
 	jbsr	rst_38                            	| [$0acb: rst     $38] move kong
@@ -3465,7 +3508,7 @@ l_0abf:
 
 l_0ae8:
 	jbsr	l_306f                            	| [$0ae8: call    $306f] animate kong climbing up the ladder with girl under arm
-	move.b	kong_climbing_counter_62af,d0   	| [$0aeb: ld      a,(kong_climbing_counter_62af)] load A with kong climbing counter
+	move.b	kong_misc_counter_62af,d0   	| [$0aeb: ld      a,(kong_misc_counter_62af)] load A with kong climbing counter
 	and.b	#0x0f,d0                         	| [$0aee: and     $0f] mask bits, now between 0 and #F.  zero?
 	bne.b	0f                               	| [...]
 	jbsr	l_304a                            	| [$0af0: call    z,$304a] yes, roll up kong's ladder behind him
@@ -3481,7 +3524,7 @@ l_0ae8:
 	move.b	d0,waittimermsb_6009            	| [$0afb: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0afe: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b01: inc     (hl)] increase
-	STORE_RAM_ADDRESS		a0,timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
+	STORE_RAM_ADDRESS_LE		a0,timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
 	rts                                    	| [$0b05: ret] return
 
 * arrive from #0A79 when intro screen indicator == 4
@@ -3493,13 +3536,13 @@ l_0b06:
 	rts                                    	| [$0b0a: ret     c] yes, return [...]
 0:
 
-	LOAD_ROM_ADDRESS	store_63c2,a0               	| [$0b0b: ld      hl,(store_63c2)] load HL with ??? EG HL = #38B4
+	LOAD_ROM_ADDRESS_LE	store_63c2,a0               	| [$0b0b: ld      hl,(store_63c2)] load HL with ??? EG HL = #38B4
  	move.b	(a0),d0                         	| [$0b0e: ld      a,(hl)] load table data
 	cmp.b	#0x7f,d0                         	| [$0b0f: cp      $7f] end of data ?
 	jeq	l_0b1e                             	| [$0b11: jp      z,$0b1e] yes, jump ahead
 
 	addq.w	#1,a0                           	| [$0b14: inc     hl] next HL
-	STORE_ROM_ADDRESS	a0,store_63c2                   	| [$0b15: ld      (store_63c2),hl] store
+	STORE_ROM_ADDRESS_LE	a0,store_63c2                   	| [$0b15: ld      (store_63c2),hl] store
 	move.b	d0,d2                           	| [$0b18: ld      c,a] C := A
 	lea	kong_sprite_array_690b,a0      	| [$0b19: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	jbsr	rst_38                            	| [$0b1c: rst     $38] move kong
@@ -3507,7 +3550,7 @@ l_0b06:
 
 l_0b1e:
 	lea	game_rom+0x385c,a0                      	| [$0b1e: ld      hl,$385c] load HL with start of kong graphic table data
-	jbsr	l_004e                            	| [$0b21: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0b21: call    $004e] update kong's sprites
 	lea	girls_head_sprite_6900,a1      	| [$0b24: ld      de,girls_head_sprite_6900] load destination with girl sprite
 	move.w	#0x08,d1                        	| [$0b27: ld      bc,$0008] set counter to 8 8
 	jbsr	ldir                              	| [$0b2a: ldir] draw the girl after kong takes her up the ladder
@@ -3538,7 +3581,7 @@ l_0b38:
 	move.b	d0,waittimermsb_6009            	| [$0b5d: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0b60: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b63: inc     (hl)] increase
-	STORE_RAM_ADDRESS	a0,timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS_LE	a0,timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$0b67: ret] return
 
 * arrive from #0A79 when intro screen indicator == 6
@@ -3552,13 +3595,13 @@ l_0b68:
 
 * make kong jump to the left during intro
 
-	LOAD_ROM_ADDRESS	unknown_63c4,a0             	| [$0b6d: ld      hl,(unknown_63c4)] load HL with ??? (table data?)
+	LOAD_ROM_ADDRESS_LE	unknown_63c4,a0             	| [$0b6d: ld      hl,(unknown_63c4)] load HL with ??? (table data?)
 	move.b	(a0),d0                         	| [$0b70: ld      a,(hl)] get table data
 	cmp.b	#0x7f,d0                         	| [$0b71: cp      $7f] done ?
 	jeq	l_0b86                             	| [$0b73: jp      z,$0b86] yes, jump ahead
 
 	addq.w	#1,a0                           	| [$0b76: inc     hl] next table entry
-	STORE_ROM_ADDRESS	a0,unknown_63c4                 	| [$0b77: ld      (unknown_63c4),hl] store for next
+	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0b77: ld      (unknown_63c4),hl] store for next
 	lea	kong_sprite_array_690b,a0      	| [$0b7a: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	move.b	d0,d2                           	| [$0b7d: ld      c,a] C := A
 	jbsr	rst_38                            	| [$0b7e: rst     $38] move kong
@@ -3569,7 +3612,7 @@ l_0b68:
 
 l_0b86:
 	lea	game_rom+0x38cb,a0                      	| [$0b86: ld      hl,$38cb] load HL with start of table data
-	STORE_ROM_ADDRESS	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
+	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
 	move.b	#0x03,d0                        	| [$0b8c: ld      a,$03] set boom sound duration
 	move.b	d0,boom_sound_address_6082      	| [$0b8e: ld      (boom_sound_address_6082),a] play boom sound
 	lea	game_rom+0x38dc,a0                      	| [$0b91: ld      hl,$38dc] load HL with start of table data
@@ -3771,7 +3814,7 @@ l_0c91:
 l_0c92:
 	jbsr	l_0874                            	| [$0c92: call    $0874] clears the screen and sprites
 	clr.b	d0                               	| [$0c95: xor     a] A := 0
-	move.b	d0,reset_onscreen_timer_638c    	| [$0c96: ld      (reset_onscreen_timer_638c),a] reset onscreen timer
+	move.b	d0,onscreen_timer_638c    	| [$0c96: ld      (onscreen_timer_638c),a] reset onscreen timer
 	move.w  #0x0501,d3                      	| [$0c99: ld      de,$0501] load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
 	jbsr	insert_task_309f                            	| [$0c9c: call    $309f] insert task
 	lea	reg_palette_a,a0               	| [$0c9f: ld      hl,reg_palette_a] load HL with palette bank selector
@@ -3952,7 +3995,7 @@ l_0d5f:
 	                           	| [$0d6a: inc     hl] HL := GameMode2
 	addq.b	#1,(a0)                         	| [$0d6b: inc     (hl)] increase game mode2
 	lea	game_rom+0x385c,a0                      	| [$0d6c: ld      hl,$385c] load HL with start of kong graphic table data
-	jbsr	l_004e                            	| [$0d6f: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$0d6f: call    $004e] update kong's sprites
 
 	lea	girls_head_sprite_6900,a1      	| [$0d72: ld      de,girls_head_sprite_6900] set destination to girl sprite
 	move.w	#0x08,d1                        	| [$0d75: ld      bc,$0008] set counter to 8 8
@@ -4968,7 +5011,10 @@ l_12f2:
 	clr.b	d0                               	| [$12f5: xor     a] A := 0
 	move.b	d0,game_start_flag_622c         	| [$12f6: ld      (game_start_flag_622c),a] store into game start flag
 	lea	number_of_lives_remaining_6228,a0	| [$12f9: ld      hl,number_of_lives_remaining_6228] load HL with address for number of lives remaining
+	tst.b	infinite_lives_flag
+	bne.b	0f
 	subq.b	#1,(a0)                         	| [$12fc: dec     (hl)] one less life
+0:
 	move.b	(a0),d0                         	| [$12fd: ld      a,(hl)] load A with number of lives left
 	lea	p1numlives_6040,a1             	| [$12fe: ld      de,p1numlives_6040] set destination address
 	move.w	#0x08,d1                        	| [$1301: ld      bc,$0008] set counter 8
@@ -5021,7 +5067,10 @@ l_1344:
 	clr.b	d0                               	| [$1347: xor     a] A := 0
 	move.b	d0,game_start_flag_622c         	| [$1348: ld      (game_start_flag_622c),a] store into game start flag
 	lea	number_of_lives_remaining_6228,a0	| [$134b: ld      hl,number_of_lives_remaining_6228] load HL with number of lives remaining
+	tst.b	infinite_lives_flag
+	bne.b	0f
 	subq.b	#1,(a0)                         	| [$134e: dec     (hl)] decrease
+0:
 	move.b	(a0),d0                         	| [$134f: ld      a,(hl)] load A with the number of lives remaining
 	lea	p2numlives_6048,a1             	| [$1350: ld      de,p2numlives_6048] load DE with destination address
 	move.w	#0x08,d1                        	| [$1353: ld      bc,$0008] set counter to 8 8
@@ -5341,10 +5390,10 @@ l_14c1:
 	jne	l_14c1                             	| [$14c7: djnz    $14c1] Next B
 
 l_14c9:
-	STORE_RAM_ADDRESS	a0,unknown_ram_address_6038                 	| [$14c9: ld      (unknown_ram_address_6038),hl] store HL into Unk6038
+	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_6038                 	| [$14c9: ld      (unknown_ram_address_6038),hl] store HL into Unk6038
 	move.w	#0xfff3,d3                      	| [$14cc: ld      de,$fff3] load DE with offset of -#13
 	add.w	d3,a0                            	| [$14cf: add     hl,de] add offset
-	STORE_RAM_ADDRESS	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
+	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
 	clr.b	d1                               	| [$14d3: ld      b,$00] B := 0
 	move.b	hscursorpos_6035,d0             	| [$14d5: ld      a,(hscursorpos_6035)] load A with high score entry digit selected
 	move.b	d0,d2                           	| [$14d8: ld      c,a] copy to C
@@ -5492,7 +5541,7 @@ l_158a:
 	lea	game_rom+0x01bf,a1                      	| [$159d: ld      de,$01bf]
 
 l_15a0:
-	LOAD_RAM_ADDRESS	unknown_ram_address_6038,a3             	| [$15a0: ld      iy,(unknown_ram_address_6038)] load IY with Unk6038
+	LOAD_RAM_ADDRESS_LE	unknown_ram_address_6038,a3             	| [$15a0: ld      iy,(unknown_ram_address_6038)] load IY with Unk6038
 	move.b	(0x04,a3),d6                    	| [$15a4: ld      l,(iy+$04)]
 	move.b	(0x05,a3),d5                    	| [$15a7: ld      h,(iy+$05)]
 	LOAD_D5_16_FROM_D5D6
@@ -5631,7 +5680,7 @@ l_1641:
 l_1654:
 	jbsr	l_1708                            	| [$1654: call    $1708] clear all sounds, draw heart sprite, redraw girl sprite, clear "help", play end of level sound
 	lea	game_rom+0x385c,a0                      	| [$1657: ld      hl,$385c] load HL with start of kong graphic table data
-	jbsr	l_004e                            	| [$165a: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$165a: call    $004e] update kong's sprites
 	move.b	#0x20,d0                        	| [$165d: ld      a,$20] A := #20
 	move.b	d0,waittimermsb_6009            	| [$165f: ld      (waittimermsb_6009),a] set timer to #20
 
@@ -5651,7 +5700,7 @@ l_1662:
 l_1670:
 	jbsr	rst_18                            	| [$1670: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x3932,a0                      	| [$1671: ld      hl,$3932] load HL with start of kong's sprites table data
-	jbsr	l_004e                            	| [$1674: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$1674: call    $004e] update kong's sprites
 	move.b	#0x20,d0                        	| [$1677: ld      a,$20] A := #20
 	move.b	d0,waittimermsb_6009            	| [$1679: ld      (waittimermsb_6009),a] set timer to #20
 	lea	end_of_level_counter_6388,a0   	| [$167c: ld      hl,end_of_level_counter_6388] load HL with end of level counter
@@ -5669,13 +5718,13 @@ l_1670:
 l_168a:
 	jbsr	rst_18                            	| [$168a: rst     $18] count down timer and only continue here if zero, else RET
 	lea	game_rom+0x388c,a0                      	| [$168b: ld      hl,$388c] load HL with start of table data for kong
-	jbsr	l_004e                            	| [$168e: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$168e: call    $004e] update kong's sprites
 	move.b	#0x66,d0                        	| [$1691: ld      a,$66] A := #66
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$1693: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite
 	clr.b	d0                               	| [$1696: xor     a] A := 0
-	move.b	d0,kongs_right_arm_sprite_for_carrying_girl_6924	| [$1697: ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a] clear the other side of kongs arm
-	move.b	d0,girl_being_carried_sprite_692c	| [$169a: ld      (girl_being_carried_sprite_692c),a] clear the girl sprite that kong is carrying
-	move.b	d0,kong_climbing_counter_62af   	| [$169d: ld      (kong_climbing_counter_62af),a] clear the kong climbing counter
+	clr.b	kongs_right_arm_sprite_for_carrying_girl_6924	| [$1697: ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a] clear the other side of kongs arm
+	clr.b	girl_being_carried_sprite_692c	| [$169a: ld      (girl_being_carried_sprite_692c),a] clear the girl sprite that kong is carrying
+	clr.b	kong_misc_counter_62af   	| [$169d: ld      (kong_misc_counter_62af),a] clear the kong climbing counter
 	jra	l_1662                             	| [$16a0: jp      $1662] jump back
 
 * jump here from #1622 when conveyors is finished.  step 1 of 5
@@ -5685,7 +5734,7 @@ l_16a3:
 	move.b	kongs_x_position_6910,d0        	| [$16a6: ld      a,(kongs_x_position_6910)] load A with kong's X position
 	sub.b	#0x3b,d0                         	| [$16a9: sub     $3b] subtract #3B
 	lea	game_rom+0x385c,a0                      	| [$16ab: ld      hl,$385c] load HL with kong graphic table data
-	jbsr	l_004e                            	| [$16ae: call    $004e] update kong's sprites to default kong graphic
+	jbsr	update_kong_sprites_004e                            	| [$16ae: call    $004e] update kong's sprites to default kong graphic
 	lea	start_of_kong_sprite_6908,a0   	| [$16b1: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	d0,d2                           	| [$16b4: ld      c,a] load C with offset computed above to move kong back where he was
 	jbsr	rst_38                            	| [$16b5: rst     $38] move Kong
@@ -5730,13 +5779,13 @@ l_16e1:
 
 l_16ee:
 	lea	game_rom+0x388c,a0                      	| [$16ee: ld      hl,$388c] load HL with start of table data for kong
-	jbsr	l_004e                            	| [$16f1: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$16f1: call    $004e] update kong's sprites
 	move.b	#0x66,d0                        	| [$16f4: ld      a,$66] A := #66
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$16f6: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite for climbing
 	clr.b	d0                               	| [$16f9: xor     a] A := 0
 	move.b	d0,kongs_right_arm_sprite_for_carrying_girl_6924	| [$16fa: ld      (kongs_right_arm_sprite_for_carrying_girl_6924),a] clear kong's arm sprite
 	move.b	d0,girl_being_carried_sprite_692c	| [$16fd: ld      (girl_being_carried_sprite_692c),a] clear girl under kong's arm
-	move.b	d0,kong_climbing_counter_62af   	| [$1700: ld      (kong_climbing_counter_62af),a] clear kong climbing counter
+	move.b	d0,kong_misc_counter_62af   	| [$1700: ld      (kong_misc_counter_62af),a] clear kong climbing counter
 	lea	end_of_level_counter_6388,a0   	| [$1703: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$1706: inc     (hl)] increase counter
 	rts                                    	| [$1707: ret] return
@@ -5852,7 +5901,7 @@ l_1785:
 
 l_178e:
 	jbsr	rst_18                            	| [$178e: rst     $18] count down timer and only continue here if zero, else RET
-	LOAD_ROM_ADDRESS	store_622a,a0               	| [$178f: ld      hl,(store_622a)] load HL with address for this screen/level
+	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$178f: ld      hl,(store_622a)] load HL with address for this screen/level
 	addq.w	#1,a0                           	| [$1792: inc     hl] next screen
 	move.b	(a0),d0                         	| [$1793: ld      a,(hl)] load A with the screen for next
 	cmp.b	#0x7f,d0                         	| [$1794: cp      $7f] at end ?
@@ -5862,7 +5911,7 @@ l_178e:
 	move.b	(a0),d0                         	| [$179c: ld      a,(hl)] load A with the screen
 
 l_179d:
-	STORE_ROM_ADDRESS	a0,store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
+	STORE_ROM_ADDRESS_LE	a0,store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
 	move.b	d0,screen_number_6227           	| [$17a0: ld      (screen_number_6227),a] store A into screen number
 	move.w  #0x0500,d3                      	| [$17a3: ld      de,$0500] load task #5, parameter 0 | adds bonus to player's score
 	jbsr	insert_task_309f                            	| [$17a6: call    $309f] insert task
@@ -5907,7 +5956,7 @@ l_17b6:
 	lea	game_rom+0x3a59,a1                      	| [$17fd: ld      de,$3a59] load DE with start of table data
 	jbsr	l_0da7                            	| [$1800: call    $0da7] draw the screen
 	lea	game_rom+0x385c,a0                      	| [$1803: ld      hl,$385c] load HL with start of kong graphic table data
-	jbsr	l_004e                            	| [$1806: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$1806: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$1809: ld      hl,start_of_kong_sprite_6908] load HL with start of kong sprites
 	move.b	#0x44,d2                        	| [$180c: ld      c,$44] load offset of #44
 	jbsr	rst_38                            	| [$180e: rst     $38] move kong
@@ -5919,7 +5968,7 @@ l_17b6:
 	move.b	d0,timer_unknown_6390           	| [$181b: ld      (timer_unknown_6390),a] store into timer ???
 	lea	end_of_level_counter_6388,a0   	| [$181e: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$1821: inc     (hl)] increase counter
-	STORE_RAM_ADDRESS	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS_LE	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$1825: ret] return
 
 * called from several places with HL preloaded with a video RAM address
@@ -5968,7 +6017,7 @@ l_1839:
 
 l_184e:
 	exg	a1,a0                              	| [$184e: ex      de,hl] DE <> HL
-	jbsr	l_004e                            	| [$184f: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$184f: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$1852: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	#0x44,d2                        	| [$1855: ld      c,$44] C := #44
 	jbsr	rst_38                            	| [$1857: rst     $38] move kong
@@ -5976,7 +6025,7 @@ l_184e:
 
 l_1859:
 	lea	game_rom+0x385c,a0                      	| [$1859: ld      hl,$385c] load HL with start of kong graphic table data
-	jbsr	l_004e                            	| [$185c: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$185c: call    $004e] update kong's sprites
 	lea	start_of_kong_sprite_6908,a0   	| [$185f: ld      hl,start_of_kong_sprite_6908] load HL with start of Kong sprite
 	move.b	#0x44,d2                        	| [$1862: ld      c,$44] C := #44
 	jbsr	rst_38                            	| [$1864: rst     $38] move kong
@@ -5993,7 +6042,7 @@ l_186f:
 	jbsr	rst_18                            	| [$186f: rst     $18] count down timer and only continue here if zero, else RET
 
 	lea	game_rom+0x3a1f,a0                      	| [$1870: ld      hl,$3a1f] start of table data for kong upside down
-	jbsr	l_004e                            	| [$1873: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$1873: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$1876: ld      a,$03] A := 3
 	move.b	d0,play_sound_for_falling_bouncer_6084	| [$1878: ld      (play_sound_for_falling_bouncer_6084),a] play falling sound
 	lea	end_of_level_counter_6388,a0   	| [$187b: ld      hl,end_of_level_counter_6388] load HL with end of level counter
@@ -6034,7 +6083,7 @@ l_1880:
 	jbsr	l_003d                            	| [$18b4: call    $003d] move the girl down
 
 	clr.b	d0                               	| [$18b7: ld      a,$00] A := 0 [why written this way?]
-	move.b	d0,kong_climbing_counter_62af   	| [$18b9: ld      (kong_climbing_counter_62af),a] store into kong climbing counter
+	move.b	d0,kong_misc_counter_62af   	| [$18b9: ld      (kong_misc_counter_62af),a] store into kong climbing counter
 	move.b	#0x03,d0                        	| [$18bc: ld      a,$03] set boom sound duration
 	move.b	d0,boom_sound_address_6082      	| [$18be: ld      (boom_sound_address_6082),a] play boom sound
 	lea	end_of_level_counter_6388,a0   	| [$18c1: ld      hl,end_of_level_counter_6388] load HL with end of level counter
@@ -6044,7 +6093,7 @@ l_1880:
 * arrive from #1647 when level is complete, last of 5 steps
 
 l_18c6:
-	lea	kong_climbing_counter_62af,a0  	| [$18c6: ld      hl,kong_climbing_counter_62af] load HL with kong climbing counter address
+	lea	kong_misc_counter_62af,a0  	| [$18c6: ld      hl,kong_misc_counter_62af] load HL with kong climbing counter address
 	subq.b	#1,(a0)                         	| [$18c9: dec     (hl)] decrease.  zero?
 	jeq	l_193d                             	| [$18ca: jp      z,$193d] yes, skip ahead, handle next level routine
 
@@ -6067,7 +6116,7 @@ l_18c6:
 	or.b	#0x20,d0                          	| [$18e2: or      $20] turn on bit 5
 	move.b	d0,(a0)                         	| [$18e4: ld      (hl),a] store result
 
-	lea	kong_climbing_counter_62af,a0  	| [$18e5: ld      hl,kong_climbing_counter_62af] load HL with kong climbing counter
+	lea	kong_misc_counter_62af,a0  	| [$18e5: ld      hl,kong_misc_counter_62af] load HL with kong climbing counter
 	move.b	(a0),d0                         	| [$18e8: ld      a,(hl)] get value
 	cmp.b	#0xe0,d0                         	| [$18e9: cp      $e0] == #E0 ?
 	jne	l_1910                             	| [$18eb: jp      nz,$1910] no, skip ahead
@@ -6128,7 +6177,7 @@ l_1920:
 * kong has climbed off the screen at end of level
 
 l_193d:
-	LOAD_ROM_ADDRESS	store_622a,a0               	| [$193d: ld      hl,(store_622a)] load HL with contents of #622A.  this is a pointer to the levels/screens data
+	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$193d: ld      hl,(store_622a)] load HL with contents of #622A.  this is a pointer to the levels/screens data
 	addq.w	#1,a0                           	| [$1940: inc     hl] increase HL.  = next level
 	move.b	(a0),d0                         	| [$1941: ld      a,(hl)] load A with contents of HL = the screen we are going to play next
 	cmp.b	#0x7f,d0                         	| [$1942: cp      $7f] is this the end code ?
@@ -6138,7 +6187,7 @@ l_193d:
 	move.b	(a0),d0                         	| [$194a: ld      a,(hl)] load A with screen number from table
 
 l_194b:
-	STORE_ROM_ADDRESS	a0,store_622a                   	| [$194b: ld      (store_622a),hl] store
+	STORE_ROM_ADDRESS_LE	a0,store_622a                   	| [$194b: ld      (store_622a),hl] store
 	move.b	d0,screen_number_6227           	| [$194e: ld      (screen_number_6227),a] store A into screen number
 	lea	level_number_6229,a0      	| [$1951: ld      hl,level_number_6229] load HL with level number address
 	addq.b	#1,(a0)                         	| [$1954: inc     (hl)] increase #6229 by one
@@ -6173,21 +6222,21 @@ l_197a:
 	jbsr	l_1dbd                            	| [$197a: call    $1dbd] check for bonus items and jumping scores, rivets
 	jbsr	l_1e8c                            	| [$197d: call    $1e8c] do stuff for items hit with hammer
 	jbsr	l_1ac3                            	| [$1980: call    $1ac3] check for jumping
-	jbsr	l_1f72                            	| [$1983: call    $1f72] roll barrels
-	jbsr	l_2c8f                            	| [$1986: call    $2c8f] roll barrels ?
+	jbsr	handle_barrel_rolls_1f72         	| [$1983: call    $1f72] roll barrels
+	jbsr	handle_barrel_rolls_2c8f 	     	| [$1986: call    $2c8f] roll barrels ?
 	jbsr	l_2c03                            	| [$1989: call    $2c03] do barrel deployment ?
 	jbsr	l_30ed                            	| [$198c: call    $30ed] update fires if needed
-	jbsr	l_2e04                            	| [$198f: call    $2e04] update bouncers if on elevators
+	jbsr	update_bouncers_if_on_elevators_2e04 | [$198f: call    $2e04] update bouncers if on elevators
 	jbsr	l_24ea                            	| [$1992: call    $24ea] do stuff for pie factory
 	jbsr	l_2ddb                            	| [$1995: call    $2ddb] deploy fireball/firefoxes for conveyors and rivets
-	jbsr	l_2ed4                            	| [$1998: call    $2ed4] do stuff for hammer
+	jbsr	handle_hammer_2ed4                	| [$1998: call    $2ed4] do stuff for hammer
 	jbsr	l_2207                            	| [$199b: call    $2207] do stuff for conveyors
-	jbsr	l_1a33                            	| [$199e: call    $1a33] check for and handle running over rivets
+	jbsr	check_running_over_rivets_1a33    	| [$199e: call    $1a33] check for and handle running over rivets
 	jbsr	check_for_mario_falling_2a85        | [$19a1: call    $2a85] check for mario falling
 	jbsr	handle_mario_falling_1f46           | [$19a4: call    $1f46] handle mario falling
 	jbsr	l_26fa                            	| [$19a7: call    $26fa] do stuff for elevators
 	jbsr	l_25f2                            	| [$19aa: call    $25f2] handle conveyor directions, adjust Mario's speed based on conveyor directions
-	jbsr	l_19da                            	| [$19ad: call    $19da] check for mario picking up bonus item
+	jbsr	check_bonus_items_pick_19da                            	| [$19ad: call    $19da] check for mario picking up bonus item
 	jbsr	l_03fb                            	| [$19b0: call    $03fb] check for kong beating chest and animate girl and her screams
 	jbsr	l_2808                            	| [$19b3: call    $2808] check for collisions with hostile sprites [set to NOPS to make mario invincible to enemy sprites]
 	jbsr	l_281d                            	| [$19b6: call    $281d] do stuff for hammers
@@ -6220,7 +6269,7 @@ l_19d2:
 * called from #19AD as part of the main routine
 * checks for bonus items being picked up
 
-l_19da:
+check_bonus_items_pick_19da:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$19da: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
 	move.b	#0x03,d1                        	| [$19dd: ld      b,$03] for B = 1 to 3
 	lea	start_of_bonus_items_6a0c,a0   	| [$19df: ld      hl,start_of_bonus_items_6a0c] load HL with X position of first bonus
@@ -6252,7 +6301,7 @@ l_19ed:
 * bonus item has been picked up
 
 	subq.w	#1,a0                           	| [$19fa: dec     l] decrease L.  HL now has the starting address of the sprite that was picked up
-	STORE_RAM_ADDRESS	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
+	STORE_RAM_ADDRESS_LE	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
 	clr.b	d0                               	| [$19fe: xor     a] A := 0
 	move.b	d0,scoring_indicator_6342       	| [$19ff: ld      (scoring_indicator_6342),a] store into ???.  read from at #1DD6
 	addq.b	#1,d0                           	| [$1a02: inc     a] A := 1
@@ -6306,7 +6355,7 @@ l_1a2a:
 * called from main routine
 * check for running over rivets ?
 
-l_1a33:
+check_running_over_rivets_1a33:
 	move.b	#0x08,d0                        	| [$1a33: ld      a,$08] A := 8 = 1000 binary = code for rivets
 	jbsr	only_continues_if_given_level_0030                            	| [$1a35: rst     $30] continue here only on rivets, else RET
 
@@ -6561,7 +6610,7 @@ l_1b55:
 	move.b	d0,(a0)                         	| [$1b66: ld      (hl),a] store into movement indicator.  mario is no longer jumping
 	clr.b	d0                               	| [$1b67: xor     a] A := 0
 	move.b	d0,put_back_6202                	| [$1b68: ld      (put_back_6202),a] set mario animation state to 0
-	jra	l_1da6                             	| [$1b6b: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1b6b: jp      $1da6] jump ahead to update mario sprite and RET
 
 * jump initiated.  arrive from #1AE3 when jump pressed and jump not already underway etc.
 
@@ -6673,7 +6722,7 @@ l_1c05:
 	move.b	d0,mario_jump_apex_621f         	| [$1c1d: ld      (mario_jump_apex_621f),a] store into #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 	jbsr	l_2853                            	| [$1c20: call    $2853] check for items under mario
 	tst.b	d0                               	| [$1c23: and     a] was an item jumped?
-	jeq	l_1da6                             	| [$1c24: jp      z,$1da6] no, jump ahead to update mario sprite and RET
+	jeq	update_mario_sprite_1da6                             	| [$1c24: jp      z,$1da6] no, jump ahead to update mario sprite and RET
 
 * an item was jumped
 
@@ -6692,7 +6741,7 @@ l_1c33:
 	jbsr	l_2954                            	| [$1c34: call    z,$2954] if zero, call this sub to check for hammer grab
 0:
 
-	jra	l_1da6                             	| [$1c37: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1c37: jp      $1da6] jump ahead to update mario sprite and RET
 
 * arrive here when mario lands.  B is preloaded with a parameter
 
@@ -6712,7 +6761,7 @@ l_1c48:
 	subq.b	#1,d1                           	| [...]
 	jne	l_1c48                             	| [$1c4a: djnz    $1c48] next B
 
-	jra	l_1da6                             	| [$1c4c: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1c4c: jp      $1da6] jump ahead to update mario sprite and RET
 
 * jump almost complete ...
 
@@ -6720,7 +6769,10 @@ l_1c4f:
 	move.b	d0,jumping_status_6216          	| [$1c4f: ld      (jumping_status_6216),a] store A into jump indicator
 	move.b	falling_too_far_indicator_6220,d0	| [$1c52: ld      a,(falling_too_far_indicator_6220)] load A with falling too far indicator
 	eor.b	#0x01,d0                         	| [$1c55: xor     $01] toggle rightmost bit [ change to LD A, #01 to enable infinite falling without death]
+	tst.b	invincible_flag
+	bne.b	0f
 	move.b	d0,mario_array_6200             	| [$1c57: ld      (mario_array_6200),a] store into mario life indicator.  if mario fell too far, he will die.
+0:
 	lea	mario_movement_indicator_sprite_value_6207,a0	| [$1c5a: ld      hl,mario_movement_indicator_sprite_value_6207] load HL with address of movement indicator
 	move.b	(a0),d0                         	| [$1c5d: ld      a,(hl)] load A with movement indicator
 	and.b	#0x80,d0                         	| [$1c5e: and     $80] maks bits, leave bit 7 as is.  all other bits are zeroed.
@@ -6736,7 +6788,7 @@ l_1c4f:
 	jbsr	l_1d95                            	| [$1c70: call    z,$1d95] yes, call this sub to play bonus sound
 0:
 
-	jra	l_1da6                             	| [$1c73: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1c73: jp      $1da6] jump ahead to update mario sprite and RET
 
 * mario is on way down from jump or falling
 
@@ -6745,7 +6797,7 @@ l_1c76:
 	lea	unknown_620e,a0                	| [$1c79: ld      hl,unknown_620e] load HL with mario original Y position ?
 	sub.b	#0x0f,d0                         	| [$1c7c: sub     $0f] subtract #F
 	cmp.b	(a0),d0                          	| [$1c7e: cp      (hl)] compare.  is mario falling too far ?
-	jcs	l_1da6                             	| [$1c7f: jp      c,$1da6] no, jump ahead to update mario sprite and RET
+	jcs	update_mario_sprite_1da6                             	| [$1c7f: jp      c,$1da6] no, jump ahead to update mario sprite and RET
 
 * mario falling too far on a jump
 
@@ -6753,7 +6805,7 @@ l_1c76:
 	move.b	d0,falling_too_far_indicator_6220	| [$1c84: ld      (falling_too_far_indicator_6220),a] store into falling too far indicator
 	lea	play_sound_for_falling_bouncer_6084,a0	| [$1c87: ld      hl,play_sound_for_falling_bouncer_6084] load HL with address for falling sound
 	move.b	#0x03,(a0)                      	| [$1c8a: ld      (hl),$03] play falling sound for 3 units
-	jra	l_1da6                             	| [$1c8c: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1c8c: jp      $1da6] jump ahead to update mario sprite and RET
 
 * arrive here when joystick is being pressed right
 
@@ -6797,7 +6849,7 @@ l_1cc2:
 
 	move.b	#0x02,d0                        	| [$1cca: ld      a,$02] A := 2
 	move.b	d0,address_of_movement_indicator_620f	| [$1ccc: ld      (address_of_movement_indicator_620f),a] store into movement indicator (reset)
-	jra	l_1da6                             	| [$1ccf: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1ccf: jp      $1da6] jump ahead to update mario sprite and RET
 
 l_1cd2:
 	lea	jump_if_bit_7_of_mario_x_position_is_set_6203,a0	| [$1cd2: ld      hl,jump_if_bit_7_of_mario_x_position_is_set_6203] load HL with mario X position address
@@ -6818,7 +6870,7 @@ l_1cd2:
 l_1ceb:
 	lea	address_of_movement_indicator_620f,a0	| [$1ceb: ld      hl,address_of_movement_indicator_620f] load HL with address of movement indicator
 	subq.b	#1,(a0)                         	| [$1cee: dec     (hl)] decrease movement indicator
-	jra	l_1da6                             	| [$1cef: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1cef: jp      $1da6] jump ahead to update mario sprite and RET
 
 * mario moving down on a ladder
 * jump here from #1B3D
@@ -6888,7 +6940,7 @@ l_1d3f:
 l_1d49:
 	move.b	#0x01,d0                        	| [$1d49: ld      a,$01] A := 1
 	move.b	d0,ladder_status_6215           	| [$1d4b: ld      (ladder_status_6215),a] store into ladder status.  mario is on a ladder now
-	jra	l_1da6                             	| [$1d4e: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1d4e: jp      $1da6] jump ahead to update mario sprite and RET
 
 l_1d51:
 	subq.w	#2,a0                           	| [$1d51: dec     l]
@@ -6914,7 +6966,7 @@ l_1d67:
 	clr.b	d0                               	| [$1d6c: xor     a] A := 0
 	move.b	d0,store_1_into_status_indicator_6219	| [$1d6d: ld      (store_1_into_status_indicator_6219),a] clear this status indicator
 	move.b	d0,ladder_status_6215           	| [$1d70: ld      (ladder_status_6215),a] clear ladder status.  mario no longer on ladder
-	jra	l_1da6                             	| [$1d73: jp      $1da6] jump ahead to update mario sprite and RET
+	jra	update_mario_sprite_1da6                             	| [$1d73: jp      $1da6] jump ahead to update mario sprite and RET
 
 * jump here from #1D07 when going up a ladder but not actually moving
 
@@ -6966,7 +7018,7 @@ l_1d95:
 
 * update mario sprite
 
-l_1da6:
+update_mario_sprite_1da6:
 	lea	mario_sprite_x_position_694c,a0	| [$1da6: ld      hl,mario_sprite_x_position_694c] load HL with mario sprite X position
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1da9: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	move.b	d0,(a0)+                         	| [$1dac: ld      (hl),a] store into hardware sprite mario X position
@@ -7061,7 +7113,7 @@ l_1e15:
 
 * arrive here when bonus item picked up or smashed with hammer
 
-	LOAD_RAM_ADDRESS	unknown_for_use_later_6343,a0	| [$1e18: ld      hl,(unknown_for_use_later_6343)] load HL with contents of #6343 , this gives the address of the sprite location
+	LOAD_RAM_ADDRESS_LE	unknown_for_use_later_6343,a0	| [$1e18: ld      hl,(unknown_for_use_later_6343)] load HL with contents of #6343 , this gives the address of the sprite location
 	move.b	(a0),d0                         	| [$1e1b: ld      a,(hl)] load A with the X position of the sprite in question
 	clr.b	(a0)                             	| [$1e1c: ld      (hl),$00] clear the sprite from the screen
 	addq.w	#3,a0                           	| [$1e1e: inc     l] increase L 3 times * 3
@@ -7210,7 +7262,7 @@ l_1ea0:
 	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1eb1: ld      hl,start_of_sprite_memory_for_bouncers_6980] HL is X position of a barrel
 
 l_1eb4:
-	LOAD_ROM_ADDRESS	unknown_6351,a2             	| [$1eb4: ld      ix,(unknown_6351)] load IX with start of item array for the item hit
+	LOAD_ROM_ADDRESS_LE	unknown_6351,a2             	| [$1eb4: ld      ix,(unknown_6351)] load IX with start of item array for the item hit
 	clr.w	d3                               	| [$1eb8: ld      d,$00] D := 0
 	move.b	unknown_6353,d0                 	| [$1eba: ld      a,(unknown_6353)] load A with the offset for each item in the array
 	move.b	d0,d3                           	| [$1ebd: ld      e,a] copy to E.  DE now has the offset
@@ -7332,7 +7384,7 @@ l_1f34:
 	addq.b	#1,d0                           	| [$1f3b: inc     a] A := 11:18 AM 6/15/2009
 	move.b	d0,bonus_indicator_6340         	| [$1f3c: ld      (bonus_indicator_6340),a] store into bonus indicator
 	lea	location_of_item_hit_6a2c,a0   	| [$1f3f: ld      hl,location_of_item_hit_6a2c] load HL with location of item hit
-	STORE_ROM_ADDRESS	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
+	STORE_ROM_ADDRESS_LE	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
 	rts                                    	| [$1f45: ret] return
 
 * called from main routine at #19A4
@@ -7365,7 +7417,7 @@ handle_mario_falling_1f46:
 * called from main routine at #1983
 * used to roll barrels
 
-l_1f72:
+handle_barrel_rolls_1f72:
 	move.b	screen_number_6227,d0           	| [$1f72: ld      a,(screen_number_6227)] load a with screen number
 	subq.b	#1,d0                           	| [$1f75: dec     a] is this the girders ?
 	beq.b	0f                               	| [...]
@@ -7374,7 +7426,6 @@ l_1f72:
 
 * yes, we are on girders
 * this subroutine checks the barrels, if any are rolling it does something, otherwise returns
-
 	lea	start_of_barrel_info_table_6700,a2	| [$1f77: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel array
 	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1f7b: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with start of sprites used for barrels
 	move.w	#0x0020,d3                      	| [$1f7e: ld      de,$0020] load DE with offset of #20.  used for checking next barrel 32
@@ -7394,6 +7445,7 @@ l_1f8d:
 
 	rts                                    	| [$1f92: ret] return
 
+* barrel is rolling
 l_1f93:
 	move.b	(0x01,a2),d0                    	| [$1f93: ld      a,(ix+$01)] Load Crazy Barrel indicator
 	subq.b	#1,d0                           	| [$1f96: dec     a] is this a crazy barrel?
@@ -7404,10 +7456,10 @@ l_1f93:
 	jcs	l_1fac                             	| [$1f9e: jp      c,$1fac] Yes, jump away to ladder sub.
 
 	roxr.b	#1,d0                           	| [$1fa1: rra] Is this barrel moving right?
-	jcs	l_1fe5                             	| [$1fa2: jp      c,$1fe5] yes, jump away to move right sub.
+	jcs	barrel_moves_to_right_1fe5                             	| [$1fa2: jp      c,$1fe5] yes, jump away to move right sub.
 
 	roxr.b	#1,d0                           	| [$1fa5: rra] is this barrel moving left?
-	jcs	l_1fef                             	| [$1fa6: jp      c,$1fef] yes, jump to moving left sub
+	jcs	barrel_moves_to_left_1fef                             	| [$1fa6: jp      c,$1fef] yes, jump to moving left sub
 
 	jra	l_2053                             	| [$1fa9: jp      $2053] else jump ahead
 
@@ -7459,24 +7511,24 @@ l_1fdf:
 
 * we arrived here because the barrel is moving to the right
 
-l_1fe5:
+barrel_moves_to_right_1fe5:
 	jbsr	exx                               	| [$1fe5: exx] exchange HL, DE, and BC with their clones
 	move.b	#0x01,d1                        	| [$1fe6: ld      bc,$0100] BC := #0100 256
 	move.b	#0x00,d2                        	| [$1fe6: ld      bc,$0100] BC := #0100 256
 	addq.b	#1,(0x03,a2)                    	| [$1fe9: inc     (ix+$03)] Increase Barrel's X posiition
-	jra	l_1ff6                             	| [$1fec: jp      $1ff6] jump ahead
+	jra	barrel_moves_laterally_1ff6                             	| [$1fec: jp      $1ff6] jump ahead
 
 * we arrived here because the barrel is moving to the left
 
-l_1fef:
+barrel_moves_to_left_1fef:
 	jbsr	exx                               	| [$1fef: exx] exchange HL, DE, and BC with their clones
 	move.b	#0xff,d1                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04 65284
 	move.b	#0x04,d2                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04 65284
 	subq.b	#1,(0x03,a2)                    	| [$1ff3: dec     (ix+$03)] decrease barrel's X position
 
-* we are here becuase the barrel is moving either left or right
+* we are here because the barrel is moving either left or right
 
-l_1ff6:
+barrel_moves_laterally_1ff6:
 	move.b	(0x03,a2),d5                    	| [$1ff6: ld      h,(ix+$03)] load H with barrel's X position
 	move.b	(0x05,a2),d6                    	| [$1ff9: ld      l,(ix+$05)] load L with barrel's Y position
 	move.b	d5,d0                           	| [$1ffc: ld      a,h] load A with barrel's X position
@@ -7607,10 +7659,10 @@ l_20c3:
 	roxr.b	#1,d6                           	| [$20cc: rr      l]
 	move.b	d5,(0x12,a2)                    	| [$20ce: ld      (ix+$12),h] store H into +#12 (???)
 	move.b	d6,(0x13,a2)                    	| [$20d1: ld      (ix+$13),l] store L into +#13 (???)
-	clr.b	d0                               	| [$20d4: xor     a] A := 0
-	move.b	d0,(0x14,a2)                    	| [$20d5: ld      (ix+$14),a] clear +#14 (???)
-	move.b	d0,(0x04,a2)                    	| [$20d8: ld      (ix+$04),a] clear +#4 (???)
-	move.b	d0,(0x06,a2)                    	| [$20db: ld      (ix+$06),a] clear +#6 (???)
+												| [$20d4: xor     a] A := 0
+	clr.b	(0x14,a2)                    	| [$20d5: ld      (ix+$14),a] clear +#14 (???)
+	clr.b	(0x04,a2)                    	| [$20d8: ld      (ix+$04),a] clear +#4 (???)
+	clr.b	(0x06,a2)                    	| [$20db: ld      (ix+$06),a] clear +#6 (???)
 	jra	l_21ba                             	| [$20de: jp      $21ba] skip ahead
 
 l_20e1:
@@ -7661,7 +7713,7 @@ l_2118:
 	clr.b	d0                               	| [$212a: xor     a] A := 0
 	move.b	d0,(0x01,a2)                    	| [$212b: ld      (ix+$01),a] barrel is no longer crazy
 	move.b	d0,(0x02,a2)                    	| [$212e: ld      (ix+$02),a]
-	move.b	#0xff,(0x10,a2)                 	| [$2131: ld      (ix+$10),$ff] set velocity to -1 (move left)
+	st.b	(0x10,a2)                 	| [$2131: ld      (ix+$10),$ff] set velocity to -1 (move left)
 	move.b	d0,(0x11,a2)                    	| [$2135: ld      (ix+$11),a]
 	move.b	d0,(0x12,a2)                    	| [$2138: ld      (ix+$12),a]
 	move.b	#0xb0,(0x13,a2)                 	| [$213b: ld      (ix+$13),$b0]
@@ -7721,7 +7773,7 @@ l_216d:
 	rts                                    	| [$2185: ret     c] yes, return without taking ladder [...]
 0:
 
-	move.b	unknown_6380,d0                 	| [$2186: ld      a,(unknown_6380)] else load A with difficulty from 1 to 5.  usually the level but increases during play
+	move.b	difficulty_level_6380,d0                 	| [$2186: ld      a,(difficulty_level_6380)] else load A with difficulty from 1 to 5.  usually the level but increases during play
 	ror.b	#1,d0                           	| [$2189: rra] roll right (div 2) .  now can be 0, 1, or 2
 	addq.b	#1,d0                           	| [$218a: inc     a] increment.  result is now 1, 2, or 3 based on skill level
 	move.b	d0,d1                           	| [$218b: ld      b,a] store into B
@@ -8029,7 +8081,7 @@ l_22cb:
 	                               	| [$22ce: and     a] is the oil can lit ?
 	jeq	l_22e1                             	| [$22cf: jp      z,$22e1] no , jump ahead
 
-	move.b	unknown_6380,d0                 	| [$22d2: ld      a,(unknown_6380)] else load A with difficulty
+	move.b	difficulty_level_6380,d0                 	| [$22d2: ld      a,(difficulty_level_6380)] else load A with difficulty
 	subq.b	#1,d0                           	| [$22d5: dec     a] decrement.  will be between 0 and 4
 	jbsr	rst_28                            	| [$22d6: rst     $28] jump based on A
 
@@ -8252,8 +8304,7 @@ l_239c:
 
 	move.b	d0,d5                           	| [$23bb: ld      h,a] store into H
 	move.b	(0x14,a2),d0                    	| [$23bc: ld      a,(ix+$14)] load +14 = mirror of modified Y position?.  used for jump counter when mario jumps
-	                               	| [$23bf: and     a] clear flags
-	CLEAR_XC_FLAGS	| clear carry is not enough
+	CLEAR_XC_FLAGS                               	| [$23bf: and     a] clear flags
 	roxl.b	#1,d0                           	| [$23c0: rla] rotate left (mult by 2)
 	addq.b	#1,d0                           	| [$23c1: inc     a] add 1
 	clr.b	d1                               	| [$23c2: ld      b,$00] B := 0
@@ -8274,7 +8325,7 @@ l_239c:
 	addq.b	#1,(0x14,a2)                    	| [$23da: inc     (ix+$14)] increase +14.  used for 6214 for mario as a jump counter
 	rts                                    	| [$23dd: ret] return
 
-* called from subs that are moving a barrell left or right
+* called from subs that are moving a barrel left or right
 * IX is memory base of the barrel in question (e.g. #6700)
 * called from #2073 with C either 0 or 4
 * C is preloaded with mask ?
@@ -9029,9 +9080,12 @@ l_276f:
 	rts                                    	| [$277e: ret] return
 
 l_277f:
-	clr.b	d0                               	| [$277f: xor     a] A := 0
-	move.b	d0,mario_array_6200             	| [$2780: ld      (mario_array_6200),a] Make mario dead
-	move.b	d0,elevator_status_6398         	| [$2783: ld      (elevator_status_6398),a] clear elevator riding indicator
+	tst.b	invincible_flag
+	bne.b	1f
+	                               	| [$277f: xor     a] A := 0
+	clr.b	mario_array_6200             	| [$2780: ld      (mario_array_6200),a] Make mario dead
+	clr.b	elevator_status_6398         	| [$2783: ld      (elevator_status_6398),a] clear elevator riding indicator
+1:
 	rts                                    	| [$2786: ret] return
 
 * riding on second elevator
@@ -9134,8 +9188,11 @@ l_2808:
 	move.b	d0,d2                           	| [$280f: ld      c,a] copy to C
 	lea	game_rom+0x0407,a0                      	| [$2810: ld      hl,$0407] H := 4, L := 7
 	jbsr	l_286f                            	| [$2813: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
+	tst.b	invincible_flag
+	bne.b	1f
 	tst.b	d0                               	| [$2816: and     a] was there a collision ?
 	bne.b	0f                               	| [...]
+1:
 	rts                                    	| [$2817: ret     z] no, return [...]
 0:
 
@@ -9182,7 +9239,7 @@ l_2832:
 	move.b	d0,unknown_6354                 	| [$2847: ld      (unknown_6354),a] store into ???
 	move.b	d4,d0                           	| [$284a: ld      a,e] load A with offset for each item
 	move.b	d0,unknown_6353                 	| [$284b: ld      (unknown_6353),a] store into ???
-	STORE_ROM_ADDRESS	a2,unknown_6351                 	| [$284e: ld      (unknown_6351),ix] store IX into ???
+	STORE_ROM_ADDRESS_LE	a2,unknown_6351                 	| [$284e: ld      (unknown_6351),ix] store IX into ???
 	rts                                    	| [$2852: ret] return
 
 * called when mario jumping, checks for items being jumped over
@@ -9427,7 +9484,7 @@ l_2974:
 * sets A := 1 if fire is next to edge of girder
 
 l_298c:
-	LOAD_RAM_ADDRESS	address_of_fireball_slot_for_this_fireball_63c8,a0	| [$298c: ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)] load HL with address of this fire
+	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a0	| [$298c: ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)] load HL with address of this fire
 	                           	| [$298f: ld      a,l] A := L
 	add.w	#0x0e,a0                         	| [$2990: add     a,$0e] add #E
 	                           	| [$2992: ld      l,a] store result.  HL now has the fire's X position
@@ -9535,8 +9592,12 @@ l_2a0e:
 * arrive from #29F4 when mario dies trying to jump onto elevator
 
 l_2a1b:
-	clr.b	d0                               	| [$2a1b: xor     a] A := 0
-	move.b	d0,mario_array_6200             	| [$2a1c: ld      (mario_array_6200),a] set mario dead
+	tst.b	invincible_flag
+	bne.b	1f
+
+	                              	| [$2a1b: xor     a] A := 0
+	clr.b	mario_array_6200             	| [$2a1c: ld      (mario_array_6200),a] set mario dead
+1:
 	rts                                    	| [$2a1f: ret] return
 
 * arrive from #29C1
@@ -9981,7 +10042,7 @@ l_2bfd:
 l_2c03:
 	move.b	#0x01,d0                        	| [$2c03: ld      a,$01] \ Return if screen is not barrels
 	jbsr	only_continues_if_given_level_0030                            	| [$2c05: rst     $30] /
-	jbsr	rst_10                            	| [$2c06: rst     $10] Return if Mario is not alive
+	jbsr	continue_only_if_mario_alive_0010                            	| [$2c06: rst     $10] Return if Mario is not alive
 
 	move.b	barrel_deployment_indicator_6393,d0	| [$2c07: ld      a,(barrel_deployment_indicator_6393)] \  Return if we are already in the process of deploying a barrel, no need to deploy another one
 	ror.b	#1,d0                            	| [$2c0a: rrca]|
@@ -10005,7 +10066,7 @@ l_2c03:
 	btst.b	#1,d0                           	| [$2c1e: bit     1,a] test bit 1 - is this the second barrel after the first crazy ?
 	jne	l_2c86                             	| [$2c20: jp      nz,$2c86] if it is, then deploy normal barrel| this barrel is never crazy.
 
-	move.b	unknown_6380,d0                 	| [$2c23: ld      a,(unknown_6380)] if not, then load A with difficulty from 1 to 5
+	move.b	difficulty_level_6380,d0                 	| [$2c23: ld      a,(difficulty_level_6380)] if not, then load A with difficulty from 1 to 5
 	move.b	d0,d1                           	| [$2c26: ld      b,a] For B = 1 to difficulty
 	move.b	framecounter_601a,d0            	| [$2c27: ld      a,(framecounter_601a)] load A with timer value.  this clock counts down from #FF to 00 over and over...
 	and.b	#0x1f,d0                         	| [$2c2a: and     $1f] zero out left 3 bits.  the result is between 0 and #1F
@@ -10115,10 +10176,10 @@ l_2c86:
 
 * called from main routine #1986
 
-l_2c8f:
+handle_barrel_rolls_2c8f:
 	move.b	#0x01,d0                        	| [$2c8f: ld      a,$01] A := 1 = code for girders
 	jbsr	only_continues_if_given_level_0030                            	| [$2c91: rst     $30] if screen is girders, continue.  else RET
-	jbsr	rst_10                            	| [$2c92: rst     $10] if mario is alive, continue.  else RET
+	jbsr	continue_only_if_mario_alive_0010                            	| [$2c92: rst     $10] if mario is alive, continue.  else RET
 	move.b	barrel_deployment_indicator_6393,d0	| [$2c93: ld      a,(barrel_deployment_indicator_6393)] load A with barrel deployment indicator
 	ror.b	#1,d0                            	| [$2c96: rrca] is a barrel being deployed ?
 	jcs	l_2d15                             	| [$2c97: jp      c,$2d15] yes, skip ahead
@@ -10141,7 +10202,7 @@ l_2ca8:
 	jcs	l_2cb3                             	| [$2cac: jp      c,$2cb3] yes, then jump ahead and test next barrel
 
 	ror.b	#1,d0                            	| [$2caf: rrca] else is this barrel already being deployed ?
-	jcc	l_2cb8                             	| [$2cb0: jp      nc,$2cb8] no, then jump ahead
+	jcc	barrel_being_deployed_2cb8                             	| [$2cb0: jp      nc,$2cb8] no, then jump ahead
 
 l_2cb3:
 	add.w	d3,a2                            	| [$2cb3: add     ix,de] Increase to next barrel
@@ -10152,8 +10213,8 @@ l_2cb3:
 
 * arrive here when a barrel is being deployed
 
-l_2cb8:
-	STORE_RAM_ADDRESS	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
+barrel_being_deployed_2cb8:
+	STORE_RAM_ADDRESS_LE	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
 	move.b	#0x02,(a2)                 	| [$2cbc: ld      (ix+$00),$02] set deployement indicator
 	clr.w	d3                               	| [$2cc0: ld      d,$00] D := 0
 	move.b	#0x0a,d0                        	| [$2cc2: ld      a,$0a] A := #0A
@@ -10163,7 +10224,7 @@ l_2cb8:
 	move.b	d0,d3                           	| [$2cc7: ld      e,a] copy this to E
 	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$2cc8: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with starting sprite address for the barrels
 	add.w	d3,a0                            	| [$2ccb: add     hl,de] Now add in offset depending on the barrel number ( will vary from 0 to #28 by 4's)
-	STORE_RAM_ADDRESS	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
+	STORE_RAM_ADDRESS_LE	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
 	move.b	#0x01,d0                        	| [$2ccf: ld      a,$01] A := 1
 	move.b	d0,barrel_deployment_indicator_6393	| [$2cd1: ld      (barrel_deployment_indicator_6393),a] set barrel deployment indicator
 	move.w	#0x0501,d3                      	| [$2cd4: ld      de,$0501] load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
@@ -10206,14 +10267,15 @@ l_2cf6:
 	move.b	#0x01,(0x15,a2)                 	| [$2d11: ld      (ix+$15),$01] set blue barrel indicator
 
 l_2d15:
-	lea	kong_climbing_counter_62af,a0  	| [$2d15: ld      hl,kong_climbing_counter_62af] load HL with deployment timer
+	lea	kong_misc_counter_62af,a0  	| [$2d15: ld      hl,kong_misc_counter_62af] load HL with deployment timer
 	subq.b	#1,(a0)                         	| [$2d18: dec     (hl)] count it down.  is the timer expired?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$2d19: ret     nz] no, return [...]
 0:
 
 	move.b	#0x18,(a0)                      	| [$2d1a: ld      (hl),$18] else reset the counter back to #18
-	move.b	deployment_indicator_638f,d0    	| [$2d1c: ld      a,(deployment_indicator_638f)] load A with the deployment indiacator.  2 = kong grabbing, 1 = kong holding, 0 = deploying, 3 = kong empty
+	* 2 = kong grabbing, 1 = kong holding, 0 = deploying, 3 = kong empty
+	move.b	deployment_indicator_638f,d0    	| [$2d1c: ld      a,(deployment_indicator_638f)] load A with the deployment indicator. 
 	                               	| [$2d1f: and     a] is a barrel being deployed right now?
 	jeq	l_2d51                             	| [$2d20: jp      z,$2d51] yes, jump ahead
 
@@ -10237,24 +10299,23 @@ l_2d2f:
 	clr.w	d3                               	| [$2d38: ld      d,$00] D: = 0
 	move.b	d0,d3                           	| [$2d37: ld      e,a] A is #50 when barrel is crazy, #28 when normal
 	add.w	d3,a0                            	| [$2d3a: add     hl,de] HL becomes #3982 when barrel is crazy, 395A when normal, 3932 when deploying all the way.  this will skip the final animation when dropping crazy barrel (?)
-	jbsr	l_004e                            	| [$2d3b: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$2d3b: call    $004e] update kong's sprites
 	lea	deployment_indicator_638f,a0   	| [$2d3e: ld      hl,deployment_indicator_638f] load HL with deployment indicator
 	subq.b	#1,(a0)                         	| [$2d41: dec     (hl)] Decrease indicator
 	jne	l_2d51                             	| [$2d42: jp      nz,$2d51] if indicator is not zero then jump ahead
 
 	move.b	#0x01,d0                        	| [$2d45: ld      a,$01] else A := 1
-	move.b	d0,kong_climbing_counter_62af   	| [$2d47: ld      (kong_climbing_counter_62af),a] Store into ???
+	move.b	d0,kong_misc_counter_62af   	| [$2d47: ld      (kong_misc_counter_62af),a] Store into ???
 	move.b	crazy_blue_barrel_indicator_6382,d0	| [$2d4a: ld      a,(crazy_blue_barrel_indicator_6382)] load A with crazy/blue barrel indicator
 	ror.b	#1,d0                            	| [$2d4d: rrca] Is this a crazy barrel?
 	jcs	l_2d83                             	| [$2d4e: jp      c,$2d83] yes, jump ahead and load HL with #39CC and store into #62A8 and #62A9 and resume on #2D54
 
 l_2d51:
-	LOAD_RAM_ADDRESS	unknown_rom_address_62a8,a0             	| [$2d51: ld      hl,(unknown_rom_address_62a8)] else load HL with (???)
-
+	LOAD_ROM_ADDRESS_LE	unknown_rom_address_62a8,a0             	| [$2d51: ld      hl,(unknown_rom_address_62a8)] else load HL with (???)
 l_2d54:
 	move.b	(a0),d0                         	| [$2d54: ld      a,(hl)] load A with value in HL.  crazy barrel this value is #BB
-	LOAD_RAM_ADDRESS	barrel_start_address_62aa,a2	| [$2d55: ld      ix,(barrel_start_address_62aa)] load IX with Barrel start address saved above
-	LOAD_RAM_ADDRESS	sprite_variable_start_62ac,a1	| [$2d59: ld      de,(sprite_variable_start_62ac)] load DE with sprite variable start  EG #6980.  set in #2CCC
+	LOAD_RAM_ADDRESS_LE	barrel_start_address_62aa,a2	| [$2d55: ld      ix,(barrel_start_address_62aa)] load IX with Barrel start address saved above
+	LOAD_RAM_ADDRESS_LE	sprite_variable_start_62ac,a1	| [$2d59: ld      de,(sprite_variable_start_62ac)] load DE with sprite variable start  EG #6980.  set in #2CCC
 	cmp.b	#0x7f,d0                         	| [$2d5d: cp      $7f] A == #7F ? (time to deploy out of kong's hands ?)
 	jeq	l_2d8c                             	| [$2d5f: jp      z,$2d8c] yes, jump ahead
 
@@ -10279,7 +10340,7 @@ l_2d70:
 												| [$2d7c: inc     de] DE now has Y position
 	move.b	d0,(a1)                         	| [$2d7d: ld      (de),a] store into sprite Y position
 												| [$2d7e: inc     hl] increase HL .  EG #39CE for crazy barrel
-	STORE_ROM_ADDRESS	a0,unknown_rom_address_62a8                 	| [$2d7f: ld      (unknown_rom_address_62a8),hl] store into 62A8.  EG 62A8 = CE, 62A9 = 39
+	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d7f: ld      (unknown_rom_address_62a8),hl] store into 62A8.  EG 62A8 = CE, 62A9 = 39
 	rts                                    	| [$2d82: ret] return
 
 * arrive here because this barrel is crazy from #2D4E
@@ -10290,7 +10351,7 @@ l_2d83:
         * 39CC  BB
         * 39CD  4D
 
-	STORE_ROM_ADDRESS	a0,unknown_rom_address_62a8                 	| [$2d86: ld      (unknown_rom_address_62a8),hl] Load #62A8 and #62A9 with #39 and #CC
+	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d86: ld      (unknown_rom_address_62a8),hl] Load #62A8 and #62A9 with #39 and #CC
 	jra	l_2d54                             	| [$2d89: jp      $2d54] jump back
 
 * jump here from #2D5F
@@ -10298,7 +10359,7 @@ l_2d83:
 
 l_2d8c:
 	lea	game_rom+0x39c3,a0                      	| [$2d8c: ld      hl,$39c3] load HL with start of table data address
-	STORE_ROM_ADDRESS	a0,unknown_rom_address_62a8                 	| [$2d8f: ld      (unknown_rom_address_62a8),hl] store into ???
+	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d8f: ld      (unknown_rom_address_62a8),hl] store into ???
 	move.b	#0x01,(0x01,a2)                 	| [$2d92: ld      (ix+$01),$01] set crazy barrel indicator
 	move.b	crazy_blue_barrel_indicator_6382,d0	| [$2d96: ld      a,(crazy_blue_barrel_indicator_6382)] load A with crazy/blue barrel indicator
 
@@ -10325,7 +10386,7 @@ l_2da5:
 	move.b	(a1),d0                         	| [$2dca: ld      a,(de)] load A with kong hand Y position
 	move.b	d0,(0x05,a2)                    	| [$2dcb: ld      (ix+$05),a] store in barrel's Y position
 	lea	game_rom+0x385c,a0                      	| [$2dce: ld      hl,$385c] load HL with table data start
-	jbsr	l_004e                            	| [$2dd1: call    $004e] update kong's sprites
+	jbsr	update_kong_sprites_004e                            	| [$2dd1: call    $004e] update kong's sprites
 	lea	kong_sprite_array_690b,a0      	| [$2dd4: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	move.b	#0xfc,d2                        	| [$2dd7: ld      c,$fc] load c with offset of -4
 	jbsr	rst_38                            	| [$2dd9: rst     $38] move kong
@@ -10338,8 +10399,8 @@ l_2ddb:
 	move.b	#0x0a,d0                        	| [$2ddb: ld      a,$0a] A := binary 1010 = code for rivets and conveyors
 	jbsr	only_continues_if_given_level_0030                            	| [$2ddd: rst     $30] returns immediately on girders and elevators, else continue
 
-	jbsr	rst_10                            	| [$2dde: rst     $10] only continue if mario alive
-	move.b	unknown_6380,d0                 	| [$2ddf: ld      a,(unknown_6380)] \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
+	jbsr	continue_only_if_mario_alive_0010                            	| [$2dde: rst     $10] only continue if mario alive
+	move.b	difficulty_level_6380,d0                 	| [$2ddf: ld      a,(difficulty_level_6380)] \  load B with (internal_difficulty+1)/2 (get's value between 1 and 3)
 	addq.b	#1,d0                           	| [$2de2: inc     a]|
 	                               	| [$2de3: and     a]| clear carry flag
 	CLEAR_XC_FLAGS	| clear carry is not enough
@@ -10375,11 +10436,11 @@ l_2df1:
 * called from main routine at #198F
 * called during the elevators.  used to move the bouncers ????
 
-l_2e04:
+update_bouncers_if_on_elevators_2e04:
 	move.b	#0x04,d0                        	| [$2e04: ld      a,$04] A := 4 (0100 binary) to check for elevators screen
 	jbsr	only_continues_if_given_level_0030                            	| [$2e06: rst     $30] if not elevators it will return to program
 
-	jbsr	rst_10                            	| [$2e07: rst     $10] if mario is alive, continue, else RET
+	jbsr	continue_only_if_mario_alive_0010                            	| [$2e07: rst     $10] if mario is alive, continue, else RET
 
 	lea	start_of_bouncer_memory_area_6500,a2	| [$2e08: ld      ix,start_of_bouncer_memory_area_6500] load IX with start of bouncer memory area
 	lea	start_of_sprite_memory_for_bouncers_6980,a3	| [$2e0c: ld      iy,start_of_sprite_memory_for_bouncers_6980] start of sprite memory for bouncers
@@ -10411,7 +10472,7 @@ l_2e29:
 	move.b	(0x0e,a2),d6                    	| [$2e37: ld      l,(ix+$0e)]
 	move.b	(0x0f,a2),d5                    	| [$2e3a: ld      h,(ix+$0f)] load HL with table address for bouncer offsets of Y positions for each pixel across
 	LOAD_D5_16_FROM_D5D6
-	LOAD_ROM_ADDRESS	d5,a0
+	LOAD_ROM_ADDRESS_BE	d5,a0
 	move.b	(a0),d0                         	| [$2e3d: ld      a,(hl)] load table data
 	move.b	d0,d2                           	| [$2e3e: ld      c,a] copy to C
 	cmp.b	#0x7f,d0                         	| [$2e3f: cp      $7f] == #7F ? (end code ?)
@@ -10422,7 +10483,7 @@ l_2e29:
 	move.b	d0,(0x05,a2)                    	| [$2e48: ld      (ix+$05),a] store into item's Y position
 
 l_2e4b:
-	STORE_ROM_ADDRESS	a0,d5
+	STORE_ROM_ADDRESS_BE	a0,d5
 	LOAD_D5D6_FROM_D5_16
 	move.b	d6,(0x0e,a2)                    	| [$2e4b: ld      (ix+$0e),l]
 	move.b	d5,(0x0f,a2)                    	| [$2e4e: ld      (ix+$0f),h] store the updated HL for next time
@@ -10505,10 +10566,10 @@ l_2ea7:
 * arrive from main routine at #1998
 * checks for hammer grabs etc ?
 
-l_2ed4:
+handle_hammer_2ed4:
 	move.b	#0x0b,d0                        	| [$2ed4: ld      a,$0b] B = # 1011 binary
 	jbsr	only_continues_if_given_level_0030                            	| [$2ed6: rst     $30] continue here on girders, conveyors, rivets only.  elevators RET from this sub, it has no hammers.
-	jbsr	rst_10                            	| [$2ed7: rst     $10] continue here only if mario is alive, otherwise RET from this sub
+	jbsr	continue_only_if_mario_alive_0010                            	| [$2ed7: rst     $10] continue here only if mario is alive, otherwise RET from this sub
 
 	lea	hardware_address_of_hammer_sprite_6a18,a1	| [$2ed8: ld      de,hardware_address_of_hammer_sprite_6a18] load DE with hardware address of hammer sprite
 	lea	software_address_of_hammer_sprite_6680,a2	| [$2edb: ld      ix,software_address_of_hammer_sprite_6680] load IX with software address of hammer sprite
@@ -10729,7 +10790,7 @@ convert_hl_into_vram_address_2ff0:
 
 
 *
-* called here in the middle of a barrlel being rolled left or right...
+* called here in the middle of a barrel being rolled left or right...
 * or when mario is moving
 * called from four locations
 * A is preloaded with ?
@@ -10826,14 +10887,14 @@ l_3064:
 
 l_3069:
 	jbsr	rst_18                            	| [$3069: rst     $18] count down timer and only continue here if zero, else RET
-	LOAD_RAM_ADDRESS	timer_unknown_63c0,a0       	| [$306a: ld      hl,(timer_unknown_63c0)] load HL with timer ???
+	LOAD_RAM_ADDRESS_LE	timer_unknown_63c0,a0       	| [$306a: ld      hl,(timer_unknown_63c0)] load HL with timer ???
 	addq.b	#1,(a0)                         	| [$306d: inc     (hl)] increase
 	rts                                    	| [$306e: ret] return
 
 * called from 3 locations
 
 l_306f:
-	lea	kong_climbing_counter_62af,a0  	| [$306f: ld      hl,kong_climbing_counter_62af] load HL with kong climbing counter
+	lea	kong_misc_counter_62af,a0  	| [$306f: ld      hl,kong_misc_counter_62af] load HL with kong climbing counter
 	addq.b	#1,(a0)                         	| [$3072: inc     (hl)] increase
 	move.b	(a0),d0                         	| [$3073: ld      a,(hl)] load A with the counter
 	and.b	#0x07,d0                         	| [$3074: and     $07] mask bits.  now between 0 and 7.  zero?
@@ -10965,7 +11026,7 @@ l_30ed:
 * called from #30ED ABOVE
 
 l_30fa:
-	move.b	unknown_6380,d0                 	| [$30fa: ld      a,(unknown_6380)] \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
+	move.b	difficulty_level_6380,d0                 	| [$30fa: ld      a,(difficulty_level_6380)] \  Jump if internal difficulty is less than 6 (Is it possible to not jump here?)
 	cmp.b	#0x06,d0                         	| [$30fd: cp      $06]|
 	jcs	l_3103                             	| [$30ff: jr      c,$3103] /
 
@@ -11085,7 +11146,7 @@ l_317c:
 	jne	l_3195                             	| [$3189: jp      nz,$3195] /
 	move.b	unknown_63a1,d0                 	| [$318c: ld      a,(unknown_63a1)] \  Return if current count of # of fires == internal difficulty, on conveyors we never have more fireballs
 	move.b	d0,d2                           	| [$318f: ld      c,a]| on screen than the internal difficulty
-	move.b	unknown_6380,d0                 	| [$3190: ld      a,(unknown_6380)]|
+	move.b	difficulty_level_6380,d0                 	| [$3190: ld      a,(difficulty_level_6380)]|
 	cmp.b	d2,d0                            	| [$3193: cp      c]|
 	bne.b	0f                               	| [...]
 	rts                                    	| [$3194: ret     z] / [...]
@@ -11112,14 +11173,14 @@ l_31b1:
 	clr.b	d0                               	| [$31b4: xor     a] \ Index of fireball being processed := 0
 	move.b	d0,unknown_63a2                 	| [$31b5: ld      (unknown_63a2),a] /
 	lea	current_fireball_data_address_63e0,a0	| [$31b8: ld      hl,current_fireball_data_address_63e0] \ Address of fireball data array for current fireball being processed := #63E0 = #6400 - #20
-	STORE_RAM_ADDRESS	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
+	STORE_RAM_ADDRESS_LE	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
 
 * Loop start
 l_31be:
-	LOAD_RAM_ADDRESS	address_of_fireball_slot_for_this_fireball_63c8,a0	| [$31be: ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)] \  Move on to next fireball by incrementing address of fireball data array for current fireball by #20
+	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a0	| [$31be: ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)] \  Move on to next fireball by incrementing address of fireball data array for current fireball by #20
 	move.w	#0x20,d1                        	| [$31c1: ld      bc,$0020]| 32
 	add.w	d1,a0                            	| [$31c4: add     hl,bc]|
-	STORE_RAM_ADDRESS	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31c5: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] /
+	STORE_RAM_ADDRESS_LE	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31c5: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] /
 	move.b	(a0),d0                         	| [$31c8: ld      a,(hl)] \  Jump if fireball is not active
 	                               	| [$31c9: and     a]|
 	jeq	l_31d0                             	| [$31ca: jp      z,$31d0] /
@@ -11140,7 +11201,7 @@ l_31d0:
 * called from #31B1 above
 
 l_31dd:
-	move.b	unknown_6380,d0                 	| [$31dd: ld      a,(unknown_6380)] \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
+	move.b	difficulty_level_6380,d0                 	| [$31dd: ld      a,(difficulty_level_6380)] \  Return if internal difficulty is < 3, no freezers are allowed until difficulty 3.
 	cmp.b	#0x03,d0                         	| [$31e0: cp      $03]|
 	bpl.b	0f                               	| [...]
 	rts                                    	| [$31e2: ret     m] / [...]
@@ -11179,7 +11240,7 @@ l_31f6:
 * called from #31CD above
 
 l_3202:
-	LOAD_RAM_ADDRESS	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3202: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball data array for current fireball
+	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3202: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball data array for current fireball
  	move.b	(0x18,a2),d0                    	| [$3206: ld      a,(ix+$18)] \  Jump if fireball is currently in the process of spawning
 	cmp.b	#0x01,d0                         	| [$3209: cp      $01]|
 	jeq	l_327a                             	| [$320b: jp      z,$327a] /
@@ -11217,7 +11278,7 @@ l_3233:
 	cmp.b	#0x01,d0                         	| [$3241: cp      $01] \ Jump if we have reached the edge of a girder
 	jeq	l_3297                             	| [$3243: jp      z,$3297] /
 
-	LOAD_RAM_ADDRESS	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3246: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
+	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3246: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
 	move.b	(0x0e,a2),d0                    	| [$324a: ld      a,(ix+$0e)] \  Jump if X-position is < #10 (i.e., fireball has reached left edge of screen)
 	cmp.b	#0x10,d0                         	| [$324d: cp      $10]|
 	jcs	l_328c                             	| [$324f: jp      c,$328c] /
@@ -11279,7 +11340,7 @@ l_3291:
 
 * Arrived from #3243 when fire is at edge of girder
 l_3297:
-	STORE_RAM_ADDRESS	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3297: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
+	STORE_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3297: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
 	move.b	(0x0d,a2),d0                    	| [$329b: ld      a,(ix+$0d)] \  Jump if fireball direction is left
 	cmp.b	#0x01,d0                         	| [$329e: cp      $01]|
 	jne	l_32b1                             	| [$32a0: jp      nz,$32b1] /
@@ -11588,7 +11649,7 @@ l_342c:
 	move.b	(0x1a,a2),d6                    	| [$342c: ld      l,(ix+$1a)] \ Load HL with address into Y-position table
 	move.b	(0x1b,a2),d5                    	| [$342f: ld      h,(ix+$1b)] /
 	LOAD_D5_16_FROM_D5D6
-	LOAD_ROM_ADDRESS	d5,a0
+	LOAD_ROM_ADDRESS_BE	d5,a0
 	                               	| [$3432: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
 	move.b	#0x00,d1                        	| [$3433: ld      bc,$0000]| 0
 	move.b	#0x00,d2                        	| [$3433: ld      bc,$0000]| 0
@@ -11613,7 +11674,7 @@ l_3445:
 
 	move.b	d0,(0x05,a2)                    	| [$344b: ld      (ix+$05),a] Else store table data into fire's Y-position
 	addq.w	#1,a0                           	| [$344e: inc     hl] \  Advance to next table entry, for the next frame
-	STORE_ROM_ADDRESS	a0,d5
+	STORE_ROM_ADDRESS_BE	a0,d5
 	LOAD_D5D6_FROM_D5_16
 	
 	move.b	d6,(0x1a,a2)                    	| [$344f: ld      (ix+$1a),l]|
@@ -11642,7 +11703,7 @@ l_3478:
 	move.b	(0x1a,a2),d6                    	| [$3478: ld      l,(ix+$1a)] \ Load HL with address into Y-position table
 	move.b	(0x1b,a2),d5                    	| [$347b: ld      h,(ix+$1b)] /
 	LOAD_D5_16_FROM_D5D6
-	LOAD_ROM_ADDRESS	d5,a0
+	LOAD_ROM_ADDRESS_BE	d5,a0
 													| [$347e: xor     a] \  Jump if HL is non-zero (i.e., if this is not the very first spawning frame)
 	                        	| [$347f: ld      bc,$0000]| 0
 	                        	| [$347f: ld      bc,$0000]| 0

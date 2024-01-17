@@ -111,7 +111,7 @@
 	.global	unknown_rom_address_62a8
 	.global	barrel_start_address_62aa
 	.global	sprite_variable_start_62ac
-	.global	kong_climbing_counter_62af
+	.global	kong_misc_counter_62af
 	.global	initial_clock_value_62b0
 	.global	bonus_timer_62b1
 	.global	blue_barrel_counter_62b2
@@ -134,7 +134,7 @@
 	.global	unknown_6352
 	.global	unknown_6353
 	.global	unknown_6354
-	.global	unknown_6380
+	.global	difficulty_level_6380
 	.global	timer_6381
 	.global	crazy_blue_barrel_indicator_6382
 	.global	memory_used_to_track_tasks_6383
@@ -146,7 +146,7 @@
 	.global	restored_when_hammer_runs_out_6389
 	.global	kong_intro_flash_counter_638a
 	.global	unknown_638b
-	.global	reset_onscreen_timer_638c
+	.global	onscreen_timer_638c
 	.global	kong_bounce_counter_638d
 	.global	kong_ladder_climb_counter_638e
 	.global	deployment_indicator_638f
@@ -490,7 +490,7 @@ barrel_start_address_62aa:
 	ds.b	2
 sprite_variable_start_62ac:
 	ds.b	3
-kong_climbing_counter_62af:
+kong_misc_counter_62af:
 	ds.b	1
 initial_clock_value_62b0:
 	ds.b	1
@@ -536,7 +536,7 @@ unknown_6353:
 	ds.b	1
 unknown_6354:
 	ds.b	44
-unknown_6380:
+difficulty_level_6380:
 	ds.b	1
 timer_6381:
 	ds.b	1
@@ -560,7 +560,7 @@ kong_intro_flash_counter_638a:
 	ds.b	1
 unknown_638b:
 	ds.b	1
-reset_onscreen_timer_638c:
+onscreen_timer_638c:
 	ds.b	1
 kong_bounce_counter_638d:
 	ds.b	1

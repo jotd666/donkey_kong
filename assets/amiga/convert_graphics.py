@@ -94,28 +94,35 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror}
+        if i in sprite_config:
+            # merge
+            sprite_config[i]["cluts"].extend(cluts)
+        else:
+            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror}
+
 def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
     add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror)
 
-add_sprite_block(0,0x10,"mario",2,mirror=True)
-add_sprite_block(0x12,0x15,"princess",9)
-add_sprite(0x10,"princess",9)
-add_sprite(0x11,"princess",10)
+add_sprite_block(0,7,"mario",2,mirror=True)
+add_sprite_block(8,0x10,"mario",2,mirror=True)
+add_sprite_block(0x10,0x15,"princess",9)
+add_sprite(0x12,"princess",10)
+add_sprite(7,"blank",2)
+
 add_sprite_block(0x15,0x19,"barrel",11)
 add_sprite(0x49,"oil_barrel",12)
 add_sprite_block(0x19,0x1C,"death_barrel",12)
 add_sprite_block(0x1E,0x20,"hammer",7,mirror=True)
 add_sprite_block(0x20,0x38,"kong",8,mirror=True)
-add_sprite(0x23,"kong",[7,8])
+add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
 add_sprite(0x3A,"blank",15)
 
 
 
-add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
-add_sprite_block(0x3D,0x3F,"fireball",[1,13,15]) # clut?
-add_sprite_block(0x40,0x44,"flame",[1,13,15])
+#add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
+add_sprite_block(0x3D,0x3F,"fireball",[0,1]) # clut?
+add_sprite_block(0x40,0x44,"flame",[1])
 
 add_sprite(0x44,"elevator",0x0) # clut?
 add_sprite(0x45,"conveyor",0x0) # clut?

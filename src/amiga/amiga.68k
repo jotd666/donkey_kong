@@ -230,23 +230,10 @@ _user:
 	or.l	#4,cheat_flags
 	st.b	cheat_used
 2:
-	move.l	(A0)+,D0	| INFPICK/S
-	beq.b	2f
-	or.l	#8,cheat_flags
-	st.b	cheat_used
-2:
 	move.l	(A0)+,D0	| CHEATKEYS/S
 	beq.b	2f
 	* cheat isn't used as long as no cheat key is used
 	or.l	#0x10,cheat_flags
-2:
-	move.l	(A0)+,D0	| HARDBAGS/S
-	beq.b	2f
-	or.l	#1,misc_options
-2:
-	move.l	(A0)+,D0	| FRENCH/S
-	beq.b	2f
-	or.l	#2,misc_options
 2:
 
 	move.l	(A0)+,D0	| SKILL/S
@@ -955,32 +942,40 @@ update_hardware_sprites:
 	jne	10b	
 	rts
 
+PREV_X = 0
+PREV_Y = 1
+PREV_IS_BOB = 2
+
 update_bobs:
 	lea		bob_previous_positions(pc),a4
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
-	move.w	(2,a4),d1
+	moveq	#0,d0
+	move.b	(PREV_X,a4),d0
 	beq.b	11f		| y=0: inactive
-	move.w	(a4),d0
-	* clear 16x16 area where the sprite was TODO
+	moveq	#0,d1
+	move.b	(PREV_Y,a4),d1
+	* clear 16x16 area where the sprite was
+	bsr		restore_16x_background
 11:
 	addq	#4,a4
 	dbf		d7,1b
 	
 	
 	lea		bob_table,a4
+	lea		bob_previous_positions(pc),a6
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
+	move.b	d0,(PREV_X,a6)
 	jeq		211f				| x=0: don't show
 	
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	bclr	#7,d2		| clear & test mirror mode
 	sne		d6
-	*and.b	#0x7F,D2
 
 	moveq	#0,d1
 	moveq	#0,d3
@@ -1001,12 +996,14 @@ update_bobs:
 11:
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	211f			| Y set to 0: not shown
+
 	
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
 	
-
+	move.b	d1,(PREV_Y,a6)
+	
 
 	* < D2: sprite code & flags
 	* < D3: sprite color (clut index)
@@ -1043,9 +1040,82 @@ update_bobs:
 	move.l	(a7)+,a0
 211:
 	addq.w	#4,a0
+	addq.w	#4,a6		| next previous sprite pos
 	dbf		d7,1b
 	
 	rts
+
+* what: blits 32x16 background data on bg plane, no horizontal shifting (erase)
+* then erases the 3 other planes
+* args:
+* < D0: X (rounded to smaller 8-multiple)
+* < D1: Y
+
+* trashes: D0-D1
+
+restore_16x_background:
+	movem.l	d2-d6/a0-a5,-(a7)
+	lea		bg_background_data,a0		| copy of tiles
+	lea		_custom,a5
+	move.l	bg_drawed_screen_ptr(pc),a1
+	* adjust offset X: X//8
+	lsr.w	#3,d0
+	lea		mulNB_BYTES_PER_ROW_table(pc),a4
+	add.w	d1,d1
+	* add Y offset: Y*40
+	add.w	(a4,d1.w),d0
+	* same offset for source and destination
+	add.w	d0,a1
+	add.w	d0,a0
+	
+	moveq	#16,d4		| height
+    move.l  #0x09f00000,d3    | A->D copy, ascending mode
+	moveq	#4,d2			| 32 bits blit
+	move.w	#NB_BYTES_PER_ROW,d1		| blit modulo
+
+    sub.w   d2,d1       | blit modulo
+    lsl.w   #6,d4
+    lsr.w   #1,d2		| blit width
+    add.w   d2,d4       | blit height
+	
+    * always the same settings
+
+    * now just wait for blitter ready to write all registers
+	WAIT_BLIT
+    
+    * blitter registers set
+
+	move.l d3,bltcon0(a5)	| sets con0 and con1
+
+    move.w  d1,bltamod(a5)	|A modulo
+    move.w  d1,bltdmod(a5)	|D modulo
+							
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	
+	lea	(BG_SCREEN_PLANE_SIZE,a0),a0
+	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
+	WAIT_BLIT
+	* second bitplane
+	move.l a0,bltapt(a5)	|source graphic top left corner
+	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+
+	.rept	NB_PLAYFIELD_PLANES-2
+	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
+    move.l  #0x01000000,d3    | minterm useD & rect clear (0xA) 
+	WAIT_BLIT
+	* now simply erase the 3 other planes
+	move.l d3,bltcon0(a5)	
+	move.l a1,bltdpt(a5)	|destination top left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	.endr
+	
+	
+	movem.l	(a7)+,d2-d6/a0-a5
+	rts
+
 
 * < A5: custom
 * < D0,D1: x,y
