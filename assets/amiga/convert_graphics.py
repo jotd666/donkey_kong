@@ -5,7 +5,7 @@ from PIL import Image,ImageOps
 import collections
 
 
-transparent = (60,100,200)  # whatever is not a used RGB is ok
+#transparent = (60,100,200)  # whatever is not a used RGB is ok
 
 
 # only 1 4 color palette, all rows use 4 colors per row
@@ -90,23 +90,23 @@ def dump_asm_bytes(*args,**kwargs):
 
 sprite_config = dict()
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite=False):
+def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
-def add_sprite(code,prefix,cluts,is_sprite=False):
-    add_sprite_block(code,code+1,prefix,cluts,is_sprite)
+        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror}
+def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
+    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror)
 
-add_sprite_block(0,0x10,"mario",2)
+add_sprite_block(0,0x10,"mario",2,mirror=True)
 add_sprite_block(0x12,0x15,"princess",9)
 add_sprite(0x10,"princess",9)
 add_sprite(0x11,"princess",10)
 add_sprite_block(0x15,0x19,"barrel",11)
 add_sprite(0x49,"oil_barrel",12)
 add_sprite_block(0x19,0x1C,"death_barrel",12)
-add_sprite_block(0x1E,0x20,"hammer",7)
-add_sprite_block(0x20,0x38,"kong",8)
+add_sprite_block(0x1E,0x20,"hammer",7,mirror=True)
+add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite(0x23,"kong",[7,8])
 add_sprite(0x70,"blank",[1,8,10])
 add_sprite(0x3A,"blank",15)
@@ -282,7 +282,7 @@ if True:
             # only consider sprites/cluts which are pre-registered
             if sprconf:
                 if k not in sprites:
-                    sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize}
+                    sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize,"mirror":sprconf["mirror"]}
                 cs = sprites[k]
 
                 if is_sprite:
@@ -315,26 +315,35 @@ if True:
 ##                    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
                     img_to_raw = img
 
-                    bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
-                        palette_precision_mask=0xFF,generate_mask=True,blit_pad=True,mask_color=transparent)
-                    bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
-
                     plane_list = []
+                    for mirrored in range(2):
+                        bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
+                            palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
+                        bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
 
-                    for ci in range(0,len(bitplanes),bitplane_size):
-                        plane = bitplanes[ci:ci+bitplane_size]
-                        if not any(plane):
-                            # only zeroes
-                            plane_list.append(None)
+
+                        for ci in range(0,len(bitplanes),bitplane_size):
+                            plane = bitplanes[ci:ci+bitplane_size]
+                            if not any(plane):
+                                # only zeroes
+                                plane_list.append(None)
+                            else:
+                                plane_index = bitplane_cache.get(plane)
+                                if plane_index is None:
+                                    bitplane_cache[plane] = plane_next_index
+                                    plane_index = plane_next_index
+                                    plane_next_index += 1
+                                plane_list.append(plane_index)
+                        if cs["mirror"] and mirrored==0:
+                            # we need do re-iterate with opposite Y-flip image (donkey kong)
+                            img_to_raw = ImageOps.mirror(img_to_raw)
                         else:
-                            plane_index = bitplane_cache.get(plane)
-                            if plane_index is None:
-                                bitplane_cache[plane] = plane_next_index
-                                plane_index = plane_next_index
-                                plane_next_index += 1
-                            plane_list.append(plane_index)
+                            # no mirror: don't do it once more
+                            break
 
+                    # plane list size varies depending on mirror or not
                     csb[cidx] = plane_list
+
             if dump_sprites:
                 scaled = ImageOps.scale(img,2,0)
                 if sprconf:
