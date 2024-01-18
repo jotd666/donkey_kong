@@ -157,9 +157,8 @@ start:
 		.global osd_update_sprites
 		.global osd_read_dsw_1
 		.global osd_read_dsw_2
-		.global osd_read_in_1
 		.global osd_read_in_2
-		.global osd_read_inputs
+		.global osd_read_in_0
 		.global osd_read_high_scores
 		.global osd_write_high_scores
 		.global osd_sound_start
@@ -2210,76 +2209,24 @@ osd_r_videoram:
 
 	
 osd_read_in_2:
-	moveq	#-1,d0
+	move.b	#1,0x200
+	moveq	#0,d0
 	movem.l	a0/d1,-(a7)
 	lea		keyboard_table(pc),a0
 	* misc control keys
-	tst.b	(6,a0)		| "6" key like in MAME
-	beq.b	0f
-	bclr	#1,d0
-0:	
+
 	tst.b	(5,a0)		| "5" key like in MAME
 	beq.b	0f
-	bclr	#0,d0
+	bset	#7,d0
 0:
 	tst.b	(1,a0)		| "1" key like in MAME
 	beq.b	0f
-	bclr	#2,d0
+	bset	#2,d0
 0:
 	tst.b	(2,a0)		| "2" key like in MAME
 	beq.b	0f
-	bclr	#10,d0
+	bset	#3,d0
 0:	
-	tst.b	(0x4C,a0)		| "up" key
-	beq.b	0f
-	bclr	#3,d0
-0:
-	tst.b	(0x4D,a0)		| "down" key
-	beq.b	0f
-	bclr	#2,d0
-0:
-	tst.b	(0x4F,a0)		| "<-" key
-	beq.b	0f
-	bclr	#1,d0
-0:
-	tst.b	(0x4E,a0)		| "->" key
-	beq.b	0f
-	bclr	#0,d0
-0:
-	tst.b	(0x63,a0)		| "ctrl" key
-	beq.b	0f
-	bclr	#5,d0
-0:
-	tst.b	(0x66,a0)		| "alt" key
-	beq.b	0f
-	bclr	#7,d0
-0:
-	* directions + fire
-	move.l	_joypad_state(pc),d1
-	btst	#JPB_BTN_UP,d1
-	beq.b	0f
-	bclr	#3,d0
-0:
-	btst	#JPB_BTN_DOWN,d1
-	beq.b	0f
-	bclr	#2,d0
-0:
-	btst	#JPB_BTN_LEFT,d1
-	beq.b	0f
-	bclr	#1,d0
-0:
-	btst	#JPB_BTN_RIGHT,d1
-	beq.b	0f
-	bclr	#0,d0
-0:
-	btst	#JPB_BTN_RED,d1
-	beq.b	0f
-	bclr	#5,d0
-0:
-	btst	#JPB_BTN_BLU,d1
-	beq.b	0f
-	bclr	#7,d0
-0:
 	movem.l	(a7)+,a0/d1
 	rts
 	
@@ -2287,23 +2234,55 @@ osd_read_in_1:
 	moveq	#-1,d0
 	rts
 	
+	* implement bit 6 : reset game
+	
 osd_read_in_0:
-	moveq	#-1,d0
+	moveq	#0,d0
 	movem.l	a0/d1,-(a7)
 	lea		keyboard_table(pc),a0
-	* misc control keys
-	tst.b	(5,a0)		| "5" key like in MAME
+	tst.b	(0x4C,a0)		| "up" key
 	beq.b	0f
-	bclr	#3,d0		| insert coin
+	bset	#2,d0
 0:
-	tst.b	(1,a0)		| "1" key like in MAME
+	tst.b	(0x4D,a0)		| "down" key
 	beq.b	0f
-	bclr	#0,d0
+	bset	#3,d0
 0:
-	tst.b	(2,a0)		| "2" key like in MAME
+	tst.b	(0x4F,a0)		| "<-" key
 	beq.b	0f
-	bclr	#1,d0
-0:	
+	bset	#1,d0
+0:
+	tst.b	(0x4E,a0)		| "->" key
+	beq.b	0f
+	bset	#0,d0
+0:
+	tst.b	(0x63,a0)		| "ctrl" key
+	beq.b	0f
+	bset	#4,d0
+0:
+	* directions + fire
+	move.l	_joypad_state(pc),d1
+	btst	#JPB_BTN_UP,d1
+	beq.b	0f
+	bset	#2,d0
+0:
+	btst	#JPB_BTN_DOWN,d1
+	beq.b	0f
+	bclr	#3,d0
+0:
+	btst	#JPB_BTN_LEFT,d1
+	beq.b	0f
+	bset	#1,d0
+0:
+	btst	#JPB_BTN_RIGHT,d1
+	beq.b	0f
+	bset	#0,d0
+0:
+	btst	#JPB_BTN_RED,d1
+	beq.b	0f
+	bset	#4,d0
+0:
+
 	movem.l	(a7)+,a0/d1
 
 	rts
@@ -2322,116 +2301,6 @@ osd_read_dsw_2:
 
 	rts
 	
-* reads most inputs in one call
-* bits 0-1    coins
-* bit 2: start game 1 player
-* bit 10: (added) start game 2 players
-
-osd_read_inputs:
-	moveq	#-1,d0
-	movem.l	a0/d1,-(a7)
-	lea		keyboard_table(pc),a0
-	* misc control keys
-	tst.b	(6,a0)		| "6" key like in MAME
-	beq.b	0f
-	bclr	#1,d0
-0:	
-	tst.b	(5,a0)		| "5" key like in MAME
-	beq.b	0f
-	bclr	#0,d0
-0:
-	tst.b	(1,a0)		| "1" key like in MAME
-	beq.b	0f
-	bclr	#2,d0
-0:
-	tst.b	(2,a0)		| "2" key like in MAME
-	beq.b	0f
-	bclr	#10,d0
-0:	
-	tst.b	(0x4F,a0)		| "<-" key
-	beq.b	0f
-	bclr	#3,d0
-0:
-	tst.b	(0x4E,a0)		| "->" key
-	beq.b	0f
-	bclr	#4,d0
-0:
-	tst.b	(0x4C,a0)		| "up" key
-	beq.b	0f
-	bclr	#5,d0
-0:
-	tst.b	(0x4D,a0)		| "down" key
-	beq.b	0f
-	bclr	#6,d0
-0:
-	tst.b	(0x63,a0)		| "ctrl" key
-	beq.b	0f
-	bclr	#7,d0
-0:
-	* directions + fire
-	move.l	_joypad_state(pc),d1
-	btst	#JPB_BTN_UP,d1
-	beq.b	0f
-	bclr	#5,d0
-0:
-	btst	#JPB_BTN_DOWN,d1
-	beq.b	0f
-	bclr	#6,d0
-0:
-	btst	#JPB_BTN_LEFT,d1
-	beq.b	0f
-	bclr	#3,d0
-0:
-	btst	#JPB_BTN_RIGHT,d1
-	beq.b	0f
-	bclr	#4,d0
-0:
-	btst	#JPB_BTN_RED,d1
-	beq.b	0f
-	bclr	#7,d0
-0:
-	* test all those flags to see if normal controls
-	* could be used to insert coins/start game
-*	tst.b	gameplay_allowed_6054
-*	beq.b	1f			| demo mode: enable
-*	tst.b	check_scenery_disabled_61ED		| intro: enable
-*	bne.b	1f
-*	tst.b	game_locked_6053		| start screen: enable
-*	beq.b	3f
-*1:
-	move.l	d2,-(a7)
-	move.l	_previous_joypad_state(pc),d2
-	* save prev state as game loops within vblank
-	* pushing fire would either lockup the game
-	* or insert a lot of credits simulatenously
-	move.l	d1,_previous_joypad_state
-	
-	* game not in play, accept start 1P game with "up"
-	btst	#JPB_BTN_UP,d1
-	beq.b	0f
-	bclr	#2,d0
-0:
-	* game not in play, accept start 2P game with "down"
-	btst	#JPB_BTN_DOWN,d1
-	beq.b	0f
-	bclr	#10,d0
-0:
-	btst	#JPB_BTN_RED,d1
-	beq.b	0f
-	btst	#JPB_BTN_RED,d2
-	bne.b	0f
-	* game not in play, accept insert coin with fire
-	bclr	#0,d0
-0:
-	move.l	(a7)+,d2
-3:
-	* not inverted logic after all
-	not.b	d0
-	
-	movem.l	(a7)+,a0/d1
-	rts
-	
-
 
 		
 osd_read_high_scores:

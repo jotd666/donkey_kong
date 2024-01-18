@@ -1,7 +1,12 @@
 - log sprites that are displayed with clut (too many cluts): in progress
-- demo: mario jumps & dies immediately unless invincible? (re-test)
-- implement insert coin
 - center of kong trashed: check if blank tile at this position (test_sprites)
   skip blank tiles like 0x70, ...
-- bonus used to work now fails (big/little endian shit)
-- barrels fall off screen but continue falling / loop, then illegal/wrong address issue
+- bonus buggy still?
+- barrels fall off screen / bounce in a bogus way
+- flame rises without any ladder
+- glitch in masks or position when drawing or erasing bobs
+- jumps: takes hammer even if far away!
+- hammer doesn't seem to destroy barrels
+- insert coin: 00 => 01 then 00 again????
+- implement sounds (turn off music to rip)
+- palette problem in goofy kong screen
