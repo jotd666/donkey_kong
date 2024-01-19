@@ -1314,7 +1314,7 @@ update_kong_sprites_004e:
 * it returns with A loaded with this result and also RngTimer1 with the answer.
 * random number generator
 
-l_0057:
+random_0057:
 	move.b	rngtimer1_6018,d0               	| [$0057: ld      a,(rngtimer1_6018)] load A with timer
 	lea	framecounter_601a,a0           	| [$005a: ld      hl,framecounter_601a] load HL with other timer address
 	add.b	(a0),d0                          	| [$005d: add     a,(hl)] add
@@ -1382,7 +1382,7 @@ l_009b:
 l_00b5:
 	lea	framecounter_601a,a0           	| [$00b5: ld      hl,framecounter_601a] else load HL with Timer constantly counts down from FF to 00 and then FF to 00 again and again ... 1 count per frame
 	subq.b	#1,(a0)                         	| [$00b8: dec     (hl)] decrease this timer
-	jbsr	l_0057                            	| [$00b9: call    $0057] update the random number gen
+	jbsr	random_0057                            	| [$00b9: call    $0057] update the random number gen
 	jbsr	handle_insert_coins_017b                            	| [$00bc: call    $017b] check for credits being inserted and handle them
 	jbsr	l_00e0                            	| [$00bf: call    $00e0] update all sounds
 										| [$00c2: ld      hl,$00d2] load HL with return address
@@ -3009,7 +3009,7 @@ l_0801:
 	lea	game_rom+0x39cf,a0                      	| [$0816: ld      hl,$39cf] load HL with table data for kong beating chest
 	jbsr	update_kong_sprites_004e                            	| [$0819: call    $004e] update kong's sprites
 	jbsr	l_3f24                            	| [$081c: call    $3f24] draw TM logo onscreen [patch? orig japanese had 3 NOPs here]
-	nop                                    	| [$081f: nop] no operation
+											| [$081f: nop] no operation
 	lea	start_of_kong_sprite_6908,a0   	| [$0820: ld      hl,start_of_kong_sprite_6908] load HL with start of kong sprite X pos
 	move.b	#0x44,d2                        	| [$0823: ld      c,$44] load C with offset to add X
 	jbsr	rst_38                            	| [$0825: rst     $38] draw kong in new position
@@ -3785,7 +3785,7 @@ l_0c43:
 	subq.b	#1,d0                           	| [$0c4a: dec     a] decrease
 	asl.b	#2,d0                            	| [$0c4b: sla     a] * 2
 
-	move.l	a0,-(sp)                        	| [$0c4f: push    hl] save HL
+	move.w	d7,-(sp)                        	| [$0c4f: push    hl] save HL
 	lea	game_rom+0x3cf0,a0                      	| [$0c50: ld      hl,$3cf0] load HL with start of table data for 25m, 50m, etc.
 	movem.w	d1/d2,-(sp)                    	| [$0c53: push    bc] save BC
 	move.w	result_63a8,d7              	| [$0c54: ld      ix,(result_63a8)] load IX with screen VRAM address to draw number of meters
@@ -3811,7 +3811,7 @@ l_0c43:
 	jbsr	osd_w_videoram                    	| [$0c67: ld      (ix+$20),a] write to screen
 	sub.w	#0x40,d7
 	move.b	#0x8b,d0
-	jbsr	osd_w_videoram                	| [$0c6a: ld      (ix-$20),$8b] write "m" to screen
+	jbsr	osd_w_videoram                	| [$0c6a: ld      (ix-$20),$8b] write "m" to screen for 25m, 50m ...
 
 	movem.w	(sp)+,d1/d2                    	| [$0c6e: pop     bc] restore BC
 
@@ -3820,9 +3820,9 @@ l_0c43:
 	move.w  #0xfffc,d3                      	| [$0c72: ld      de,$fffc] load offset for next screen location
 	add.w	d3,d7                            	| [$0c75: add     hl,de] add offset
 	move.w	d7,result_63a8                  	| [$0c76: ld      (result_63a8),hl] store result
-	move.l	(sp)+,a0                        	| [$0c79: pop     hl] restore HL
+	move.w	(sp)+,d7                        	| [$0c79: pop     hl] restore HL
 	move.w	#0xff5f,d3                      	| [$0c7a: ld      de,$ff5f] load DE with offset for goofy
-	add.w	d3,a0                            	| [$0c7d: add     hl,de] add offset to draw next goofy
+	add.w	d3,d7                            	| [$0c7d: add     hl,de] add offset to draw next goofy
 	subq.b	#1,d1                           	| [$0c7e: dec     b] decrease B.  done drawing goofy kongs ?
 	jne	l_0c29                             	| [$0c7f: jp      nz,$0c29] no, loop and do another [why not use DJNZ ???]
 
@@ -3920,7 +3920,7 @@ l_0cf2:
 
 l_0d00:
 	move.b	#0x08,d1                        	| [$0d00: ld      b,$08] for B = 1 to 8 rivets to draw
-	lea	game_rom+0x0d17,a0                      	| [$0d02: ld      hl,$0d17] load HL with start of table data below
+	lea	l_0d17(pc),a0                      	| [$0d02: ld      hl,$0d17] load HL with start of table data below
 
 l_0d05:
 	move.b	#0xb8,d0                        	| [$0d05: ld      a,$b8] load A with #B8 = start code for rivet
@@ -3944,6 +3944,8 @@ l_0d0d:
 
 * start of table data for rivets used above
 * these are addresses in video RAM for the rivets
+* in big endian, because well it's easy here
+
 l_0d17:
 	.word	0x76CA | #76CA
 	.word	0x76CF | #76CF
@@ -5961,8 +5963,8 @@ l_17b6:
 
 	jbsr	clear_all_sounds_011c                            	| [$17b7: call    $011c] clear all sounds
 	lea	sound_buffer_address_608a,a0   	| [$17ba: ld      hl,sound_buffer_address_608a] load HL with sound address
-	move.b	#0x0e,(a0)                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
-	addq.w	#1,a0                           	| [$17bf: inc     hl] HL := #608B = sound duration
+	move.b	#0x0e,(a0)+                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
+												| [$17bf: inc     hl] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$17c0: ld      (hl),$03] set duration to 3
 	move.b	#0x10,d0                        	| [$17c2: ld      a,$10] A := #10 = code for clear space
 	move.w	#0x0020,d3                      	| [$17c4: ld      de,$0020] DE := #20 32
@@ -6423,8 +6425,8 @@ l_1a51:
 	bset.b	#2,d1                           	| [$1a60: set     2,b] else B := 4
 
 l_1a62:
-	rol.b	#1,d0                            	| [$1a62: rlca]
-	rol.b	#1,d0                            	| [$1a63: rlca] rotate left twice = mult by 4
+												| [$1a62: rlca]
+	rol.b	#2,d0                            	| [$1a63: rlca] rotate left twice = mult by 4
 	jcc	l_1a69                             	| [$1a64: jp      nc,$1a69] no carry, skip next step
 
 	bset.b	#1,d1                           	| [$1a67: set     1,b] B := B + 2
@@ -6462,26 +6464,27 @@ l_1a7b:
 	ror.b	#1,d0                           	| [$1a8e: rra] rotate right.  carry?  (is this rivet on right side?)
 	jcs	l_1abd                             	| [$1a8f: jp      c,$1abd] yes, skip ahead and load HL with #012B and return to #1A95
 
-	lea	game_rom+0x02cb,a0                      	| [$1a92: ld      hl,$02cb] else load HL with master offset for rivets
+	move.w	#0x02cb,d7                      	| [$1a92: ld      hl,$02cb] else load HL with master offset for rivets
 
 l_1a95:
 	tst.b	d0                               	| [$1a95: and     a] A == 0 ?
 	jeq	l_1a9e                             	| [$1a96: jp      z,$1a9e] yes, skip next 3 steps
 
 l_1a99:
-	add.w	d1,a0                            	| [$1a99: add     hl,bc] add offset to HL
+	add.w	d1,d7                            	| [$1a99: add     hl,bc] add offset to HL
 	subq.b	#1,d0                           	| [$1a9a: dec     a] decrease A.  zero?
 	jne	l_1a99                             	| [$1a9b: jp      nz,$1a99] no, loop again
 
 l_1a9e:
-	move.w	#0x74,d1                        	| [$1a9e: ld      bc,$7400] start of video RAM is #7400 29696
-	add.w	d1,a0                            	| [$1aa1: add     hl,bc] add offset computed based on which rivet is cleared
+	                        	| [$1a9e: ld      bc,$7400] start of video RAM is #7400 29696
+	add.w	#0x7400,d7                            	| [$1aa1: add     hl,bc] add offset computed based on which rivet is cleared
 	move.b	#0x10,d0                        	| [$1aa2: ld      a,$10] A := #10 = clear space
-	move.b	d0,(a0)                         	| [$1aa4: ld      (hl),a] erase the rivet
+	jbsr	osd_w_videoram                         	| [$1aa4: ld      (hl),a] erase the rivet
 	                           	| [$1aa5: dec     l] next video memory
-	move.b	d0,-(a0)                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
-	addq.w	#2,a0                           	| [$1aa7: inc     l] * 2
-	move.b	d0,(a0)                         	| [$1aa9: ld      (hl),a] erase underneath the rivet [ not needed , there is nothing there to erase ???]
+	subq	#1,d7
+	jbsr	osd_w_videoram                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
+	addq.w	#2,d7                           	| [$1aa7: inc     l] * 2
+	jbsr	osd_w_videoram                         	| [$1aa9: ld      (hl),a] erase underneath the rivet [ not needed , there is nothing there to erase ???]
 	move.b	#0x01,d0                        	| [$1aaa: ld      a,$01] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1aac: ld      (bonus_indicator_6340),a] store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 	move.b	d0,scoring_indicator_6342       	| [$1aaf: ld      (scoring_indicator_6342),a] store into scoring indicator
@@ -6497,7 +6500,7 @@ l_1a9e:
 * arrive from #1A8F above
 
 l_1abd:
-	lea	game_rom+0x012b,a0                      	| [$1abd: ld      hl,$012b] load HL with alternate master offset for rivets
+	move.w	#0x012b,d7                      	| [$1abd: ld      hl,$012b] load HL with alternate master offset for rivets
 	jra	l_1a95                             	| [$1ac0: jp      $1a95] jump back to program and resume
 
 * check for jumping and other movements
@@ -8675,7 +8678,7 @@ l_2539:
 * deploy a pie
 
 l_2545:
-	jbsr	l_0057                            	| [$2545: call    $0057] load A with a random number
+	jbsr	random_0057                            	| [$2545: call    $0057] load A with a random number
 	move.b	#0x7c,(0x05,a2)                 	| [$254a: ld      (ix+$05),$7c] store #7C into pie's Y position
 	cmp.b	#0x60,d0                         	| [$2548: cp      $60] < #60 ?
 	jcs	l_2558                             	| [$254e: jp      c,$2558] yes, skip next 3 steps
@@ -8699,7 +8702,7 @@ l_2560:
 	jra	l_2576                             	| [$256b: jp      $2576] skip ahead
 
 l_256e:
-	jbsr	l_0057                            	| [$256e: call    $0057] load A with random number
+	jbsr	random_0057                            	| [$256e: call    $0057] load A with random number
 	cmp.b	#0x68,d0                         	| [$2571: cp      $68] < #68 ?
 	scs		d7
 	jra	l_2560                             	| [$2573: jp      $2560] use to decide to put on left or right side
@@ -10128,7 +10131,7 @@ l_2c33:
 0:
 
 l_2c41:
-	jbsr	l_0057                            	| [$2c41: call    $0057] else load A with a random number
+	jbsr	random_0057                            	| [$2c41: call    $0057] else load A with a random number
 
 * hack to increase crazy barrels
 * 2C41  3E 00          LD A, #00
@@ -10585,7 +10588,7 @@ l_2ea7:
 	move.b	d0,bouncer_release_6396         	| [$2eaf: ld      (bouncer_release_6396),a] reset bouncer release flag
 	move.b	#0x50,(0x05,a2)                 	| [$2eb2: ld      (ix+$05),$50] set bouncer's Y position to #50
 	move.b	#0x01,(0x0d,a2)                 	| [$2eb6: ld      (ix+$0d),$01] set value to sprite bouncing across, not down
-	jbsr	l_0057                            	| [$2eba: call    $0057] load A with random number
+	jbsr	random_0057                            	| [$2eba: call    $0057] load A with random number
 	and.b	#0x0f,d0                         	| [$2ebd: and     $0f] mask bits, result is between 0 and #F
 	add.b	#0xf8,d0                         	| [$2ebf: add     a,$f8] add #F8 = result is now between #F8 and #07
 	move.b	d0,(0x03,a2)                    	| [$2ec1: ld      (ix+$03),a] store A into initial X position for bouncer sprite
@@ -10945,8 +10948,8 @@ l_306f:
 	jbsr	l_3096                            	| [$3082: call    $3096] animate kong sprite
 	lea	kongs_right_arm_address_sprite_691d,a0	| [$3085: ld      hl,kongs_right_arm_address_sprite_691d] load HL with kong's right arm address sprite
 	jbsr	l_3096                            	| [$3088: call    $3096] animate kong sprite
-	jbsr	l_0057                            	| [$308b: call    $0057] load A with random number
-	and.b	#0x80,d0                         	| [$308e: and     $80] mask bits, now either 0 or #80
+	jbsr	random_0057                            	| [$308b: call    $0057] load A with random number
+	and.b	#0x80,d0                         	| [$308e: and     $80] mask bits, now either 0 or #80: flip girl or not
 	lea	sprite_of_girl_under_kongs_arms_692d,a0	| [$3090: ld      hl,sprite_of_girl_under_kongs_arms_692d] load HL with sprite of girl under kong's arms
 	move.b	(a0),d7
 	eor.b	d7,d0                            	| [$3093: xor     (hl)] toggle the sprite
@@ -11373,7 +11376,7 @@ l_3291:
 
 * Arrived from #3243 when fire is at edge of girder
 l_3297:
-	STORE_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3297: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
+	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a2	| [$3297: ld      ix,(address_of_fireball_slot_for_this_fireball_63c8)] Load IX with address of fireball slot for this fireball
 	move.b	(0x0d,a2),d0                    	| [$329b: ld      a,(ix+$0d)] \  Jump if fireball direction is left
 	cmp.b	#0x01,d0                         	| [$329e: cp      $01]|
 	jne	l_32b1                             	| [$32a0: jp      nz,$32b1] /

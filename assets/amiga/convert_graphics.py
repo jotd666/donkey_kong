@@ -107,27 +107,33 @@ def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
-add_sprite_block(0x10,0x15,"princess",9)
+add_sprite_block(0x10,0x14,"princess",9,mirror=True)
 add_sprite(0x12,"princess",10)
+add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 add_sprite(7,"blank",2)
 
 add_sprite_block(0x15,0x19,"barrel",11)
 add_sprite(0x49,"oil_barrel",12)
 add_sprite_block(0x19,0x1C,"death_barrel",12)
-add_sprite_block(0x1E,0x20,"hammer",7,mirror=True)
+add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True)
 add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
+add_sprite_block(0x4d,0x4f,"firefox",1)
+add_sprite_block(0x73,0x76,"bonus",0xA)
+add_sprite_block(0x76,0x78,"heart",9)
+add_sprite(0x39,"sparkle",1)
 add_sprite(0x3A,"blank",15)
+add_sprite(0x3F,"blank",0xC)
 
 
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
-add_sprite_block(0x3D,0x3F,"fireball",[0,1]) # clut?
+add_sprite_block(0x3D,0x3F,"fireball",[0,1])
 add_sprite_block(0x40,0x44,"flame",[1])
 
-add_sprite(0x44,"elevator",0x0) # clut?
-add_sprite(0x45,"conveyor",0x0) # clut?
+add_sprite(0x44,"elevator",3) # clut?
+add_sprite(0x45,"conveyor",0xF) # clut?
 add_sprite(0x46,"moving_ladder",0x0) # clut?
 
 block_dict = {}

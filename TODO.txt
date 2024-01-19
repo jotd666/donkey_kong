@@ -1,11 +1,14 @@
-- log sprites that are displayed with clut (too many cluts): in progress
-- skip blank tiles like 0x70, ...
 - barrels fall off screen / bounce in a bogus way / switch sprite
   from facing to side...
-- princess switching to barrel when kong takes her in the intro
-- flame rises without any ladder
+- flame rises without any ladder, also at rivets level
 - jumps: takes hammer even if far away!
 - hammer doesn't seem to destroy barrels
 - insert coin: 00 => 01 then 00 again????
-- implement sounds (turn off music to rip)
 - blit reverse for y flip (kong falls)
+- "50m" is shifted
+- skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
+- implement sounds (turn off music to rip)
+- princess at rivets stage: wrong attributes: should be ok now
+- rivets logically removed but not from screen, left part ok right not done, around 1a84
+- level select!
+- scoring remains at 0
