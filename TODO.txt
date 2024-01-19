@@ -1,12 +1,11 @@
 - log sprites that are displayed with clut (too many cluts): in progress
-- center of kong trashed: check if blank tile at this position (test_sprites)
-  skip blank tiles like 0x70, ...
-- bonus buggy still?
-- barrels fall off screen / bounce in a bogus way
+- skip blank tiles like 0x70, ...
+- barrels fall off screen / bounce in a bogus way / switch sprite
+  from facing to side...
+- princess switching to barrel when kong takes her in the intro
 - flame rises without any ladder
-- glitch in masks or position when drawing or erasing bobs
 - jumps: takes hammer even if far away!
 - hammer doesn't seem to destroy barrels
 - insert coin: 00 => 01 then 00 again????
 - implement sounds (turn off music to rip)
-- palette problem in goofy kong screen
+- blit reverse for y flip (kong falls)

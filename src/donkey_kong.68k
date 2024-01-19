@@ -3721,7 +3721,7 @@ height_pre_level_screen_0bda:
 	jbsr	insert_task_309f                            	| [$0be7: call    $309f] insert task to display remaining lives and level number
 	lea	reg_palette_a,a0               	| [$0bea: ld      hl,reg_palette_a] load HL with palette bank
 	move.b	#0x01,(a0)+                      	| [$0bed: ld      (hl),$01] set palette bank selector
-										| [$0bef: inc     hl] next pallete bank
+										| [$0bef: inc     hl] next palette bank
 	clr.b	(a0)                             	| [$0bf0: ld      (hl),$00] clear palette bank selector
 	jbsr	osd_update_palette_bank
 	lea	sound_buffer_address_608a,a0   	| [$0bf2: ld      hl,sound_buffer_address_608a] load HL with tune address

@@ -967,7 +967,7 @@ update_bobs:
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 
-	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
+	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
 	move.b	d0,(PREV_X,a6)
 	jeq		211f				| x=0: don't show
 	
@@ -1256,12 +1256,13 @@ blit_planes_any_internal_cookie_cut:
 	moveq	#0,d5
     move.w  #0x0fca,d5    | B+C-A->D cookie cut   
 	swap	d5
-    move    d0,d6
+	moveq	#0,d6		| make sure D6.L is zero!!
+    move.w  d0,d6
     beq.b   4f
     lsr.w   #3,d0
 	bclr	#0,d0
     and.w   #0xF,d6
-	beq.b	3f
+	beq.b	3f				| if 0 shift, optimize a few instructions
     lsl.l   #8,d6
     lsl.l   #4,d6
     or.w    d6,d5            | add shift to mask (bltcon1)

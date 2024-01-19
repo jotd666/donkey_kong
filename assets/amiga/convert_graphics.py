@@ -62,7 +62,8 @@ def guess_cluts():
     for i in range(0,4):
         bank = os.path.join(this_dir,f"palettes/bank_{i:02}.png")
         img = Image.open(bank)
-        x_start = img.size[0]-8
+        # snapshot of palette 1 is incomplete/not refreshed
+        x_start = 0 if i==1 else img.size[0]-8
         row_cols = []
         for y_start in range(0,img.size[1],8):
             clut_order = iter([3,1,2])
