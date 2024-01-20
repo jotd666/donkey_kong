@@ -1634,6 +1634,8 @@ l_01c3:
 	move.b	#0x01,d0                        	| [$01e2: ld      a,$01] A := 1
 	move.b	d0,reg_flipscreen               	| [$01e4: ld      (reg_flipscreen),a] store into flip screen setting
 	move.b	d0,gamemode1_6005               	| [$01e7: ld      (gamemode1_6005),a] store into game mode 1
+	move.b	start_screen,d0
+	addq	#1,d0
 	move.b	d0,screen_number_6227           	| [$01ea: ld      (screen_number_6227),a] initialize screen to 1 (girders)
 	clr.b	d0                               	| [$01ed: xor     a] A := 0
 	move.b	d0,gamemode2_600a               	| [$01ee: ld      (gamemode2_600a),a] store into game mode 2
@@ -8095,9 +8097,8 @@ l_22bd:
 	move.b	(a0),d0                         	| [$22bd: ld      a,(hl)] load A with ladder Y value
 	move.l	a0,d7
 	sub.l	#ram_6000,d7
-	illegal
-	btst.b	#3,d7                           	| [$22be: bit     3,l] test bit 3 of L
 	lea	ladder_sprite_y_value_694b,a1  	| [$22c0: ld      de,ladder_sprite_y_value_694b] load DE with ladder sprite Y value
+	btst.b	#3,d7                           	| [$22be: bit     3,l] test bit 3 of L
 	jne	l_22c9                             	| [$22c3: jp      nz,$22c9] if other ladder, skip next step
 
 	lea	other_ladder_sprite_y_value_6947,a1	| [$22c6: ld      de,other_ladder_sprite_y_value_6947] load DE with other ladder sprite Y value
@@ -8471,24 +8472,28 @@ l_241f:
 * 1.  runs checksum on the NINTENDO, breaks if not correct
 * 2.
 
+*
+* part 1 can be skipped now!
+*
+
 l_2441:
-	lea	game_rom+0x3f0c,a0                      	| [$2441: ld      hl,$3f0c] load HL with ROM area that has NINTENDO written
-	move.b	#0x5e,d0                        	| [$2444: ld      a,$5e] A := #5E = constant so the checksum comes to zero
-	move.b	#0x06,d1                        	| [$2446: ld      b,$06] for B = 1 to 6
-
-l_2448:
-	add.b	(a0)+,d0                          	| [$2448: add     a,(hl)] add this letter
-												| [$2449: inc     hl] next letter
-	subq.b	#1,d1                           	| [...]
-	jne	l_2448                             	| [$244a: djnz    $2448] loop until done
-
+*	lea	game_rom+0x3f0c,a0                      	| [$2441: ld      hl,$3f0c] load HL with ROM area that has NINTENDO written
+*	move.b	#0x5e,d0                        	| [$2444: ld      a,$5e] A := #5E = constant so the checksum comes to zero
+*	move.b	#0x06,d1                        	| [$2446: ld      b,$06] for B = 1 to 6
+*
+*l_2448:
+*	add.b	(a0)+,d0                          	| [$2448: add     a,(hl)] add this letter
+*												| [$2449: inc     hl] next letter
+*	subq.b	#1,d1                           	| [...]
+*	jne	l_2448                             	| [$244a: djnz    $2448] loop until done
+*
 	lea	unknown_6310,a3                	| [$244c: ld      iy,unknown_6310]
-	tst.b	d0                               	| [$2450: and     a] A == 0 ? checksum OK ?
-	jeq	l_2456                             	| [$2451: jp      z,$2456] yes, skip next step
-
-	addq.w	#1,a3                           	| [$2454: inc     iy] running this step will break the game ?  loops at #2371 forever
-
-l_2456:
+*	tst.b	d0                               	| [$2450: and     a] A == 0 ? checksum OK ?
+*	jeq	l_2456                             	| [$2451: jp      z,$2456] yes, skip next step
+*
+*	addq.w	#1,a3                           	| [$2454: inc     iy] running this step will break the game ?  loops at #2371 forever
+*
+*l_2456:
 	move.b	screen_number_6227,d0           	| [$2456: ld      a,(screen_number_6227)] load A with screen number
 	subq.b	#1,d0                           	| [$2459: dec     a] is this the girders?
 	lea	game_rom+0x3ae4,a0                      	| [$245a: ld      hl,$3ae4] load HL with start of table data for girders
@@ -8551,10 +8556,10 @@ l_249e:
 	move.b	(a0),d0                         	| [$24a4: ld      a,(hl)]
 	move.b	d0,(0x15,a3)                    	| [$24a5: ld      (iy+$15),a]
 	addq.w	#2,a0                           	| [$24a8: inc     hl] * 2
-	move.b	(a0),d0                         	| [$24aa: ld      a,(hl)]
+	move.b	(a0)+,d0                         	| [$24aa: ld      a,(hl)]
 	move.b	d0,(0x2a,a3)                    	| [$24ab: ld      (iy+$2a),a]
 	addq.w	#1,a3                           	| [$24ae: inc     iy]
-	addq.w	#1,a0                           	| [$24b0: inc     hl]
+												| [$24b0: inc     hl]
 	jra	l_2478                             	| [$24b1: jp      $2478] jump back
 
 * called this sub from barrel roll from #2068

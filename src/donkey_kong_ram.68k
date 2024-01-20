@@ -1,6 +1,7 @@
 
 	.global	bg_videoram
 
+	.global	start_screen
 	.global invincible_flag
 	.global start_level
 	.global vb_ticks_count
@@ -68,6 +69,8 @@ vbl_sync_counter_start_screen:
 high_score_beaten:
 	.word	0
 invincible_flag:
+	.byte	0
+start_screen:
 	.byte	0
 infinite_lives_flag:
 	.byte	0

@@ -235,11 +235,11 @@ _user:
 	or.l	#0x10,cheat_flags
 2:
 
-	move.l	(A0)+,D0	| SKILL/S
-	beq.b	2f
-	bsr		bcpl_string_to_int
-	move.l	d0,dip_switch_difficulty
-2:
+*	move.l	(A0)+,D0	| SKILL/S
+*	beq.b	2f
+*	bsr		bcpl_string_to_int
+*	move.l	d0,dip_switch_difficulty
+*2:
 	move.l	(A0)+,D0	| STARTLIVES/S
 	beq.b	2f
 	bsr		bcpl_string_to_int
@@ -309,8 +309,11 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
-	move.l	dip_switch_difficulty(pc),d0
-	lsl.b	#3,d0
+	move.l	start_level_option(pc),d0
+	move.b	d0,start_level
+	
+	*move.l	dip_switch_difficulty(pc),d0
+	*lsl.b	#3,d0
 	
 	move.b	dip_switch_start_lives+3(pc),d1
 	bne.b	1f
@@ -2554,7 +2557,7 @@ cheat_flags:
 misc_options:
 		.long	0
 		.long	WHDLTAG_CUSTOM4_GET
-dip_switch_difficulty:
+start_level_option:
 		.long	0
 		.long	WHDLTAG_CUSTOM5_GET
 dip_switch_start_lives:

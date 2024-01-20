@@ -9,3 +9,4 @@
 - level select: level_number_6229
 - scoring remains at 0
 - score sprites don't appear, ever, ex: removing rivet at l_1a9e
+- elevators: mario doesn't stand on them falls through

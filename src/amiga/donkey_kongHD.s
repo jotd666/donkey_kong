@@ -39,6 +39,7 @@ _config
 	dc.b	"C1:X:invincibility:0;"
 	dc.b	"C1:X:infinite lives:1;"
 	dc.b	"C1:X:cheat keys:4;"
+	dc.b    "C4:L:start screen:girders,pie factory,elevators,tower;"
 ;	dc.b    "C4:L:difficulty:easy,medium,hard,hardest;"
 ;	dc.b    "C5:L:start lives:default,2,3,4,5;"
 	IFD		CHIP_ONLY
