@@ -1,12 +1,21 @@
-- barrels fall off screen / bounce in a bogus way / switch sprite
-  from facing to side...
-- flame rises without any ladder, also at rivets level
+- barrels climb up slopes now (but ok barrels)
+- mario sees every ladder as broken now (check 1b25)
 - insert coin: 00 => 01 then 00 again????
 - blit reverse for y flip (kong falls)
-- "50m" is shifted
+- "50m/75m/100m..." is shifted
+- hammer hits barrels but doesn't kill them
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
 - implement sounds (turn off music to rip)
 - level select: level_number_6229
 - scoring remains at 0
 - score sprites don't appear, ever, ex: removing rivet at l_1a9e
 - elevators: mario doesn't stand on them falls through
+- elevator color looks wrong
+- bonus does not decrease fast enough
+
+
+check_for_ladders_nearby_236e: d1.W: problems
+what does it return?
+
+* d2???
+cmp.b	d2,d0                            	| [$1b25: cp      c] compare.  is the ladder broken?

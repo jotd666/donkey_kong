@@ -119,7 +119,7 @@ add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True)
 add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
-add_sprite_block(0x4d,0x4f,"firefox",[0,1])
+add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True)
 add_sprite_block(0x3b,0x3e,"bouncer",0)
 add_sprite_block(0x73,0x76,"bonus",0xA)
 add_sprite_block(0x76,0x78,"heart",9)
@@ -130,12 +130,13 @@ add_sprite(0x3F,"blank",0xC)
 
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
-add_sprite_block(0x3D,0x3F,"fireball",[0,1])
+add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True)
 add_sprite_block(0x40,0x44,"flame",[1])
 
-add_sprite(0x44,"elevator",3) # clut?
-add_sprite(0x45,"conveyor",0xF) # clut?
-add_sprite(0x46,"moving_ladder",0x0) # clut?
+add_sprite(0x44,"elevator",3)
+add_sprite(0x45,"conveyor",0xF)
+add_sprite_block(0x50,0x53,"wheel",0)
+add_sprite(0x46,"moving_ladder",0x3)
 
 block_dict = {}
 

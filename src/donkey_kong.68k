@@ -6558,9 +6558,8 @@ l_1afe:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1b09: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
 	or.b	#0x03,d0                          	| [$1b0c: or      $03] turn on left 2 bits (0 and 1)
 	bclr.b	#2,d0                           	| [$1b0e: res     2,a] turn off bit 2
-	move.b	#0x00,d1                        	| [$1b10: ld      bc,$0015] load BC with #15 = number of ladders to check 21
-	move.b	#0x15,d2                        	| [$1b10: ld      bc,$0015] load BC with #15 = number of ladders to check 21
-	jbsr	l_236e                            	| [$1b13: call    $236e] check for ladders nearby if none, RET to higher sub.  else A := 0 if at bottom of ladder, A := 1 if at top.  C has the ladder number/type?
+	move.w	#0x15,d1                        	| [$1b10: ld      bc,$0015] load BC with #15 = number of ladders to check 21
+	jbsr	check_for_ladders_nearby_236e                            	| [$1b13: call    $236e] check for ladders nearby if none, RET to higher sub.  else A := 0 if at bottom of ladder, A := 1 if at top.  C has the ladder number/type?
 
 * mario is near a ladder
 
@@ -6580,7 +6579,7 @@ l_1afe:
 
 l_1b2c:
 	move.w	(sp)+,d0                        	| [$1b2c: pop     af] restore AF
-	                               	| [$1b2d: and     a] A == 0 ?  is mario at bottom of ladder?
+	tst.b	d0                               	| [$1b2d: and     a] A == 0 ?  is mario at bottom of ladder?
 	jeq	l_1b4e                             	| [$1b2e: jp      z,$1b4e] yes, skip ahead
 
 * else mario at top of ladder
@@ -7471,9 +7470,9 @@ l_1f83:
 	subq.b	#1,d0                           	| [$1f86: dec     a] Is this barrel rolling ?
 	jeq	l_1f93                             	| [$1f87: jp      z,$1f93] Yes, jump ahead
 
-	addq.w	#3,a0                           	| [$1f8a: inc     l] otherwise increase L by 4 * 3
+	addq.w	#3,a0                           	| [$1f8a: inc     l]*3 otherwise increase (pointer) L by 3
 l_1f8d:
-	addq.w	#1,a0                           	| [$1f8d: inc     l]
+	addq.w	#1,a0                           	| [$1f8d: inc     l]*4 actually
 	add.w	d3,a2                            	| [$1f8e: add     ix,de] Add offset to check for next barrel
 	subq.b	#1,d1                           	| [...]
 	jne	l_1f83                             	| [$1f90: djnz    $1f83] Next B
@@ -7780,15 +7779,14 @@ l_215f:
 	addq.b	#0x05,d0                        	| [$2160: add     a,$05] add 5
 	move.b	d0,d3                           	| [$2162: ld      d,a] store into D
 	move.b	d5,d0                           	| [$2163: ld      a,h] load A with barrels X position
-	move.b	#0x00,d1                        	| [$2164: ld      bc,$0015] load BC with #15 to check for all ladders 21
-	move.b	#0x15,d2                        	| [$2164: ld      bc,$0015] load BC with #15 to check for all ladders 21
+	move.w	#0x15,d1                        	| [$2164: ld      bc,$0015] load BC with #15 to check for all ladders 21
 	jbsr	l_216d                            	| [$2167: call    $216d] check for going down ladder
 	jra	l_21ba                             	| [$216a: jp      $21ba] skip ahead
 
 * called from #2167
 
 l_216d:
-	jbsr	l_236e                            	| [$216d: call    $236e] check for ladder.  if no ladders, RET to higher sub.  if at top of ladder, A := 1
+	jbsr	check_for_ladders_nearby_236e                            	| [$216d: call    $236e] check for ladder.  if no ladders, RET to higher sub.  if at top of ladder, A := 1
 	subq.b	#1,d0                           	| [$2170: dec     a] is there a ladder to go down?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$2171: ret     nz] no, return [...]
@@ -8266,7 +8264,7 @@ l_2366:
 * called when firefoxs are moving to check for ladders
 * if no ladder is nearby , it RETs to a higher subroutine
 
-l_236e:
+check_for_ladders_nearby_236e:
 	lea	ladder_positions_6300,a0       	| [$236e: ld      hl,ladder_positions_6300] load HL with start of table data that has positions of ladders
 l_2371:
 	jbsr	cpir                              	| [$2371: cpir] check for ladders ???
@@ -8311,11 +8309,12 @@ l_2398:
 	move.b	(a0),d1                         	| [$2399: ld      b,(hl)] load B with value in HL
 
 l_239a:
-	move.l	(sp)+,a0                        	| [$239a: pop     hl] restore HL
+	move.l	(sp)+,a0                        	| [$239a: pop     hl] pop caller address, return immediately
 	rts                                    	| [$239b: ret] return
 
 * called from #20ED for crazy barrel movement.  for this, BC, DE,and HL have their alternates
-* subroutine called from #2054.  used when barrels are rolling.  only called when rolling around edges or mario jumping???
+* subroutine called from #2054.  used when barrels are rolling.  only called when rolling around edges
+* or mario jumping???
 * IX has the start value of barrel sprite.  EG 6700
 * IX can have 6200 for mario from #1BC2
 
@@ -8413,6 +8412,7 @@ l_2407:
 	move.b	d0,d6                           	| [$2415: ld      l,a] store into L
 	move.b	(0x13,a2),d2                    	| [$2416: ld      c,(ix+$13)] load C with +13
 	move.b	(0x12,a2),d1                    	| [$2419: ld      b,(ix+$12)] load B with +12
+	LOAD_D1_16_FROM_D1D2
 	LOAD_D5_16_FROM_D5D6
 	sub.w	d1,d5                            	| [$241c: sbc     hl,bc] HL := HL - BC
 	LOAD_D5D6_FROM_D5_16
@@ -8425,7 +8425,8 @@ l_2407:
 * called from #2B09
 
 l_241f:
-	lea	game_rom+0x0100,a1                      	| [$241f: ld      de,$0100] DE:= #0100
+	move.b	#0x01,d3
+	move.b	#0x00,d4                      	| [$241f: ld      de,$0100] D = 1, E:= 0
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2422: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
 	cmp.b	#0x16,d0                         	| [$2425: cp      $16] is this greater than #16 ?
 	bcc.b	0f                               	| [...]
@@ -11516,9 +11517,8 @@ l_333d:
 	add.b	#0x08,d0                         	| [$3350: add     a,$08]|
 	move.b	d0,d3                           	| [$3352: ld      d,a] /
 	move.b	(0x0e,a2),d0                    	| [$3353: ld      a,(ix+$0e)] A := fireball's X-position
-	move.b	#0x00,d1                        	| [$3356: ld      bc,$0015] BC := #0015, the number of ladders to check 21
-	move.b	#0x15,d2                        	| [$3356: ld      bc,$0015] BC := #0015, the number of ladders to check 21
-	jbsr	l_236e                            	| [$3359: call    $236e] Check for ladders nearby, return if none, else A := 0 if at bottom of ladder, A := 1 if at top
+	move.w	#0x15,d1                        	| [$3356: ld      bc,$0015] BC := #0015, the number of ladders to check 21
+	jbsr	check_for_ladders_nearby_236e                            	| [$3359: call    $236e] Check for ladders nearby, return if none, else A := 0 if at bottom of ladder, A := 1 if at top
 	tst.b	d0                               	| [$335c: and     a] \ Jump if there is a ladder nearby to go up
 	jeq	l_3399                             	| [$335d: jp      z,$3399] /
 
