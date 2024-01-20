@@ -11,6 +11,7 @@
     OPT_START_SCORE=0                 | LEAVE AT 0!!!
 	OPT_SKIP_INTRO_SCREEN=0           | LEAVE AT 0!!!
 	OPT_SKIP_GAME_DEMO=0              | LEAVE AT 0!!!
+	OPT_START_LEVEL=1              | LEAVE AT 1!!!
 	.else
 	
     * hardware options
@@ -23,6 +24,7 @@
     OPT_START_SCORE=0x0
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
+	OPT_START_LEVEL=1
 
 	.endif
 	

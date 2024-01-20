@@ -976,12 +976,14 @@ update_bobs:
 	
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
-	bclr	#7,d2		| clear & test mirror mode
-	sne		d6
+	bclr	#7,d2		| clear & test X mirror mode
+	sne		d6			| d6 nonzero means we'll use mirrored bob data
 
 	moveq	#0,d1
 	moveq	#0,d3
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
+	btst	#7,d3		| test Y flip mode
+	sne		d5
 	* ATM flip y not considered
 	and.b	#0xF,d3	| get attributes
 
@@ -1037,6 +1039,8 @@ update_bobs:
 	move.l	d2,a3
 	moveq	#0,d2	| no y-clip
 	move.w	#16,d3	| height = 16 for all bobs
+	tst.b	d5
+	bne.b	14f
 	bsr		blit_planes_cookie_cut_16x
 21:
 	move.l	(a7)+,a0
@@ -1044,9 +1048,12 @@ update_bobs:
 	addq.w	#4,a0
 	addq.w	#4,a6		| next previous sprite pos
 	dbf		d7,1b
-	
 	rts
-
+	* rarer case: blit upside down (kong falling)
+14:
+	bsr		blit_planes_cookie_cut_16x_flipped	
+	bra.b	21b
+	
 * what: blits 32x16 background data on bg plane, no horizontal shifting (erase)
 * then erases the 3 other planes
 * args:
@@ -1206,6 +1213,15 @@ clear_planes_any_blitter_internal:
 	
     rts
 
+* y-flipped version
+blit_planes_cookie_cut_16x_flipped:
+    lea _custom,A5
+	move.w	d2,d5
+	move.w	d3,d4
+	neg.w	d4
+	moveq	#NB_PLAYFIELD_PLANES,d3
+    moveq  #4,d2       | 16 pixels + 2 shift bytes
+    jra blit_planes_any_internal_cookie_cut
 
 * what: blits 16x? data on one plane, cookie cut
 * args:
@@ -1222,7 +1238,7 @@ blit_planes_cookie_cut_16x:
     lea _custom,A5
 	move.w	d2,d5
 	move.w	d3,d4
-	moveq	#NB_PLAYFIELD_PLANES,d3		| 4 planes
+	moveq	#NB_PLAYFIELD_PLANES,d3
     moveq  #4,d2       | 16 pixels + 2 shift bytes
 * < A5: custom
 * < D0.W,D1.W: x,y
@@ -1242,6 +1258,7 @@ blit_planes_any_internal_cookie_cut:
     * pre-compute the maximum of shit here
 	tst.w	d4
 	bpl.b	1f
+	* inverted y blit
 	sub.w	d4,d1	| pre-add height to d1
 	subq.w	#1,d1	| minus one
 1:	
@@ -2401,8 +2418,12 @@ handle_keyboard:
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
 	* level skip
-	move.b	#0x16,gamemode2_600a		| level completed
-	move.b	#4,end_of_level_counter_6388 | last step of level complete
+	* jotd method
+	*move.b	#0x16,gamemode2_600a		| level completed
+	*move.b	#4,end_of_level_counter_6388 | last step of level complete
+	* MAME cheat method, cleaner
+	clr.b	number_of_rivets_left_6290
+	move.b	#0x30,mario_y_position_6205
 	st.b	cheat_used
 	
 0:

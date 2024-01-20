@@ -62,7 +62,7 @@
 	.global	put_back_6202
 	.global	jump_if_bit_7_of_mario_x_position_is_set_6203
 	.global	unknown_6204
-	.global	return_without_taking_the_ladder_6205
+	.global	mario_y_position_6205
 	.global	unknown_6206
 	.global	mario_movement_indicator_sprite_value_6207
 	.global	mario_color_6208
@@ -392,7 +392,7 @@ jump_if_bit_7_of_mario_x_position_is_set_6203:
 	ds.b	1
 unknown_6204:
 	ds.b	1
-return_without_taking_the_ladder_6205:
+mario_y_position_6205:
 	ds.b	1
 unknown_6206:
 	ds.b	1

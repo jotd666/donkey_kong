@@ -131,8 +131,9 @@ add_sprite(0x3F,"blank",0xC)
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True)
-add_sprite_block(0x40,0x44,"flame",[1])
+add_sprite_block(0x40,0x44,"flame",[1])  # barrel flame
 
+add_sprite(0x4B,"pie",0xE)
 add_sprite(0x44,"elevator",3)
 add_sprite(0x45,"conveyor",0xF)
 add_sprite_block(0x50,0x53,"wheel",0)

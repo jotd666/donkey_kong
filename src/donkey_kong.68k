@@ -3240,7 +3240,7 @@ l_0919:
 	move.b	startinglives_6020,d0           	| [$0922: ld      a,(startinglives_6020)] load initial number of lives
 	move.b	d0,(a1)+                         	| [$0925: ld      (de),a] store into number of lives player 2
 											| [$0926: inc     e] DE := Unk6049
-	lea	game_rom+0x095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
+	lea	l_095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
 	move.w	#0x07,d1                        	| [$092a: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$092d: ldir] copy #095E into Unk6049 for 7 bytes
 	move.w  #0x0101,d3                      	| [$092f: ld      de,$0101] load task #1, parameter 1.  clears player 1 and 2 scores and displays them.
@@ -3256,7 +3256,7 @@ l_0938:
 	move.b	startinglives_6020,d0           	| [$0941: ld      a,(startinglives_6020)] number of initial lives set with dip switches (3, 4, 5, or 6)
 	move.b	d0,(a1)+                         	| [$0944: ld      (de),a] store into number of lives
 	                           	| [$0945: inc     e] DE := Unk6041
-	lea	game_rom+0x095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
+	lea	l_095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
 	move.w	#0x07,d1                        	| [$0949: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$094c: ldir] copy #095E into Unk6041 for 7 bytes
 	move.w  #0x0100,d3                      	| [$094e: ld      de,$0100] load task #1, parameter 0.  clears player 1 score and displays it
@@ -3269,8 +3269,21 @@ l_0938:
 
 * table data use in code above - gets copied to Unk6041 to Unk6041+7
 
+* OPT_START_LEVEL is 1, but can be set to 2 to test second screen
+* as elevators, or 3 to test second screen as "pie factory"
 l_095e:
-	.byte	0x01,0x65,0x3A,0x01,0x00,0x00,0x00              | #3A65 is start of table data for screens/levels
+	.ifeq	OPT_START_LEVEL-1
+	.byte	0x01,0x65
+	.else
+		.ifeq	OPT_START_LEVEL-2
+		.byte	0x02,0x67              | #3A65 is start of table data for screens/levels	
+	    .else
+		    .byte	0x03,0x6A              | #3A65 is start of table data for screens/levels	
+		.endif
+	.endif
+	
+	.byte	0x3A,0x01,0x00,0x00,0x00              | #3A65 is start of table data for screens/levels
+	
 	.align	2
 * called from #08CB
 
@@ -6319,7 +6332,7 @@ l_19e2:
 	rts                                    	| [$19ec: ret] return
 
 l_19ed:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$19ed: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$19ed: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	addq.w	#3,a0                           	| [$19f0: inc     l] * 3
 	cmp.b	(a0),d0                          	| [$19f3: cp      (hl)] are they equal?
 	beq.b	0f                               	| [...]
@@ -6413,7 +6426,7 @@ l_1a4b:
 l_1a51:
 	clr.b	column_indicator_6291        	| [$1a51: ld      (column_indicator_6291),a] clear the column indicator
 	clr.b	d1                           	| [$1a54: ld      b,a] B := 0
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1a55: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1a55: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	subq.b	#1,d0                           	| [$1a58: dec     a] decrement
 	cmp.b	#0xd0,d0                         	| [$1a59: cp      $d0] compare with #D0.  is mario too low to go over a rivet?
 	bcs.b	0f                               	| [...]
@@ -6552,7 +6565,7 @@ l_1afe:
 	rts                                    	| [$1b02: ret     z] yes, return [...]
 0:
 
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1b03: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1b03: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x08,d0                         	| [$1b06: add     a,$08] Add 8
 	move.b	d0,d3                           	| [$1b08: ld      d,a] copy into D
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1b09: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
@@ -6687,7 +6700,7 @@ l_1b8a:
 	and.b	#0x80,d0                         	| [$1b9f: and     $80] clear right 4 bits and leftmost bit
 	or.b	#0x0e,d0                          	| [$1ba1: or      $0e] set right bits to E = 1110
 	move.b	d0,mario_movement_indicator_sprite_value_6207	| [$1ba3: ld      (mario_movement_indicator_sprite_value_6207),a] set jumping bits to indicate a jump in progress
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1ba6: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1ba6: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	move.b	d0,unknown_620e                 	| [$1ba9: ld      (unknown_620e),a] save mario's Y position when jump
 	lea	sound_buffer_address_for_jumping_6081,a0	| [$1bac: ld      hl,sound_buffer_address_for_jumping_6081] load HL with sound buffer address for jumping
 	move.b	#0x03,(a0)                      	| [$1baf: ld      (hl),$03] load sound buffer jumping sound for 3 units (3 frames?)
@@ -6699,9 +6712,9 @@ l_1bb2:
 	lea	mario_array_6200,a2            	| [$1bb2: ld      ix,mario_array_6200] load IX with start of array for mario
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1bb6: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	move.b	d0,(0x0b,a2)                    	| [$1bb9: ld      (ix+$0b),a] store into +B
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1bbc: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1bbc: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	move.b	d0,(0x0c,a2)                    	| [$1bbf: ld      (ix+$0c),a] store into +C = #620C = jump height
-	jbsr	l_239c                            	| [$1bc2: call    $239c] handle jump stuff ?
+	jbsr	update_barrel_variables_239c                            	| [$1bc2: call    $239c] handle jump stuff ?
 	jbsr	l_241f                            	| [$1bc5: call    $241f] loads DE with something depending on mario's position
 	subq.b	#1,d3                           	| [$1bc8: dec     d] D == 1 ?
 	jne	l_1bf2                             	| [$1bc9: jp      nz,$1bf2] no, skip ahead
@@ -6723,7 +6736,7 @@ l_1bd8:
 	clr.b	(0x14,a2)                        	| [$1be8: ld      (ix+$14),$00] clear the +14 indicator (???)
 
 l_1bec:
-	jbsr	l_239c                            	| [$1bec: call    $239c] ???
+	jbsr	update_barrel_variables_239c                            	| [$1bec: call    $239c] ???
 	jra	l_1c05                             	| [$1bef: jp      $1c05] skip ahead
 
 l_1bf2:
@@ -6827,7 +6840,7 @@ l_1c4f:
 * mario is on way down from jump or falling
 
 l_1c76:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1c76: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1c76: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	lea	unknown_620e,a0                	| [$1c79: ld      hl,unknown_620e] load HL with mario original Y position ?
 	sub.b	#0x0f,d0                         	| [$1c7c: sub     $0f] subtract #F
 	cmp.b	(a0),d0                          	| [$1c7e: cp      (hl)] compare.  is mario falling too far ?
@@ -6895,11 +6908,11 @@ l_1cd2:
 	jne	l_1ceb                             	| [$1cdc: jp      nz,$1ceb] no, skip ahead
 
 	move.b	(a0),d5                         	| [$1cdf: ld      h,(hl)] else load H with mario X position
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1ce0: ld      a,(return_without_taking_the_ladder_6205)] load A with mario Y position
+	move.b	mario_y_position_6205,d0	| [$1ce0: ld      a,(mario_y_position_6205)] load A with mario Y position
 	move.b	d0,d6                           	| [$1ce3: ld      l,a] copy to L.  HL now has mario X,Y
 	jbsr	l_2333                            	| [$1ce4: call    $2333] check for movement up/down a girder, might also change Y position ?
 	move.b	d6,d0                           	| [$1ce7: ld      a,l] load A with new Y position
-	move.b	d0,return_without_taking_the_ladder_6205	| [$1ce8: ld      (return_without_taking_the_ladder_6205),a] store into Y position
+	move.b	d0,mario_y_position_6205	| [$1ce8: ld      (mario_y_position_6205),a] store into Y position
 
 l_1ceb:
 	lea	address_of_movement_indicator_620f,a0	| [$1ceb: ld      hl,address_of_movement_indicator_620f] load HL with address of movement indicator
@@ -6934,7 +6947,7 @@ l_1d03:
 	move.b	#0xfe,d0                        	| [$1d0f: ld      a,$fe] A := #FE = -2 pixels movement
 
 l_1d11:
-	lea	return_without_taking_the_ladder_6205,a0	| [$1d11: ld      hl,return_without_taking_the_ladder_6205] load HL with mario Y position address
+	lea	mario_y_position_6205,a0	| [$1d11: ld      hl,mario_y_position_6205] load HL with mario Y position address
 	add.b	(a0),d0                          	| [$1d14: add     a,(hl)] add A to Y position
 	move.b	d0,(a0)                         	| [$1d15: ld      (hl),a] store result into Y position
 	move.b	d0,d1                           	| [$1d16: ld      b,a] copy to B
@@ -7014,7 +7027,7 @@ l_1d76:
 	move.b	d0,store_1_into_status_indicator_6219	| [$1d7d: ld      (store_1_into_status_indicator_6219),a] store 1 into status indicator
 	move.b	y_value_of_top_of_ladder_621c,d0	| [$1d80: ld      a,(y_value_of_top_of_ladder_621c)] load A with Y value of top of ladder
 	sub.b	#0x13,d0                         	| [$1d83: sub     $13] subtract #13
-	lea	return_without_taking_the_ladder_6205,a0	| [$1d85: ld      hl,return_without_taking_the_ladder_6205] load HL with mario Y position address
+	lea	mario_y_position_6205,a0	| [$1d85: ld      hl,mario_y_position_6205] load HL with mario Y position address
 	cmp.b	(a0),d0                          	| [$1d88: cp      (hl)] is mario at or above the top of ladder ?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1d89: ret     nc] yes, return without changing movement [...]
@@ -7062,7 +7075,7 @@ update_mario_sprite_1da6:
 	move.b	mario_color_6208,d0             	| [$1db2: ld      a,(mario_color_6208)] load A with mario color
 	                           	| [$1db5: inc     l] HL := #694E = hardware mario sprite color
 	move.b	d0,(a0)+                         	| [$1db6: ld      (hl),a] store into mario sprite color
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1db7: ld      a,(return_without_taking_the_ladder_6205)] load A with mario Y position
+	move.b	mario_y_position_6205,d0	| [$1db7: ld      a,(mario_y_position_6205)] load A with mario Y position
 	                           	| [$1dba: inc     l] HL := #694F = mario sprite Y position
 	move.b	d0,(a0)                         	| [$1dbb: ld      (hl),a] store into mario sprite Y position
 	rts                                    	| [$1dbc: ret] return
@@ -7162,7 +7175,7 @@ l_1e15:
 
 l_1e28:
 	jbsr	insert_task_309f                            	| [$1e28: call    $309f] insert task to add score
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1e2b: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$1e2b: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x14,d0                         	| [$1e2e: add     a,$14] add #14
 	move.b	d0,d2                           	| [$1e30: ld      c,a] store into C
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1e31: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
@@ -7212,7 +7225,7 @@ l_1e57:
 
 	ror.b	#1,d0                           	| [$1e5f: rra] else rotate right with carry
 	jcs	l_1e7a                             	| [$1e63: jp      c,$1e7a] skip ahead on girders and elevators
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1e60: ld      a,(return_without_taking_the_ladder_6205)] load A with y position of mario
+	move.b	mario_y_position_6205,d0	| [$1e60: ld      a,(mario_y_position_6205)] load A with y position of mario
 
 	cmp.b	#0x51,d0                         	| [$1e66: cp      $51] else on the conveyors.  is mario high enough to end level?
 	bcs.b	0f                               	| [...]
@@ -7235,7 +7248,7 @@ l_1e74:
 * check for end of level on girders and elevators
 
 l_1e7a:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1e60: ld      a,(return_without_taking_the_ladder_6205)] load A with y position of mario
+	move.b	mario_y_position_6205,d0	| [$1e60: ld      a,(mario_y_position_6205)] load A with y position of mario
 	cmp.b	#0x31,d0                         	| [$1e7a: cp      $31] are we on top level (rescued girl?)
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1e7c: ret     nc] no, return [...]
@@ -7444,7 +7457,7 @@ handle_mario_falling_1f46:
 	addq.b	#1,d0                           	| [$1f64: inc     a] A := 1
 	move.b	d0,jumping_status_6216          	| [$1f65: ld      (jumping_status_6216),a] set jump indicator
 	move.b	d0,mario_jump_apex_621f         	| [$1f68: ld      (mario_jump_apex_621f),a] set #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
-	move.b	return_without_taking_the_ladder_6205,d0	| [$1f6b: ld      a,(return_without_taking_the_ladder_6205)] load A with ???
+	move.b	mario_y_position_6205,d0	| [$1f6b: ld      a,(mario_y_position_6205)] load A with ???
 	move.b	d0,unknown_620e                 	| [$1f6e: ld      (unknown_620e),a] store into ???
 	rts                                    	| [$1f71: ret] return
 
@@ -7547,7 +7560,7 @@ l_1fdf:
 
 barrel_moves_to_right_1fe5:
 	jbsr	exx                               	| [$1fe5: exx] exchange HL, DE, and BC with their clones
-	move.b	#0x01,d1                        	| [$1fe6: ld      bc,$0100] BC := #0100 256
+	move.b	#0x01,d1                        	| [$1fe6: ld      bc,$0100] BC := #0100 deltax = 1
 	move.b	#0x00,d2                        	| [$1fe6: ld      bc,$0100] BC := #0100 256
 	addq.b	#1,(0x03,a2)                    	| [$1fe9: inc     (ix+$03)] Increase Barrel's X posiition
 	jra	barrel_moves_laterally_1ff6                             	| [$1fec: jp      $1ff6] jump ahead
@@ -7556,8 +7569,8 @@ barrel_moves_to_right_1fe5:
 
 barrel_moves_to_left_1fef:
 	jbsr	exx                               	| [$1fef: exx] exchange HL, DE, and BC with their clones
-	move.b	#0xff,d1                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04 65284
-	move.b	#0x04,d2                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04 65284
+	move.b	#0xff,d1                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04 deltax = -1
+	move.b	#0x04,d2                        	| [$1ff0: ld      bc,$ff04] load BC with #FF04
 	subq.b	#1,(0x03,a2)                    	| [$1ff3: dec     (ix+$03)] decrease barrel's X position
 
 * we are here because the barrel is moving either left or right
@@ -7576,7 +7589,7 @@ barrel_moves_laterally_1ff6:
 	move.b	d6,d0                           	| [$200d: ld      a,l] Load A with Barrel's Y position
 	move.b	d0,(0x05,a2)                    	| [$200e: ld      (ix+$05),a] store back into barrel's y position
 	jbsr	l_23de                            	| [$2011: call    $23de]
-	jbsr	l_24b4                            	| [$2014: call    $24b4]
+	jbsr	barrel_running_into_oil_can_24b4                            	| [$2014: call    $24b4]
 	move.b	(0x03,a2),d0                    	| [$2017: ld      a,(ix+$03)] Load A with Barrels' X position
 	cmp.b	#0x1c,d0                         	| [$201a: cp      $1c] have we arrived at left edge of girder?
 	jcs	l_202f                             	| [$201c: jp      c,$202f] yes, jump ahead to handle
@@ -7614,7 +7627,7 @@ l_2038:
 
 l_2053:
 	jbsr	exx                               	| [$2053: exx] Exchange DE, HL, BC with counterparts
-	jbsr	l_239c                            	| [$2054: call    $239c] update barrel position ?
+	jbsr	update_barrel_variables_239c                            	| [$2054: call    $239c] update barrel position ?
 	jbsr	l_2a2f                            	| [$2057: call    $2a2f] ???  set A to zero or 1 depending on ???
 	tst.b	d0                               	| [$205a: and     a] iS A == 0 ?
 	jne	l_2083                             	| [$205b: jp      nz,$2083] no, jump ahead
@@ -7624,7 +7637,7 @@ l_2053:
 	cmp.b	#0x10,d0                         	| [$2063: cp      $10] compare with #10
 	jcs	l_2079                             	| [$2065: jp      c,$2079] If carry, jump ahead, clear barrel, (rolled off screen?)
 
-	jbsr	l_24b4                            	| [$2068: call    $24b4] check for barrel running into oil can?
+	jbsr	barrel_running_into_oil_can_24b4  	| [$2068: call    $24b4] check for barrel running into oil can?
 	move.b	(0x10,a2),d0                    	| [$206b: ld      a,(ix+$10)] load A with +10 = rolling over edge / direction indicator
 	and.b	#0x01,d0                         	| [$206e: and     $01] mask all bits but 1.  result is 0 or 1
 	rol.b	#2,d0                            	| [$2070: rlca] rotate left * 2
@@ -7669,7 +7682,7 @@ l_20a2:
 
 * normal barrel traversed edge
 
-	lea	return_without_taking_the_ladder_6205,a0	| [$20a9: ld      hl,return_without_taking_the_ladder_6205] load HL with mario's Y position address
+	lea	mario_y_position_6205,a0	| [$20a9: ld      hl,mario_y_position_6205] load HL with mario's Y position address
 	move.b	(0x05,a2),d0                    	| [$20ac: ld      a,(ix+$05)] load A with +5 = barrel's Y position
 	sub.b	#0x16,d0                         	| [$20af: sub     $16] subtract #16
 	cmp.b	(a0),d0                          	| [$20b1: cp      (hl)] compare to mario Y position.  is the barrel below mario?
@@ -7709,7 +7722,7 @@ l_20e1:
 
 l_20ec:
 	jbsr	exx                               	| [$20ec: exx] exchange BC, DE, and HL with their alternates
-	jbsr	l_239c                            	| [$20ed: call    $239c] update Barrel's variables ?. H now has +5 and L has +6
+	jbsr	update_barrel_variables_239c                            	| [$20ed: call    $239c] update Barrel's variables ?. H now has +5 and L has +6
 	move.b	d5,d0                           	| [$20f0: ld      a,h] Load A with H = +5 = Y position
 	sub.b	#0x1a,d0                         	| [$20f1: sub     $1a] Subtract #1A (26 decimal)
 	move.b	(0x19,a2),d1                    	| [$20f3: ld      b,(ix+$19)] load B with Barrel status #19 (?)
@@ -7720,7 +7733,7 @@ l_20ec:
 	tst.b	d0                               	| [$20fd: and     a] is A == 0 ?
 	jne	l_2118                             	| [$20fe: jp      nz,$2118] No, jump ahead
 
-	jbsr	l_24b4                            	| [$2101: call    $24b4] else call this sub (???)
+	jbsr	barrel_running_into_oil_can_24b4                            	| [$2101: call    $24b4] else call this sub (???)
 
 l_2104:
 	move.b	(0x03,a2),d0                    	| [$2104: ld      a,(ix+$03)] load A with barrel X position
@@ -7799,7 +7812,7 @@ l_216d:
 	                               	| [$217b: and     a] is the fire lit ?
 	jeq	l_21b2                             	| [$217c: jp      z,$21b2] no, always take ladders before oil is lit
 
-	move.b	return_without_taking_the_ladder_6205,d0	| [$217f: ld      a,(return_without_taking_the_ladder_6205)] else load A with mario's Y position + 5
+	move.b	mario_y_position_6205,d0	| [$217f: ld      a,(mario_y_position_6205)] else load A with mario's Y position + 5
 	subq.b	#0x04,d0                        	| [$2182: sub     $04] subtract 4
 	cmp.b	d3,d0                            	| [$2184: cp      d] is the barrel already below mario  ?
 	bcc.b	0f                               	| [...]
@@ -7894,13 +7907,13 @@ l_21ee:
 	lea	game_rom+0x21d1,a1                      	| [$21ee: ld      de,$21d1] load DE with start of table data
 	lea	state_of_attract_mode_63cc,a0  	| [$21f1: ld      hl,state_of_attract_mode_63cc] load HL with state of attract mode
 	moveq	#0,d0
-	move.b	(a0),d0                         	| [$21f4: ld      a,(hl)] load A with state
+	move.b	(a0)+,d0                         	| [$21f4: ld      a,(hl)] load A with state
 	rol.b	#1,d0                            	| [$21f5: rlca] rotate left (x2)
 	add.w	d0,a1                            	| [$21f6: add     a,e] add to E to get the movement
 												| [$21f7: ld      e,a] put back
 	move.b	(a1),d0                         	| [$21f8: ld      a,(de)] load A with data from table
 	move.b	d0,inputstate_6010              	| [$21f9: ld      (inputstate_6010),a] store into copy of input
-	addq.w	#1,a0                           	| [$21fc: inc     l] HL := #63CD (timer)
+												| [$21fc: inc     l] HL := #63CD (timer)
 	move.b	(a0),d0                         	| [$21fd: ld      a,(hl)] load timer
 	subq.b	#1,(a0)                         	| [$21fe: dec     (hl)] decrement
 	tst.b	d0                               	| [$21ff: and     a] == #00 ?
@@ -7948,8 +7961,8 @@ l_2227:
 	subq.b	#1,(a0)                         	| [$2229: dec     (hl)] decrement.  at zero ?
 	jne	l_223a                             	| [$222a: jp      nz,$223a] no, skip ahead and check to disable moving ladder indicator
 
-	subq.w	#1,a0                           	| [$222d: dec     l] put HL back where it was
-	addq.b	#1,(a0)                         	| [$222e: inc     (hl)] increase ladder status.  now it is moving down
+												| [$222d: dec     l] put HL back where it was
+	addq.b	#1,-(a0)                         	| [$222e: inc     (hl)] increase ladder status.  now it is moving down
 	addq.w	#2,a0                           	| [$222f: inc     l] * 2
 	jbsr	l_2243                            	| [$2231: call    $2243] only continue below if mario is on the ladder
 
@@ -7970,7 +7983,7 @@ l_223a:
 * called from #2276 below
 
 l_2243:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2243: ld      a,(return_without_taking_the_ladder_6205)] load mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2243: ld      a,(mario_y_position_6205)] load mario's Y position
 	cmp.b	#0x7a,d0                         	| [$2246: cp      $7a] is mario on the top pie tray level or above?
 	jcc	l_2257                             	| [$2248: jp      nc,$2257] no, skip ahead and return to higher sub
 
@@ -8017,12 +8030,12 @@ l_2275:
 
 * ladder is moving down and mario is on it
 
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2279: ld      a,(return_without_taking_the_ladder_6205)] load A with mario Y position
+	move.b	mario_y_position_6205,d0	| [$2279: ld      a,(mario_y_position_6205)] load A with mario Y position
 	cmp.b	#0x68,d0                         	| [$227c: cp      $68] is mario already at the low point of the ladder ?
 	jcc	l_228a                             	| [$227e: jp      nc,$228a] yes, skip ahead
 
 l_2281:
-	lea	return_without_taking_the_ladder_6205,a0	| [$2281: ld      hl,return_without_taking_the_ladder_6205] else load HL with Mario's Y position
+	lea	mario_y_position_6205,a0	| [$2281: ld      hl,mario_y_position_6205] else load HL with Mario's Y position
 	addq.b	#1,(a0)                         	| [$2284: inc     (hl)] increase (move mario down one pixel)
 	jbsr	l_3fc0                            	| [$2285: call    $3fc0] sets mario sprite to on ladder with left hand up and HL to #694F (mario's sprite Y position) [this line seems like a patch ??? orig could be  LD HL,#694F ]
 	addq.b	#1,(a0)                         	| [$2288: inc     (hl)] increase sprite (move mario down one pixel in the hardware .  immediate update)
@@ -8194,8 +8207,8 @@ l_2326:
 
 * called from #2007 when barrels are rolling
 * called from #     when mario is moving left or right on girders
-* HL is preloaded with mario X,Y position
-* B is preloaded with direction
+* D5,D6 (HL) is preloaded with character (barrel, fireball, mario) X,Y position
+* d1 (B) is preloaded with direction
 
 l_2333:
 	move.b	#0x0f,d0                        	| [$2333: ld      a,$0f] load A with binary 00001111
@@ -8208,7 +8221,7 @@ l_2333:
 	rts                                    	| [$233c: ret     c] return if Carry ( A < 0F ) most of time it wont? [...]
 0:
 
-	st.b	d1                                	| [$233d: ld      b,$ff] else B := #FF
+	st.b	d1                                	| [$233d: ld      b,$ff] else B := #FF direction -1
 	jra	l_2347                             	| [$233f: jp      $2347] skip next 3 steps
 
 l_2342:
@@ -8233,12 +8246,14 @@ l_2347:
 	jeq	l_235c                             	| [$2356: jp      z,$235c]
 
 l_2359:
+	* apply inverse lateral direction
 	sub.b	d1,d0                            	| [$2359: sub     b]
 l_235a:
 	move.b	d0,d6                           	| [$235a: ld      l,a]
 	rts                                    	| [$235b: ret] return
 
 l_235c:
+	* apply lateral direction
 	add.b	d1,d0                            	| [$235c: add     a,b] A := A + B
 	jra	l_235a                             	| [$235d: jp      $235a] loop back
 
@@ -8320,7 +8335,7 @@ l_239a:
 * IX has the start value of barrel sprite.  EG 6700
 * IX can have 6200 for mario from #1BC2
 
-l_239c:
+update_barrel_variables_239c:
 	move.b	(0x04,a2),d0                    	| [$239c: ld      a,(ix+$04)] load modified Y position, used for crazy barrels hitting girders ???
 	add.b	(0x11,a2),d0                     	| [$239f: add     a,(ix+$11)] add +11 = vertical speed?
 	move.b	d0,(0x04,a2)                    	| [$23a2: ld      (ix+$04),a] update position ?
@@ -8449,7 +8464,7 @@ l_241f:
 	rts                                    	| [$2432: ret     nc] no, return [...]
 0:
 
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2433: ld      a,(return_without_taking_the_ladder_6205)] otherwise load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2433: ld      a,(mario_y_position_6205)] otherwise load A with mario's Y position
 	cmp.b	#0x58,d0                         	| [$2436: cp      $58] is this > #58 ?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$2438: ret     nc] Yes, return [...]
@@ -8568,7 +8583,7 @@ l_249e:
 * called this sub from barrel roll from #2068
 * check for barrel collision with the oil can ????
 
-l_24b4:
+barrel_running_into_oil_can_24b4:
 	move.b	(0x05,a2),d0                    	| [$24b4: ld      a,(ix+$05)] load A with Barrel Y position
 	cmp.b	#0xe8,d0                         	| [$24b7: cp      $e8] Is it near the bottom or lower?
 	bcc.b	0f                               	| [...]
@@ -8846,7 +8861,7 @@ l_2616:
 
 l_262f:
 	lea	master_direction_vector_for_upper_left_62a3,a0	| [$262f: ld      hl,master_direction_vector_for_upper_left_62a3] load HL with address of master direction vector for middle conveyor
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2632: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2632: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	cmp.b	#0xc0,d0                         	| [$2635: cp      $c0] is mario slightly above the lower conveyor?
 	jcs	l_266f                             	| [$2637: jp      c,$266f] yes, skip ahead.  in this case the upper trays don't vary
 
@@ -9020,7 +9035,7 @@ l_26fa:
 
 * elevators only
 
-	move.b	return_without_taking_the_ladder_6205,d0	| [$26fd: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$26fd: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	cmp.b	#0xf0,d0                         	| [$2700: cp      $f0] is mario too low ?
 	jcc	l_277f                             	| [$2702: jp      nc,$277f] yes, then mario dead
 
@@ -9112,12 +9127,12 @@ l_2766:
 * arrive here when mario riding on first elevator
 
 l_276f:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$276f: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$276f: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	cmp.b	#0x71,d0                         	| [$2772: cp      $71] top of elevator ? (death)
 	jcs	l_277f                             	| [$2774: jp      c,$277f] yes, die
 
 	subq.b	#1,d0                           	| [$2777: dec     a] else decrement (move mario up)
-	move.b	d0,return_without_taking_the_ladder_6205	| [$2778: ld      (return_without_taking_the_ladder_6205),a] store into Mario's Y position
+	move.b	d0,mario_y_position_6205	| [$2778: ld      (mario_y_position_6205),a] store into Mario's Y position
 	move.b	d0,mario_sprite_y_value_694f    	| [$277b: ld      (mario_sprite_y_value_694f),a] store into mario sprite Y value
 	rts                                    	| [$277e: ret] return
 
@@ -9133,12 +9148,12 @@ l_277f:
 * riding on second elevator
 
 l_2787:
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2787: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2787: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	cmp.b	#0xe8,d0                         	| [$278a: cp      $e8] at bottom of elevator ? (death)
 	jcc	l_277f                             	| [$278c: jp      nc,$277f] yes, set death and return
 
 	addq.b	#1,d0                           	| [$278f: inc     a] else increment (move mario down)
-	move.b	d0,return_without_taking_the_ladder_6205	| [$2790: ld      (return_without_taking_the_ladder_6205),a] store back into mario's Y position
+	move.b	d0,mario_y_position_6205	| [$2790: ld      (mario_y_position_6205),a] store back into mario's Y position
 	move.b	d0,mario_sprite_y_value_694f    	| [$2793: ld      (mario_sprite_y_value_694f),a] store into mario sprite Y value
 	rts                                    	| [$2796: ret] return
 
@@ -9225,7 +9240,7 @@ l_2806:
 
 l_2808:
 	lea	mario_array_6200,a3            	| [$2808: ld      iy,mario_array_6200] load IY with start of mario sprite
-	move.b	return_without_taking_the_ladder_6205,d0	| [$280c: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$280c: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$280f: ld      c,a] copy to C
 	move.b	#0x04,d5
 	move.b	#0x07,d6                      	| [$2810: ld      hl,$0407] H := 4, L := 7
@@ -9291,7 +9306,7 @@ l_2832:
 
 l_2853:
 	lea	mario_array_6200,a3            	| [$2853: ld      iy,mario_array_6200] load IY with start of mario array
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2857: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2857: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x0c,d0                         	| [$285a: add     a,$0c] add #0C (12 decimal)
 	move.b	d0,d2                           	| [$285c: ld      c,a] copy to C
 	move.b	inputstate_6010,d0              	| [$285d: ld      a,(inputstate_6010)] load A with copy of input (see RawInput). except when jump pressed, bit 7 is set momentarily.
@@ -9514,7 +9529,7 @@ l_296f:
 
 is_hammer_grabbed_2974:
 	lea	mario_array_6200,a3            	| [$2974: ld      iy,mario_array_6200] load IY with start of mario sprite values
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2978: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2978: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$297b: ld      c,a] copy to C
 	move.b	#0x04,d5
 	move.b	#0x08,d6                      	| [$297c: ld      hl,$0408] H := 4, L := 8
@@ -9564,7 +9579,7 @@ l_29af:
 	jbsr	only_continues_if_given_level_0030                            	| [$29b1: rst     $30] only continue here if we are on the elevators, else RET
 
 	lea	mario_array_6200,a3            	| [$29b2: ld      iy,mario_array_6200] load IY with mario's array
-	move.b	return_without_taking_the_ladder_6205,d0	| [$29b6: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$29b6: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$29b9: ld      c,a] copy to C
 	move.b	#0x04,d5
 	move.b	#0x08,d6                      	| [$29ba: ld      hl,$0408] H := 4, L := 8
@@ -9598,7 +9613,7 @@ l_29d0:
 
 	move.b	d3,d0                           	| [$29df: ld      a,d] load A with elevator's height - 4
 	sub.b	#0x08,d0                         	| [$29e0: sub     $08] subtract 8
-	move.b	d0,return_without_taking_the_ladder_6205	| [$29e2: ld      (return_without_taking_the_ladder_6205),a] store A into Mario's Y position
+	move.b	d0,mario_y_position_6205	| [$29e2: ld      (mario_y_position_6205),a] store A into Mario's Y position
 	move.b	#0x01,d0                        	| [$29e5: ld      a,$01] A := 1
 	move.b	d0,d1                           	| [$29e7: ld      b,a] B := 1
 	move.b	d0,elevator_status_6398         	| [$29e8: ld      (elevator_status_6398),a] set elevator riding indicator ?
@@ -9787,7 +9802,7 @@ check_for_mario_falling_2a85:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2a95: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	subq.b	#0x03,d0                        	| [$2a98: sub     $03] subtract 3
 	move.b	d0,d5                           	| [$2a9a: ld      h,a] store into H
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2a9b: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2a9b: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x0c,d0                         	| [$2a9e: add     a,$0c] add #0C = 13 decimal
 	move.b	d0,d6                           	| [$2aa0: ld      l,a] store into L
 
@@ -9834,7 +9849,7 @@ l_2acd:
 l_2ad3:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2ad3: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	move.b	d0,d1                           	| [$2ad6: ld      b,a] copy to B
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2ad7: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2ad7: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	cmp.b	#0x50,d0                         	| [$2ada: cp      $50] is mario on upper level ?
 	jeq	l_2aea                             	| [$2adc: jp      z,$2aea] yes, skip ahead
 
@@ -9903,7 +9918,7 @@ l_2b29:
 
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2b30: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's x position
 	move.b	d0,d5                           	| [$2b33: ld      h,a] copy to H
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2b34: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's y position
+	move.b	mario_y_position_6205,d0	| [$2b34: ld      a,(mario_y_position_6205)] load A with mario's y position
 	addq.b	#0x07,d0                        	| [$2b37: add     a,$07] add 7 to y position
 	move.b	d0,d6                           	| [$2b39: ld      l,a] copy to L
 	jbsr	l_2b9b                            	| [$2b3a: call    $2b9b] check for ???
@@ -9917,7 +9932,7 @@ l_2b29:
 
 	move.b	d2,d0                           	| [$2b48: ld      a,c] A := C
 	subq.b	#0x07,d0                        	| [$2b49: sub     $07] subtract 7
-	move.b	d0,return_without_taking_the_ladder_6205	| [$2b4b: ld      (return_without_taking_the_ladder_6205),a] store A into mario's Y position
+	move.b	d0,mario_y_position_6205	| [$2b4b: ld      (mario_y_position_6205),a] store A into mario's Y position
 	move.b	#0x01,d0                        	| [$2b4e: ld      a,$01] A : = 1
 	move.b	d0,d1                           	| [$2b50: ld      b,a] B := 1
 
@@ -9931,7 +9946,7 @@ l_2b53:
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2b53: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
 	subq.b	#0x03,d0                        	| [$2b56: sub     $03] subtract 3
 	move.b	d0,d5                           	| [$2b58: ld      h,a] store into H
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2b59: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2b59: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	addq.b	#0x07,d0                        	| [$2b5c: add     a,$07] add 7
 	move.b	d0,d6                           	| [$2b5e: ld      l,a] store into L
 	jbsr	l_2b9b                            	| [$2b5f: call    $2b9b] check for ???
@@ -10063,7 +10078,7 @@ l_2be1:
 l_2bef:
 	move.b	d2,d0                           	| [$2bef: ld      a,c] A := C = original location masked
 	subq.b	#0x07,d0                        	| [$2bf0: sub     $07] subtract 7 to adjust for mario' height
-	move.b	d0,return_without_taking_the_ladder_6205	| [$2bf2: ld      (return_without_taking_the_ladder_6205),a] store A into mario's Y position
+	move.b	d0,mario_y_position_6205	| [$2bf2: ld      (mario_y_position_6205),a] store A into mario's Y position
 	jra	l_2bfd                             	| [$2bf5: jp      $2bfd] skip next 3 steps
 
 * arrive when mario has his head passing through girder above
@@ -10710,7 +10725,7 @@ l_2f7c:
 	addq.w	#1,a0                           	| [$2f89: inc     hl] next
 	move.b	d2,(a0)                         	| [$2f8a: ld      (hl),c] store into hammer color
 	addq.w	#1,a0                           	| [$2f8b: inc     hl] next
-	move.b	return_without_taking_the_ladder_6205,d0	| [$2f8c: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
+	move.b	mario_y_position_6205,d0	| [$2f8c: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	add.b	(0x0f,a2),d0                     	| [$2f8f: add     a,(ix+$0f)] add hammer offset
 	move.b	d0,(a0)                         	| [$2f92: ld      (hl),a] store into hammer Y position
 	move.b	d0,(0x05,a2)                    	| [$2f93: ld      (ix+$05),a] store into hammer Y position
@@ -11445,7 +11460,7 @@ l_32d6:
 
 * It is time to maybe freeze the fireball at the top of a ladder.
 	clr.b	(0x1d,a2)                        	| [$32e6: ld      (ix+$1d),$00] Reset the freeze flag to zero
-	move.b	return_without_taking_the_ladder_6205,d0	| [$32ea: ld      a,(return_without_taking_the_ladder_6205)] \  Jump if Mario is above fireball, in this case we leave freezer mode immediately without freezing.
+	move.b	mario_y_position_6205,d0	| [$32ea: ld      a,(mario_y_position_6205)] \  Jump if Mario is above fireball, in this case we leave freezer mode immediately without freezing.
 	move.b	(0x0f,a2),d1                    	| [$32ed: ld      b,(ix+$0f)]|
 	sub.b	d1,d0                            	| [$32f0: sub     b]|
 	jcs	l_3303                             	| [$32f1: jp      c,$3303] /
@@ -11526,7 +11541,7 @@ l_333d:
 
 * Else there is a ladder nearby to go down
 	move.b	d1,(0x1f,a2)                    	| [$3360: ld      (ix+$1f),b] Store B into +#1F = Y-position of bottom of ladder
-	move.b	return_without_taking_the_ladder_6205,d0	| [$3363: ld      a,(return_without_taking_the_ladder_6205)] \  Return without taking the ladder if Mario is at or above the Y-position of the fireball
+	move.b	mario_y_position_6205,d0	| [$3363: ld      a,(mario_y_position_6205)] \  Return without taking the ladder if Mario is at or above the Y-position of the fireball
 	move.b	d0,d1                           	| [$3366: ld      b,a]|
 	move.b	(0x0f,a2),d0                    	| [$3367: ld      a,(ix+$0f)]|
 	sub.b	d1,d0                            	| [$336a: sub     b]|
