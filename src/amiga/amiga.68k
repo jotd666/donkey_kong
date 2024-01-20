@@ -2397,6 +2397,9 @@ handle_keyboard:
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
+	* level skip
+	move.b	#0x16,gamemode2_600a		| level completed
+	move.b	#4,end_of_level_counter_6388 | last step of level complete
 	st.b	cheat_used
 	
 0:

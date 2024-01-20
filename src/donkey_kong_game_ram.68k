@@ -77,7 +77,7 @@
 	.global	jump_counter_6214
 	.global	ladder_status_6215
 	.global	jumping_status_6216
-	.global	unknown_6217
+	.global	hammer_active_6217
 	.global	mario_is_grabbing_the_hammer_until_he_lands_6218
 	.global	store_1_into_status_indicator_6219
 	.global	moving_ladder_indicator_621a
@@ -422,7 +422,7 @@ ladder_status_6215:
 	ds.b	1
 jumping_status_6216:
 	ds.b	1
-unknown_6217:
+hammer_active_6217:
 	ds.b	1
 mario_is_grabbing_the_hammer_until_he_lands_6218:
 	ds.b	1

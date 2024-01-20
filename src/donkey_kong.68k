@@ -1815,7 +1815,7 @@ l_0298:
 *
 
 l_02bd:
-	lea		ram_6000,a0	                    	| [$02bd: ld      h,$60] H := #60
+	lea		ram_6000,a0	                    	| [$02bd: ld      h,$60] HL := #60xx
 	moveq	#0,d0
 	move.b	the_task_pointer_60b1,d0        	| [$02bf: ld      a,(the_task_pointer_60b1)] load A with task pointer
 												| [$02c2: ld      l,a] copy to L.  HL now has #60XX which is the current task
@@ -3806,7 +3806,6 @@ l_0c43:
 	move.w		a2,d7
 										| [$0c65: inc     hl] next
 	move.b	(a0),d0                         	| [$0c66: ld      a,(hl)] get table data
-	move.w		a2,d7
 	add.w	#0x20,d7
 	jbsr	osd_w_videoram                    	| [$0c67: ld      (ix+$20),a] write to screen
 	sub.w	#0x40,d7
@@ -6405,13 +6404,13 @@ check_running_over_rivets_1a33:
 	rts                                    	| [$1a4a: ret] else return
 
 l_1a4b:
-	move.b	#0x01,d0                        	| [$1a4b: ld      a,$01] A := 1
-	move.b	d0,column_indicator_6291        	| [$1a4d: ld      (column_indicator_6291),a] store into column indicator
+	move.b	#0x01,column_indicator_6291                        	| [$1a4b: ld      a,$01] A := 1
+										| [$1a4d: ld      (column_indicator_6291),a] store into column indicator
 	rts                                    	| [$1a50: ret] return
 
 l_1a51:
-	move.b	d0,column_indicator_6291        	| [$1a51: ld      (column_indicator_6291),a] clear the column indicator
-	move.b	d0,d1                           	| [$1a54: ld      b,a] B := 0
+	clr.b	column_indicator_6291        	| [$1a51: ld      (column_indicator_6291),a] clear the column indicator
+	clr.b	d1                           	| [$1a54: ld      b,a] B := 0
 	move.b	return_without_taking_the_ladder_6205,d0	| [$1a55: ld      a,(return_without_taking_the_ladder_6205)] load A with Mario's Y position
 	subq.b	#1,d0                           	| [$1a58: dec     a] decrement
 	cmp.b	#0xd0,d0                         	| [$1a59: cp      $d0] compare with #D0.  is mario too low to go over a rivet?
@@ -6454,14 +6453,14 @@ l_1a7b:
 	rts                                    	| [$1a83: ret     z] yes, return [...]
 0:
 
-* a rivet has been traversed
-
+* a rivet has been traversed: clear rivet
 	clr.b	(a0)                             	| [$1a84: ld      (hl),$00] set this rivet as cleared
-	lea	number_of_rivets_left_6290,a0  	| [$1a86: ld      hl,number_of_rivets_left_6290] load HL with address of number of rivets remaining
-	subq.b	#1,(a0)                         	| [$1a89: dec     (hl)] decrease number of rivets
+												| [$1a86: ld      hl,number_of_rivets_left_6290] load HL with address of number of rivets remaining
+	subq.b	#1,number_of_rivets_left_6290                         	| [$1a89: dec     (hl)] decrease number of rivets
 	move.b	d1,d0                           	| [$1a8a: ld      a,b] A := B
-	move.w	#0x05,d1                        	| [$1a8b: ld      bc,$0005] load BC with offset of 5 5
-	ror.b	#1,d0                           	| [$1a8e: rra] rotate right.  carry?  (is this rivet on right side?)
+	move.w	#0x05,d1                        	| [$1a8b: ld      bc,$0005] load BC with offset of 5
+	* ror doesn't work, makes value $8x ! using the 9-bit rotation that we don't have!
+	lsr.b	#1,d0                           	| [$1a8e: rra] rotate right.  carry?  (is this rivet on right side?)
 	jcs	l_1abd                             	| [$1a8f: jp      c,$1abd] yes, skip ahead and load HL with #012B and return to #1A95
 
 	move.w	#0x02cb,d7                      	| [$1a92: ld      hl,$02cb] else load HL with master offset for rivets
@@ -6471,7 +6470,7 @@ l_1a95:
 	jeq	l_1a9e                             	| [$1a96: jp      z,$1a9e] yes, skip next 3 steps
 
 l_1a99:
-	add.w	d1,d7                            	| [$1a99: add     hl,bc] add offset to HL
+	add.w	d1,d7                            	| [$1a99: add     hl,bc] add column offset to HL
 	subq.b	#1,d0                           	| [$1a9a: dec     a] decrease A.  zero?
 	jne	l_1a99                             	| [$1a9b: jp      nz,$1a99] no, loop again
 
@@ -6481,7 +6480,7 @@ l_1a9e:
 	move.b	#0x10,d0                        	| [$1aa2: ld      a,$10] A := #10 = clear space
 	jbsr	osd_w_videoram                         	| [$1aa4: ld      (hl),a] erase the rivet
 	                           	| [$1aa5: dec     l] next video memory
-	subq	#1,d7
+	subq.w	#1,d7
 	jbsr	osd_w_videoram                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
 	addq.w	#2,d7                           	| [$1aa7: inc     l] * 2
 	jbsr	osd_w_videoram                         	| [$1aa9: ld      (hl),a] erase underneath the rivet [ not needed , there is nothing there to erase ???]
@@ -6492,7 +6491,7 @@ l_1a9e:
 	move.b	jumping_status_6216,d0          	| [$1ab5: ld      a,(jumping_status_6216)] load A with jump indicator
 	                               	| [$1ab8: and     a] is mario jumping ?
 	bne.b	0f                               	| [...]
-	jbsr	l_1d95                            	| [$1ab9: call    z,$1d95] no, play the bonus sound
+	jbsr	play_bonus_sound_1d95                            	| [$1ab9: call    z,$1d95] no, play the bonus sound
 0:
 
 	rts                                    	| [$1abc: ret] else return
@@ -6515,7 +6514,7 @@ l_1ac3:
 	                               	| [$1acd: and     a] is the jump almost done ?
 	jne	l_1b55                             	| [$1ace: jp      nz,$1b55] yes, skip way ahead
 
-	move.b	unknown_6217,d0                 	| [$1ad1: ld      a,(unknown_6217)] load A with hammer check
+	move.b	hammer_active_6217,d0                 	| [$1ad1: ld      a,(hammer_active_6217)] load A with hammer check
 	subq.b	#1,d0                           	| [$1ad4: dec     a] is hammer active?
 	jeq	l_1ae6                             	| [$1ad5: jp      z,$1ae6] yes, skip ahead
 
@@ -6545,7 +6544,7 @@ l_1af5:
 	jne	l_1cab                             	| [$1afb: jp      nz,$1cab] yes, skip ahead
 
 l_1afe:
-	move.b	unknown_6217,d0                 	| [$1afe: ld      a,(unknown_6217)] else load A with hammer check
+	move.b	hammer_active_6217,d0                 	| [$1afe: ld      a,(hammer_active_6217)] else load A with hammer check
 	subq.b	#1,d0                           	| [$1b01: dec     a] is the hammer active?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1b02: ret     z] yes, return [...]
@@ -6637,7 +6636,7 @@ l_1b55:
 * arrive here when jump is complete
 
 	move.b	mario_is_grabbing_the_hammer_until_he_lands_6218,d0	| [$1b5a: ld      a,(mario_is_grabbing_the_hammer_until_he_lands_6218)] load A with hammer grabbing indicator
-	move.b	d0,unknown_6217                 	| [$1b5d: ld      (unknown_6217),a] store into hammer indicator
+	move.b	d0,hammer_active_6217                 	| [$1b5d: ld      (hammer_active_6217),a] store into hammer indicator
 	lea	mario_movement_indicator_sprite_value_6207,a0	| [$1b60: ld      hl,mario_movement_indicator_sprite_value_6207] load HL with movement indicator address
 	move.b	(a0),d0                         	| [$1b63: ld      a,(hl)] load A with movement indicator
 	and.b	#0x80,d0                         	| [$1b64: and     $80] mask bits.  we only care about bit 7, which we leave as is.  all other bits are now zero
@@ -6819,7 +6818,7 @@ l_1c4f:
 	move.b	bonus_sound_indicator_6225,d0   	| [$1c6c: ld      a,(bonus_sound_indicator_6225)] load A with bonus sound indicator
 	subq.b	#1,d0                           	| [$1c6f: dec     a] was a bonus awarded?
 	bne.b	0f                               	| [...]
-	jbsr	l_1d95                            	| [$1c70: call    z,$1d95] yes, call this sub to play bonus sound
+	jbsr	play_bonus_sound_1d95                            	| [$1c70: call    z,$1d95] yes, call this sub to play bonus sound
 0:
 
 	jra	update_mario_sprite_1da6                             	| [$1c73: jp      $1da6] jump ahead to update mario sprite and RET
@@ -7034,7 +7033,7 @@ l_1d8f:
 
 * arrive here when walking over a rivet, not jumping.  from #1AB9, or from #1C70
 
-l_1d95:
+play_bonus_sound_1d95:
 	move.b	d0,bonus_sound_indicator_6225   	| [$1d95: ld      (bonus_sound_indicator_6225),a] store A into bonus sound indicator.  A is zero so this clears the indicator
 	move.b	screen_number_6227,d0           	| [$1d98: ld      a,(screen_number_6227)] load A with screen number
 	subq.b	#1,d0                           	| [$1d9b: dec     a] is this the girders?
@@ -8478,8 +8477,8 @@ l_2441:
 	move.b	#0x06,d1                        	| [$2446: ld      b,$06] for B = 1 to 6
 
 l_2448:
-	add.b	(a0),d0                          	| [$2448: add     a,(hl)] add this letter
-	addq.w	#1,a0                           	| [$2449: inc     hl] next letter
+	add.b	(a0)+,d0                          	| [$2448: add     a,(hl)] add this letter
+												| [$2449: inc     hl] next letter
 	subq.b	#1,d1                           	| [...]
 	jne	l_2448                             	| [$244a: djnz    $2448] loop until done
 
@@ -8529,16 +8528,16 @@ l_2478:
 
 l_2488:
 	addq.w	#1,a0                           	| [$2488: inc     hl] next HL
-	move.b	(a0),d0                         	| [$2489: ld      a,(hl)] load A with table data (EG #3B12)
+	move.b	(a0)+,d0                         	| [$2489: ld      a,(hl)] load A with table data (EG #3B12)
 	move.b	d0,(a2)                    	| [$248a: ld      (ix+$00),a] store into index
-	addq.w	#1,a0                           	| [$248d: inc     hl] next HL
+	                           	| [$248d: inc     hl] next HL
 	move.b	(a0),d0                         	| [$248e: ld      a,(hl)] load A with table data
 	move.b	d0,(0x15,a2)                    	| [$248f: ld      (ix+$15),a] store into index +#15
 	addq.w	#2,a0                           	| [$2492: inc     hl] * 2
-	move.b	(a0),d0                         	| [$2494: ld      a,(hl)] load A with table data
+	move.b	(a0)+,d0                         	| [$2494: ld      a,(hl)] load A with table data
 	move.b	d0,(0x2a,a2)                    	| [$2495: ld      (ix+$2a),a] store into index +#2A
 	addq.w	#1,a2                           	| [$2498: inc     ix] next location
-	addq.w	#1,a0                           	| [$249a: inc     hl] next table data
+												| [$249a: inc     hl] next table data
 	jra	l_2478                             	| [$249b: jp      $2478] jump back
 
 * data element was #02
@@ -8546,9 +8545,9 @@ l_2488:
 
 l_249e:
 	addq.w	#1,a0                           	| [$249e: inc     hl]
-	move.b	(a0),d0                         	| [$249f: ld      a,(hl)]
+	move.b	(a0)+,d0                         	| [$249f: ld      a,(hl)]
 	move.b	d0,(0x00,a3)                    	| [$24a0: ld      (iy+$00),a]
-	addq.w	#1,a0                           	| [$24a3: inc     hl]
+												| [$24a3: inc     hl]
 	move.b	(a0),d0                         	| [$24a4: ld      a,(hl)]
 	move.b	d0,(0x15,a3)                    	| [$24a5: ld      (iy+$15),a]
 	addq.w	#2,a0                           	| [$24a8: inc     hl] * 2
@@ -8631,9 +8630,10 @@ l_24fc:
 	move.b	d0,(a0)+                         	| [$2515: ld      (hl),a] store into sprite
 	                           	| [$2516: inc     l] next address
 
+* called from "pie/cement" factory
+* d3 has been checked and is OK (0x10)
 l_2517:
 	add.w	d3,a2                            	| [$2517: add     ix,de] add offset for next pie
-	illegal	| TODO: review d3 computation above
 	subq.b	#1,d1                           	| [...]
 	jne	l_24fc                             	| [$2519: djnz    $24fc] next B
 
@@ -9041,7 +9041,7 @@ l_271e:
 
 l_2722:
 	jbsr	l_2797                            	| [$2722: call    $2797] move elevators
-	jbsr	l_27da                            	| [$2725: call    $27da] check for and set elevators that have reset
+	jbsr	check_elevators_27da                            	| [$2725: call    $27da] check for and set elevators that have reset
 	move.b	#0x06,d1                        	| [$2728: ld      b,$06] For B = 1 to 6
 	move.w	#0x0010,d3                      	| [$272a: ld      de,$0010] load offset 16
 	lea	elevator_sprites_6958,a0       	| [$272d: ld      hl,elevator_sprites_6958] load starting value for elevator sprites
@@ -9182,7 +9182,7 @@ l_27c7:
 
 * [IF elevator_counter <> 0 THEN ( elevator_counter--  | RETURN ) ELSE (
 
-l_27da:
+check_elevators_27da:
 	lea	elevator_counter_address_62a7,a0	| [$27da: ld      hl,elevator_counter_address_62a7] load HL with elevator counter address
 	move.b	(a0),d0                         	| [$27dd: ld      a,(hl)] load A with elevator counter
 	                               	| [$27de: and     a] == 0 ?
@@ -9191,7 +9191,6 @@ l_27da:
 	move.b	#0x06,d1                        	| [$27e2: ld      b,$06] for B = 1 to 6 elevators
 	lea	elevator_array_start_6600,a2   	| [$27e4: ld      ix,elevator_array_start_6600] load IX with sprite addr. for elevators
 
-	illegal  |  TODO: review d3 computation
 l_27e8:
 	btst.b	#0,(a2)                    	| [$27e8: bit     0,(ix+$00)] is this elevator active ?
 	jeq	l_27f4                             	| [$27ec: jp      z,$27f4] no, skip ahead and reset
@@ -9289,7 +9288,8 @@ l_2853:
 	move.b	d0,d2                           	| [$285c: ld      c,a] copy to C
 	move.b	inputstate_6010,d0              	| [$285d: ld      a,(inputstate_6010)] load A with copy of input (see RawInput). except when jump pressed, bit 7 is set momentarily.
 	and.b	#0x03,d0                         	| [$2860: and     $03] mask bits, now between 0 and 3
-	lea	game_rom+0x0508,a0                      	| [$2862: ld      hl,$0508] H := #05, L := #08.  [H is the left-right window for jumping items, L is the up-down window?]
+	move.b	#0x05,d5
+	move.b	#0x08,d6                      	| [$2862: ld      hl,$0508] H := #05, L := #08.  [H is the left-right window for jumping items, L is the up-down window?]
 	jeq	l_286b                             	| [$2865: jp      z,$286b] if masked input was zero, skip next step
 
 * player moving joystick left or right while jumping
@@ -9480,8 +9480,8 @@ l_294c:
 
 l_2954:
 	move.b	#0x0b,d0                        	| [$2954: ld      a,$0b] A := #0B = 1011 binary
-	jbsr	only_continues_if_given_level_0030                            	| [$2956: rst     $30] if level is elevators RET from this sub now.  no hammers on elevators.
-	jbsr	l_2974                            	| [$2957: call    $2974] load A with 1 if hammer is grabbed, 0 if no grab
+	jbsr	only_continues_if_given_level_0030  | [$2956: rst     $30] if level is elevators RET from this sub now.  no hammers on elevators.
+	jbsr	is_hammer_grabbed_2974              | [$2957: call    $2974] load A with 1 if hammer is grabbed, 0 if no grab
 	move.b	d0,mario_is_grabbing_the_hammer_until_he_lands_6218	| [$295a: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into hammer grabbing indicator
 	ror.b	#2,d0                            	| [$295d: rrca] * 2
 	move.b	d0,play_sound_for_bonus_6085    	| [$295f: ld      (play_sound_for_bonus_6085),a] play sound for bonus
@@ -9504,11 +9504,12 @@ l_296f:
 * called from #2957 above
 * check for hammer grab ?
 
-l_2974:
+is_hammer_grabbed_2974:
 	lea	mario_array_6200,a3            	| [$2974: ld      iy,mario_array_6200] load IY with start of mario sprite values
 	move.b	return_without_taking_the_ladder_6205,d0	| [$2978: ld      a,(return_without_taking_the_ladder_6205)] load A with mario's Y position
 	move.b	d0,d2                           	| [$297b: ld      c,a] copy to C
-	lea	game_rom+0x0408,a0                      	| [$297c: ld      hl,$0408] H := 4, L := 8
+	move.b	#0x04,d5
+	move.b	#0x08,d6                      	| [$297c: ld      hl,$0408] H := 4, L := 8
 	move.b	#0x02,d1                        	| [$297f: ld      b,$02] B := 2 for the 2 hammers (?)
 	move.w	#0x0010,d3                      	| [$2981: ld      de,$0010] offset for each hammer 16
 	lea	software_address_of_hammer_sprite_6680,a2	| [$2984: ld      ix,software_address_of_hammer_sprite_6680] load IX with start of hammer sprites ?
@@ -10619,12 +10620,12 @@ handle_hammer_2ed4:
 l_2eed:
 	clr.b	(0x0e,a2)                        	| [$2eed: ld      (ix+$0e),$00] store 0 into +#E == ???
 	move.b	#0xf0,(0x0f,a2)                 	| [$2ef1: ld      (ix+$0f),$f0] store #F0 into +#F (???)
-	move.b	unknown_6217,d0                 	| [$2ef5: ld      a,(unknown_6217)] load A with hammer indicator
+	move.b	hammer_active_6217,d0                 	| [$2ef5: ld      a,(hammer_active_6217)] load A with hammer indicator
 	ror.b	#1,d0                            	| [$2ef8: rrca] is the hammer already active?
 	jcc	l_2f97                             	| [$2ef9: jp      nc,$2f97] no, skip ahead and check for new hammer grab
 
-	clr.b	d0                               	| [$2efc: xor     a] A := 0
-	move.b	d0,mario_is_grabbing_the_hammer_until_he_lands_6218	| [$2efd: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into grabbing the hammer indicator. the grab is complete.
+	                               	| [$2efc: xor     a] A := 0
+	clr.b	mario_is_grabbing_the_hammer_until_he_lands_6218	| [$2efd: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into grabbing the hammer indicator. the grab is complete.
 	lea	background_music_value_6089,a0 	| [$2f00: ld      hl,background_music_value_6089] load HL with music address
 	move.b	#0x04,(a0)                      	| [$2f03: ld      (hl),$04] set music for hammer
 	move.b	#0x06,(0x09,a2)                 	| [$2f05: ld      (ix+$09),$06] set width ?
@@ -10675,10 +10676,10 @@ l_2f43:
 
 * arrive here when hammer runs out
 
-	clr.b	d0                               	| [$2f5a: xor     a] A := 0
-	move.b	d0,hammer_length_6395           	| [$2f5b: ld      (hammer_length_6395),a] clear hammer length
-	move.b	d0,unknown_6217                 	| [$2f5e: ld      (unknown_6217),a] store into hammer indicator
-	move.b	d0,(0x01,a2)                    	| [$2f61: ld      (ix+$01),a] clear hammer active indicator
+	                               	| [$2f5a: xor     a] A := 0
+	clr.b	hammer_length_6395           	| [$2f5b: ld      (hammer_length_6395),a] clear hammer length
+	clr.b	hammer_active_6217                 	| [$2f5e: ld      (hammer_active_6217),a] store into hammer indicator
+	clr.b	(0x01,a2)                    	| [$2f61: ld      (ix+$01),a] clear hammer active indicator
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2f64: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
 	neg.b	d0                               	| [$2f67: neg] take negative
 	move.b	d0,(0x0e,a2)                    	| [$2f69: ld      (ix+$0e),a] store into +E
@@ -11151,7 +11152,7 @@ l_3149:
 	move.b	d0,unknown_63a1                 	| [$3155: ld      (unknown_63a1),a] /
 	move.b	#0x01,d0                        	| [$3158: ld      a,$01] \  Set fire color to #01 (normal) if hammer is not active, and #00 (blue) if hammer is active
 	move.b	d0,(0x08,a2)                    	| [$315a: ld      (ix+$08),a]|
-	move.b	unknown_6217,d0                 	| [$315d: ld      a,(unknown_6217)]|
+	move.b	hammer_active_6217,d0                 	| [$315d: ld      a,(hammer_active_6217)]|
 	cmp.b	#0x01,d0                         	| [$3160: cp      $01]|
 	jne	l_316a                             	| [$3162: jp      nz,$316a]|
 	clr.b	d0                               	| [$3165: ld      a,$00]|
