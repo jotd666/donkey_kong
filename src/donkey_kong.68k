@@ -8268,7 +8268,9 @@ check_for_ladders_nearby_236e:
 	lea	ladder_positions_6300,a0       	| [$236e: ld      hl,ladder_positions_6300] load HL with start of table data that has positions of ladders
 l_2371:
 	jbsr	cpir                              	| [$2371: cpir] check for ladders ???
-
+	sne		d7
+	move.b	d1,d2							| game expects d2 as index if found
+	tst.b	d7
 	jne	l_239a                             	| [$2373: jp      nz,$239a] if no match, return to higher sub, no ladder nearby
 
 

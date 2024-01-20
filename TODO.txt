@@ -1,5 +1,4 @@
-- barrels climb up slopes now (but ok barrels)
-- mario sees every ladder as broken now (check 1b25)
+- barrels climb up slopes now if not taking a ladder!
 - insert coin: 00 => 01 then 00 again????
 - blit reverse for y flip (kong falls)
 - "50m/75m/100m..." is shifted
@@ -11,11 +10,5 @@
 - score sprites don't appear, ever, ex: removing rivet at l_1a9e
 - elevators: mario doesn't stand on them falls through
 - elevator color looks wrong
-- bonus does not decrease fast enough
+- girders level fireball: wrong colors when going right (flashing)
 
-
-check_for_ladders_nearby_236e: d1.W: problems
-what does it return?
-
-* d2???
-cmp.b	d2,d0                            	| [$1b25: cp      c] compare.  is the ladder broken?
