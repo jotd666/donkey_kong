@@ -107,6 +107,7 @@ def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
+add_sprite_block(0x7B,0x7F,"score_sprite",7)
 add_sprite_block(0x10,0x14,"princess",9,mirror=True)
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
@@ -120,7 +121,7 @@ add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
 add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True)
-add_sprite_block(0x3b,0x3e,"bouncer",0)
+add_sprite_block(0x3b,0x3d,"bouncer",0)
 add_sprite_block(0x73,0x76,"bonus",0xA)
 add_sprite_block(0x76,0x78,"heart",9)
 add_sprite(0x39,"sparkle",1)
@@ -135,8 +136,8 @@ add_sprite_block(0x40,0x44,"flame",[1])  # barrel flame
 
 add_sprite(0x4B,"pie",0xE)
 add_sprite(0x44,"elevator",3)
-add_sprite(0x45,"conveyor",0xF)
-add_sprite_block(0x50,0x53,"wheel",0)
+add_sprite(0x45,"elevator_conveyor",0xF)
+add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True)
 add_sprite(0x46,"moving_ladder",0x3)
 
 block_dict = {}

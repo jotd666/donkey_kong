@@ -49,7 +49,7 @@ reg_music:
 reg_sprite:
 	ds.b	1
 reg_sfx:
-	ds.b	1
+	ds.b	8
 reg_sfx_death:
 	ds.b	1
 	.align	2

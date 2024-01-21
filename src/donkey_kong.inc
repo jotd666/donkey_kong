@@ -1,5 +1,6 @@
 
-	NB_HARDWARE_SPRITES = 76
+	* I think only 77 are used (last one is score sprite)
+	NB_HARDWARE_SPRITES = 78
 	
 ***    
 *** BUILD OPTIONS
@@ -11,6 +12,8 @@
     OPT_START_SCORE=0                 | LEAVE AT 0!!!
 	OPT_SKIP_INTRO_SCREEN=0           | LEAVE AT 0!!!
 	OPT_SKIP_GAME_DEMO=0              | LEAVE AT 0!!!
+	OPT_START_WITH_CONVEYORS=0			| LEAVE AT 0!!!
+	OPT_START_WITH_ELEVATORS=0			| LEAVE AT 0!!!
 	OPT_START_LEVEL=1              | LEAVE AT 1!!!
 	.else
 	
@@ -25,6 +28,8 @@
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
+	OPT_START_WITH_CONVEYORS=0
+	OPT_START_WITH_ELEVATORS=1
 
 	.endif
 	
