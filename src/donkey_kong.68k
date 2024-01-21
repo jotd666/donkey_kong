@@ -293,6 +293,8 @@ DSW1        = 0x7d80       | DIP switches
 * 7800-780F P8257 Control registers
 * @TODO@ -- define constants for this
 
+* normal value is 10, use less to test
+NB_BARRELS = 10
 
 REG_MUSIC       = 0x7c00
 
@@ -2633,7 +2635,7 @@ l_0616:
 
 l_062a:
 	tst.b	d0                               	| [$062a: and     a] parameter == 0 ?
-	jeq	l_0691                             	| [$062b: jp      z,$0691] yes, skip ahead and add bonus to player's score
+	jeq	add_bonus_to_player_score_0691                             	| [$062b: jp      z,$0691] yes, skip ahead and add bonus to player's score
 
 	move.b	onscreen_timer_638c,d0    	| [$062e: ld      a,(onscreen_timer_638c)] else load onscreen timer
 	                               	| [$0631: and     a] timer == 0 ?
@@ -2717,7 +2719,7 @@ l_0689:
 * adds bonus to player's score
 *
 
-l_0691:
+add_bonus_to_player_score_0691:
 	move.b	onscreen_timer_638c,d0    	| [$0691: ld      a,(onscreen_timer_638c)] load A with timer value from #638C
 	move.b	d0,d1                           	| [$0694: ld      b,a] copy to B
 	and.b	#0x0f,d0                         	| [$0695: and     $0f] and with #0F - mask four left bits.  how has low byte of bonus
@@ -7476,7 +7478,7 @@ handle_barrel_rolls_1f72:
 	lea	start_of_barrel_info_table_6700,a2	| [$1f77: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel array
 	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1f7b: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with start of sprites used for barrels
 	move.w	#0x0020,d3                      	| [$1f7e: ld      de,$0020] load DE with offset of #20.  used for checking next barrel 32
-	move.b	#0x0a,d1                        	| [$1f81: ld      b,$0a] for B = 1 to #0A ( do for each barrel)
+	move.b	#NB_BARRELS,d1                        	| [$1f81: ld      b,$0a] for B = 1 to #0A ( do for each barrel)
 
 l_1f83:
 	move.b	(a2),d0                    	| [$1f83: ld      a,(ix+$00)] Load A with Barrel indicator (0 = no barrel, 2 = being deployed, 1=rolling)
@@ -9360,7 +9362,7 @@ l_286f:
 
 l_2880:
 	movem.w	(sp)+,d5/d6                        	| [$2880: pop     hl] restore HL
-	move.b	#0x0a,d1                        	| [$2881: ld      b,$0a] B := #0A (10 decimal).  one for each barrel
+	move.b	#NB_BARRELS,d1                        	| [$2881: ld      b,$0a] B := #0A (10 decimal).  one for each barrel
 	move.b	d1,d0                           	| [$2883: ld      a,b] A := #0A
 	move.b	d0,counter_for_use_later_63b9   	| [$2884: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$2887: ld      de,$0020] load DE with offset of #20 32
@@ -9723,7 +9725,7 @@ l_2a2f:
 	cmp.b	#0x08,d0                         	| [$2a46: cp      $08] < 8 ?
 	jcc	l_2a7b                             	| [$2a48: jp      nc,$2a7b] no, skip ahead, clear A to 0 and return - nothing to do.
 
-	move.b	(a0),d0                         	| [$2a4b: ld      a,(hl)] load A with graphic at this location
+	jbsr	osd_r_videoram                         	| [$2a4b: ld      a,(hl)] load A with graphic at this location
 	cmp.b	#0xc0,d0                         	| [$2a4c: cp      $c0] == girder with ladder on bottom going up ?
 	jeq	l_2a7b                             	| [$2a4e: jp      z,$2a7b] yes, clear A to 0 and return - nothing to do.
 
@@ -10254,7 +10256,7 @@ handle_barrel_rolls_2c8f:
 
 	lea	start_of_barrel_info_table_6700,a2	| [$2c9f: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel memory
 	move.w	#0x0020,d3                      	| [$2ca3: ld      de,$0020] incrementer gets #20 32
-	move.b	#0x0a,d1                        	| [$2ca6: ld      b,$0a] For B = 1 to #0A (all 10 barrels)
+	move.b	#NB_BARRELS,d1                        	| [$2ca6: ld      b,$0a] For B = 1 to #0A (all 10 barrels)
 
 l_2ca8:
 	move.b	(a2),d0                    	| [$2ca8: ld      a,(ix+$00)] load A with +0 indicator
@@ -10277,7 +10279,7 @@ barrel_being_deployed_2cb8:
 	STORE_RAM_ADDRESS_LE	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
 	move.b	#0x02,(a2)                 	| [$2cbc: ld      (ix+$00),$02] set deployement indicator
 	clr.w	d3                               	| [$2cc0: ld      d,$00] D := 0
-	move.b	#0x0a,d0                        	| [$2cc2: ld      a,$0a] A := #0A
+	move.b	#NB_BARRELS,d0                        	| [$2cc2: ld      a,$0a] A := #0A
 	sub.b	d1,d0                            	| [$2cc4: sub     b] A = A - B |  B has the number of the barrel A now will be 0 if this is the first barrel, #0A if the last
 	add.b	d0,d0                            	| [$2cc5: add     a,a] A = A * 2
 	add.b	d0,d0                            	| [$2cc6: add     a,a] A = A * 2 (A is now 4 times what it was)
@@ -12949,7 +12951,7 @@ l_3e99:
 	movem.w	(sp)+,d5/d6                        	| [$3e99: pop     hl] restore HL
 	clr.b	d0                               	| [$3e9a: xor     a] A := 0
 	move.b	d0,numobstaclesjumped_6060      	| [$3e9b: ld      (numobstaclesjumped_6060),a] clear counter for barrels jumped
-	move.b	#0x0a,d1                        	| [$3e9e: ld      b,$0a] For B = 1 to #A barrels
+	move.b	#NB_BARRELS,d1                        	| [$3e9e: ld      b,$0a] For B = 1 to #A barrels
 	move.w	#0x0020,d3                      	| [$3ea0: ld      de,$0020] load DE with offset 32
 	lea	start_of_barrel_info_table_6700,a2	| [$3ea3: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel info table
 	jbsr	l_3ec3                            	| [$3ea7: call    $3ec3] call sub below.  check for barrels under jump
