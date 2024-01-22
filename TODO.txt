@@ -1,4 +1,4 @@
-- hammer hits barrels but doesn't kill them
+- hammer kills wrong firefox (_1ea0 rivets level)
 - elevators: mario doesn't stand on them falls through
 - pie factory: moving ladders are completely off (color+Y)
 - playing a while: score seems to have been reset

@@ -4767,7 +4767,7 @@ l_1186:
 	jbsr	l_122a                            	| [$118f: call    $122a] copy
 
 	lea	start_of_bouncer_memory_area_6500,a2	| [$1192: ld      ix,start_of_bouncer_memory_area_6500] load IX with ???
-	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1196: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with sprite start (???)
+	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$1196: ld      hl,start_of_bouncers_or_barrels_sprites_6980] load HL with sprite start (???)
 	move.b	#0x0a,d1                        	| [$1199: ld      b,$0a] B := #A
 	move.w	#0x0010,d3                      	| [$119b: ld      de,$0010] load DE with offset 16
 	jbsr	l_11d3                            	| [$119e: call    $11d3] copy
@@ -7160,6 +7160,7 @@ l_1e10:
 l_1e15:
 	jbsr	insert_task_309f                            	| [$1e15: call    $309f] insert task to add score
 
+	
 * arrive here when bonus item picked up or smashed with hammer
 
 	LOAD_RAM_ADDRESS_LE	unknown_for_use_later_6343,a0	| [$1e18: ld      hl,(unknown_for_use_later_6343)] load HL with contents of #6343 , this gives the address of the sprite location
@@ -7300,23 +7301,23 @@ l_1e96:
 
 * arrive right when an item is hit
 l_1ea0:
+	lea	start_of_pie_sprites_69b8,a0   	| [$1ea5: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
 	move.b	unknown_6352,d0                 	| [$1ea0: ld      a,(unknown_6352)] load A with ???
 	cmp.b	#0x65,d0                         	| [$1ea3: cp      $65] == #65 ?
-	lea	start_of_pie_sprites_69b8,a0   	| [$1ea5: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
 	jeq	l_1eb4                             	| [$1ea8: jp      z,$1eb4] yes, skip next 3 steps
 
 	lea	start_of_firefox_sprites_69d0,a0	| [$1eab: ld      hl,start_of_firefox_sprites_69d0] load HL with start of fire sprites ???
 	jcs	l_1eb4                             	| [$1eae: jp      c,$1eb4] if carry, then skip next step
 
-	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1eb1: ld      hl,start_of_sprite_memory_for_bouncers_6980] HL is X position of a barrel
+	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$1eb1: ld      hl,start_of_bouncers_or_barrels_sprites_6980] HL is X position of a barrel
 
 l_1eb4:
-	LOAD_RAM_ADDRESS_LE	unknown_6351,a2             	| [$1eb4: ld      ix,(unknown_6351)] load IX with start of item array for the item hit
+	LOAD_RAM_ADDRESS_LE	item_array_for_item_hit_6351,a2             	| [$1eb4: ld      ix,(item_array_for_item_hit_6351)] load IX with start of item array for the item hit
 	clr.w	d3                               	| [$1eb8: ld      d,$00] D := 0
-	move.b	unknown_6353,d0                 	| [$1eba: ld      a,(unknown_6353)] load A with the offset for each item in the array
-	move.b	d0,d3                           	| [$1ebd: ld      e,a] copy to E.  DE now has the offset
+	move.b	offset_for_item_in_array_6353,d3                 	| [$1eba: ld      a,(offset_for_item_in_array_6353)] load A with the offset for each item in the array
+												| [$1ebd: ld      e,a] copy to E.  DE now has the offset
 	move.w	#0x04,d1                        	| [$1ebe: ld      bc,$0004] BC := 4 4
-	move.b	unknown_6354,d0                 	| [$1ec1: ld      a,(unknown_6354)] load A with the index of the item hit
+	move.b	index_of_item_hit_6354,d0                 	| [$1ec1: ld      a,(index_of_item_hit_6354)] load A with the index of the item hit
 	                               	| [$1ec4: and     a] == 0 ?
 	jeq	l_1ecf                             	| [$1ec5: jp      z,$1ecf] yes, skip ahead, we use the default HL and IX
 
@@ -7339,7 +7340,7 @@ l_1ecf:
 *
 *
 
-	tst.b	d0                               	| [$1ed6: and     a] ==0 ? is this a regular barrel?  (sometimes fires and pies fall here too)
+											| [$1ed6: and     a] ==0 ? is this a regular barrel?  (sometimes fires and pies fall here too)
 	jeq	l_1ede                             	| [$1ed9: jp      z,$1ede] yes, skip next step
 
 	move.b	#0x04,d0                        	| [$1edc: ld      a,$04] else A := 4, used for random points (blue barrel, sometimes fire, sometimes pie)
@@ -7350,17 +7351,17 @@ l_1ede_2:
 	move.b	d0,scoring_indicator_6342       	| [$1ede: ld      (scoring_indicator_6342),a] store A into scoring indicator
 	lea		location_of_item_hit_6a2c,a4	| [$1ee1: ld      bc,location_of_item_hit_6a2c] load BC with scoring sprite address None
 	move.b	(a0),d0                         	| [$1ee4: ld      a,(hl)] load A with sprite value ?
-	clr.b	(a0)                             	| [$1ee5: ld      (hl),$00] clear the sprite that was hit
-	move.b	d0,(a4)                         	| [$1ee7: ld      (bc),a] store sprite value into the scoring sprite
-	addq.b	#1,d2                           	| [$1ee8: inc     c] next
-	addq.w	#1,a0                           	| [$1ee9: inc     l] next
+	clr.b	(a0)+                             	| [$1ee5: ld      (hl),$00] clear the sprite that was hit
+	move.b	d0,(a4)+                         	| [$1ee7: ld      (bc),a] store sprite value into the scoring sprite
+												| [$1ee8: inc     c] next
+	                           	| [$1ee9: inc     l] next
 	move.b	#0x60,d0                        	| [$1eea: ld      a,$60] A := #60 = sprite for large bluewhite circle
-	move.b	d0,(a4)                         	| [$1eec: ld      (bc),a] store into sprite graphic
-	addq.b	#1,d2                           	| [$1eed: inc     c] next
+	move.b	d0,(a4)+                         	| [$1eec: ld      (bc),a] store into sprite graphic
+											| [$1eed: inc     c] next
 	addq.w	#1,a0                           	| [$1eee: inc     l] next
 	move.b	#0x0c,d0                        	| [$1eef: ld      a,$0c] A := #0C = color code
-	move.b	d0,(a4)                         	| [$1ef1: ld      (bc),a] store into sprite color
-	addq.b	#1,d2                           	| [$1ef2: inc     c] next
+	move.b	d0,(a4)+                         	| [$1ef1: ld      (bc),a] store into sprite color
+	                           	| [$1ef2: inc     c] next
 	addq.w	#1,a0                           	| [$1ef3: inc     l] next
 	move.b	(a0),d0                         	| [$1ef4: ld      a,(hl)] load A with Y value for sprite hit
 	move.b	d0,(a4)                         	| [$1ef5: ld      (bc),a] store into Y value for scoring sprite
@@ -7430,7 +7431,7 @@ l_1f34:
 	clr.b	d0                               	| [$1f36: xor     a] A := 0
 	move.b	d0,(a0)                         	| [$1f37: ld      (hl),a] store into HL.  reset the item being hit with hammer
 	move.b	d0,item_hit_indicator_unknown_6350	| [$1f38: ld      (item_hit_indicator_unknown_6350),a] store into item hit indicator
-	addq.b	#1,d0                           	| [$1f3b: inc     a] A := 11:18 AM 6/15/2009
+	addq.b	#1,d0                           	| [$1f3b: inc     a] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1f3c: ld      (bonus_indicator_6340),a] store into bonus indicator
 	lea	location_of_item_hit_6a2c,a0   	| [$1f3f: ld      hl,location_of_item_hit_6a2c] load HL with location of item hit
 	STORE_RAM_ADDRESS_LE	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
@@ -7476,7 +7477,7 @@ handle_barrel_rolls_1f72:
 * yes, we are on girders
 * this subroutine checks the barrels, if any are rolling it does something, otherwise returns
 	lea	start_of_barrel_info_table_6700,a2	| [$1f77: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel array
-	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$1f7b: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with start of sprites used for barrels
+	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$1f7b: ld      hl,start_of_bouncers_or_barrels_sprites_6980] load HL with start of sprites used for barrels
 	move.w	#0x0020,d3                      	| [$1f7e: ld      de,$0020] load DE with offset of #20.  used for checking next barrel 32
 	move.b	#NB_BARRELS,d1                        	| [$1f81: ld      b,$0a] for B = 1 to #0A ( do for each barrel)
 
@@ -9295,11 +9296,11 @@ l_2832:
 	move.b	d0,item_hit_indicator_unknown_6350	| [$2840: ld      (item_hit_indicator_unknown_6350),a] store A into item hit indicator ???
 	move.b	counter_for_use_later_63b9,d0   	| [$2843: ld      a,(counter_for_use_later_63b9)] load A with the number of total items checked for collision?
 	sub.b	d1,d0                            	| [$2846: sub     b] subract the number of item hit ?
-	move.b	d0,unknown_6354                 	| [$2847: ld      (unknown_6354),a] store into ???
-	move.b	d4,d0                           	| [$284a: ld      a,e] load A with offset for each item
-	move.b	d0,unknown_6353                 	| [$284b: ld      (unknown_6353),a] store into ???
+	move.b	d0,index_of_item_hit_6354                 	| [$2847: ld      (index_of_item_hit_6354),a] store into ???
+	* d3 has the offset see 281f						| [$284a: ld      a,e] load A with offset for each item
+	move.b	d3,offset_for_item_in_array_6353                 	| [$284b: ld      (offset_for_item_in_array_6353),a] store into ???
 	* here IX is 64xx (fireballs) or 67xx (barrels)
-	STORE_RAM_ADDRESS_LE	a2,unknown_6351                 	| [$284e: ld      (unknown_6351),ix] store IX into ???
+	STORE_RAM_ADDRESS_LE	a2,item_array_for_item_hit_6351                 	| [$284e: ld      (item_array_for_item_hit_6351),ix] store IX into ???
 	rts                                    	| [$2852: ret] return
 
 * called when mario jumping, checks for items being jumped over
@@ -10284,7 +10285,7 @@ barrel_being_deployed_2cb8:
 	add.b	d0,d0                            	| [$2cc5: add     a,a] A = A * 2
 	add.b	d0,d0                            	| [$2cc6: add     a,a] A = A * 2 (A is now 4 times what it was)
 	move.b	d0,d3                           	| [$2cc7: ld      e,a] copy this to E
-	lea	start_of_sprite_memory_for_bouncers_6980,a0	| [$2cc8: ld      hl,start_of_sprite_memory_for_bouncers_6980] load HL with starting sprite address for the barrels
+	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$2cc8: ld      hl,start_of_bouncers_or_barrels_sprites_6980] load HL with starting sprite address for the barrels
 	add.w	d3,a0                            	| [$2ccb: add     hl,de] Now add in offset depending on the barrel number ( will vary from 0 to #28 by 4's)
 	STORE_RAM_ADDRESS_LE	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
 	move.b	#0x01,d0                        	| [$2ccf: ld      a,$01] A := 1
@@ -10505,7 +10506,7 @@ update_bouncers_if_on_elevators_2e04:
 	jbsr	continue_only_if_mario_alive_0010                            	| [$2e07: rst     $10] if mario is alive, continue, else RET
 
 	lea	start_of_bouncer_memory_area_6500,a2	| [$2e08: ld      ix,start_of_bouncer_memory_area_6500] load IX with start of bouncer memory area
-	lea	start_of_sprite_memory_for_bouncers_6980,a3	| [$2e0c: ld      iy,start_of_sprite_memory_for_bouncers_6980] start of sprite memory for bouncers
+	lea	start_of_bouncers_or_barrels_sprites_6980,a3	| [$2e0c: ld      iy,start_of_bouncers_or_barrels_sprites_6980] start of sprite memory for bouncers
 	move.b	#0x0a,d1                        	| [$2e10: ld      b,$0a] for B = 1 to #0A (ten) .  do for all ten sprites
 
 l_2e12:

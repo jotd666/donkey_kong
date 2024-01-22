@@ -107,8 +107,9 @@ def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
-add_sprite_block(0x7B,0x7F,"score_sprite",7)
+add_sprite_block(0x7B,0x80,"score_sprite",7)
 add_sprite_block(0x10,0x14,"princess",9,mirror=True)
+add_sprite_block(0x60,0x64,"shattered",12)
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 add_sprite(7,"blank",2)

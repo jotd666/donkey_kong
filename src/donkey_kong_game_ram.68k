@@ -130,10 +130,10 @@
 	.global	timer_6346
 	.global	the_oil_can_is_on_fire_6348
 	.global	item_hit_indicator_unknown_6350
-	.global	unknown_6351
+	.global	item_array_for_item_hit_6351
 	.global	unknown_6352
-	.global	unknown_6353
-	.global	unknown_6354
+	.global	offset_for_item_in_array_6353
+	.global	index_of_item_hit_6354
 	.global	difficulty_level_6380
 	.global	timer_6381
 	.global	crazy_blue_barrel_indicator_6382
@@ -240,7 +240,7 @@
 	.global	elevator_sprites_6958
 	.global	sprites_used_at_top_and_bottom_of_elevators_6970
 	.global	unknown_6974
-	.global	start_of_sprite_memory_for_bouncers_6980
+	.global	start_of_bouncers_or_barrels_sprites_6980
 	.global	extra_barrels_sprites_69a8
 	.global	start_of_pie_sprites_69b8
 	.global	start_of_firefox_sprites_69d0
@@ -528,13 +528,13 @@ the_oil_can_is_on_fire_6348:
 	ds.b	8
 item_hit_indicator_unknown_6350:
 	ds.b	1
-unknown_6351:
+item_array_for_item_hit_6351:
 	ds.b	1
 unknown_6352:
 	ds.b	1
-unknown_6353:
+offset_for_item_in_array_6353:
 	ds.b	1
-unknown_6354:
+index_of_item_hit_6354:
 	ds.b	44
 difficulty_level_6380:
 	ds.b	1
@@ -748,7 +748,7 @@ sprites_used_at_top_and_bottom_of_elevators_6970:
 	ds.b	4
 unknown_6974:
 	ds.b	12
-start_of_sprite_memory_for_bouncers_6980:
+start_of_bouncers_or_barrels_sprites_6980:
 	ds.b	40
 extra_barrels_sprites_69a8:
 	ds.b	16
