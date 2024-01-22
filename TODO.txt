@@ -1,11 +1,10 @@
 - hammer kills wrong firefox (_1ea0 rivets level)
-- elevators: mario doesn't stand on them falls through
 - pie factory: moving ladders are completely off (color+Y)
-- playing a while: score seems to have been reset
+- playing a while: score seems to have been reset (to confirm)
 - implement sounds (turn off music to rip): test mode has sounds!!
 - add double buffering
 - "50m/75m/100m..." is shifted
-- elevator/conveyors: colors are wrong
+- elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
 - highscore save
 - implement dipswitches
 - insert coin with fire, start with up/down

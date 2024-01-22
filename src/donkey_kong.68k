@@ -3876,10 +3876,14 @@ l_0c92:
 	subq.b	#1,d0                           	| [$0cae: dec     a] if not decrease a again
 	jeq	draw_conveyors_screen_0cdf                             	| [$0caf: jp      z,$0cdf] if zero jump to #0CDf - we were on pie - continue on #0CC6
 	.endif
-	
+
+	.ifne	OPT_START_WITH_CONVEYORS
+	move.b	#3,screen_number_6227
+	jra	l_0cf2
+	.else
 	subq.b	#1,d0                           	| [$0cb2: dec     a] if not decrease a again
 	jeq	l_0cf2                             	| [$0cb3: jp      z,$0cf2] iF zero jump to #0CF2 - we were on elevators - continue on #0CC6
-
+	.endif
                                         * else we are on rivets
 
 	jbsr	l_0d43                            	| [$0cb6: call    $0d43] draws the blue vertical bars next to kong on rivets
@@ -6283,7 +6287,7 @@ l_197a:
 	jbsr	check_running_over_rivets_1a33    	| [$199e: call    $1a33] check for and handle running over rivets
 	jbsr	check_for_mario_falling_2a85        | [$19a1: call    $2a85] check for mario falling
 	jbsr	handle_mario_falling_1f46           | [$19a4: call    $1f46] handle mario falling
-	jbsr	l_26fa                            	| [$19a7: call    $26fa] do stuff for elevators
+	jbsr	handle_elevators_26fa                            	| [$19a7: call    $26fa] do stuff for elevators
 	jbsr	l_25f2                            	| [$19aa: call    $25f2] handle conveyor directions, adjust Mario's speed based on conveyor directions
 	jbsr	check_bonus_items_pick_19da                            	| [$19ad: call    $19da] check for mario picking up bonus item
 	jbsr	l_03fb                            	| [$19b0: call    $03fb] check for kong beating chest and animate girl and her screams
@@ -9032,7 +9036,7 @@ l_26f8:
 
 * arrive here from main routine at #19A7
 
-l_26fa:
+handle_elevators_26fa:
 	move.b	#0x04,d0                        	| [$26fa: ld      a,$04] A := 4 = 0100 binary
 	jbsr	only_continues_if_given_level_0030                            	| [$26fc: rst     $30] only continue here if elevators, else RET
 
@@ -9062,8 +9066,8 @@ l_271a:
 	jcs	l_2722                             	| [$271b: jp      c,$2722] if carry jump ahead and move the elevators (50% of time)
 
 l_271e:
-	jbsr	l_2745                            	| [$271e: call    $2745] handle if mario is riding elevators
-	rts                                    	| [$2721: ret] return
+	jbra	handle_mario_on_elevator_2745                            	| [$271e: call    $2745] handle if mario is riding elevators
+	                                    	| [$2721: ret] return
 
 l_2722:
 	jbsr	l_2797                            	| [$2722: call    $2797] move elevators
@@ -9090,7 +9094,7 @@ l_2734:
 
 * called from #271E
 
-l_2745:
+handle_mario_on_elevator_2745:
 	move.b	elevator_status_6398,d0         	| [$2745: ld      a,(elevator_status_6398)] load A with elevator riding indicator
 	                               	| [$2748: and     a] is mario riding an elevator?
 	bne.b	0f                               	| [...]
@@ -9577,7 +9581,7 @@ l_29ac:
 
 * called from #2B23 during a jump
 
-l_29af:
+handle_jump_stuff_for_elevators_29af:
 	move.b	#0x04,d0                        	| [$29af: ld      a,$04] A := 4 = 0100
 	jbsr	only_continues_if_given_level_0030                            	| [$29b1: rst     $30] only continue here if we are on the elevators, else RET
 
@@ -9595,11 +9599,10 @@ l_29af:
 	
 	move.b	#0x06,d0                        	| [$29c4: ld      a,$06] A := 6
 	sub.b	d1,d0                            	| [$29c6: sub     b] subtract B.  zero ?
-	and.w	#0xFF,d4		| jotd: this is possibly wrong, d4 or d3?
 l_29c7:
 	jeq	l_29d0                             	| [$29c7: jp      z,$29d0] yes, skip ahead
 
-	add.w	d4,a2                            	| [$29ca: add     ix,de] else add offset for next elevator
+	add.w	d3,a2                            	| [$29ca: add     ix,de] else add offset for next elevator (d3 loaded in l_2a22)
 	subq.b	#1,d0                           	| [$29cc: dec     a] decrease counter
 	jra	l_29c7                             	| [$29cd: jp      $29c7] loop again
 
@@ -9904,7 +9907,7 @@ l_2b1a:
 l_2b1c:
 	lea	mario_array_6200,a2            	| [$2b1c: ld      ix,mario_array_6200] set IX for mario's array
 	jbsr	l_2b29                            	| [$2b20: call    $2b29] do stuff for jumping.  certain crieria will set A and B and return without the rest of this sub.
-	jbsr	l_29af                            	| [$2b23: call    $29af] handle jump stuff for elevators
+	jbsr	handle_jump_stuff_for_elevators_29af 	| [$2b23: call    $29af] handle jump stuff for elevators
 	clr.b	d0                               	| [$2b26: xor     a] A := 0
 	move.b	d0,d1                           	| [$2b27: ld      b,a] B := 0
 	rts                                    	| [$2b28: ret] return
