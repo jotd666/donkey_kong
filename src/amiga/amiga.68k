@@ -949,7 +949,7 @@ PREV_Y = 1
 PREV_IS_BOB = 2
 
 update_bobs:
-	lea		bob_previous_positions(pc),a4
+	move.l		bob_previous_drawed_positions(pc),a4
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -966,7 +966,7 @@ update_bobs:
 	
 	
 	lea		bob_table,a4
-	lea		bob_previous_positions(pc),a6
+	move.l	bob_previous_drawed_positions(pc),a6
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 
@@ -1596,9 +1596,6 @@ osd_sound_start:
 	bsr		osd_sound_stop
 	jra	1b
 	
-
-bob_previous_positions:
-	ds.l	NB_TARGET_SPRITES
 	
 osd_sound_stop:
 	movem.l	d0/a0/a6,-(a7)
@@ -1617,8 +1614,10 @@ switch_screen_buffers:
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
+	* also toggle previous sprite positions
 	lea		bg_drawed_screen_ptr(pc),a0
-	lea		bg_displayed_screen_ptr(pc),a4
+	lea		bob_previous_positions_1(pc),a2
+	lea		bob_previous_positions_2(pc),a3
 	lea		bg_screen_data_1,a1
 	lea		bg_screen_data_2,a5
 	* also switch previous state memory
@@ -1627,9 +1626,12 @@ switch_screen_buffers:
 	* screen data 1 is displayed screen
 	* set it to drawn screen
 	exg		a1,a5
+	exg		a2,a3
 2:
 	move.l	a1,(a0)
-	move.l	a5,(a4)
+	move.l	a5,bg_displayed_screen_ptr
+	move.l	a3,bob_previous_displayed_positions
+	move.l	a2,bob_previous_drawed_positions
 	jbsr		set_bitplanes
 	.endif
 	
@@ -2698,6 +2700,21 @@ temp_filename_buffer:
 _end_of_ng_code:
 		
 	.align 2
+
+	
+bob_previous_positions_1:
+	ds.l	NB_TARGET_SPRITES
+bob_previous_drawed_positions:
+	.long	bob_previous_positions_1
+bob_previous_displayed_positions:
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
+	.long	bob_previous_positions_1
+	.else
+	.long	bob_previous_positions_2	
+bob_previous_positions_2:
+	ds.l	NB_TARGET_SPRITES	
+	.endif
+	
 palette:
 	.include "palette.68k"
 
