@@ -1,14 +1,15 @@
 - hammer kills wrong firefox (_1ea0 rivets level)
-- pie factory: moving ladders are completely off (color+Y)
-- playing a while: score seems to have been reset (to confirm)
-- implement sounds
-- add double buffering
+- pie factory: moving ladders are completely off (Y)
+- kludge to switch CLUT index of ladder to 7 when 3 is set
+- same kludge for elevators/conveyors?
+- implement more sounds
 - "50m/75m/100m..." is shifted
 - elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
-- highscore save
 - implement dipswitches
 - insert coin with fire, start with up/down
+- playing a while: score seems to have been reset (to confirm)
 - pause
+- highscore save
 - fix level 22 kill screen: Like most kill screens, this kill screen is 
 the result of integer overflow on an 8 bit variable. 
 The amount of time allowed for any given screen is 

@@ -2430,10 +2430,7 @@ handle_keyboard:
 	bne.b	0f
 	move.w	#0x0FF,_custom+color
 	* level skip
-	* jotd method
-	*move.b	#0x16,gamemode2_600a		| level completed
-	*move.b	#4,end_of_level_counter_6388 | last step of level complete
-	* MAME cheat method, cleaner
+	* MAME cheat method
 	clr.b	number_of_rivets_left_6290
 	move.b	#0x30,mario_y_position_6205
 	st.b	cheat_used
@@ -2442,8 +2439,10 @@ handle_keyboard:
 	cmp.b	#0x51,d0	| F2 key
 	bne.b	0f
 	st.b	cheat_used
+	* give hammer
 	move.w	#0x0FF,_custom+color
-	eor.b	#1,invincible_flag
+	move.b	#1,hammer_active_6217
+	move.b	#1,second_hammer_sprite_6690+1
 	
 0:
 	cmp.b	#0x52,d0	| F3 key

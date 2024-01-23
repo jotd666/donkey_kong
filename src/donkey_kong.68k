@@ -2193,8 +2193,8 @@ l_0450:
 
 l_0464:
 	clr.b	d0                               	| [$0464: xor     a] A := 0
-	move.b	d0,(a0)                         	| [$0465: ld      (hl),a] clear timer
-	addq.w	#1,a0                           	| [$0466: inc     hl] increase address to #6391
+	move.b	d0,(a0)+                         	| [$0465: ld      (hl),a] clear timer
+												| [$0466: inc     hl] increase address to #6391
 	move.b	d0,(a0)                         	| [$0467: ld      (hl),a] clear this one too
 	move.b	barrel_deployment_indicator_6393,d0	| [$0468: ld      a,(barrel_deployment_indicator_6393)] Load Barrel deployment indicator
 	                               	| [$046b: and     a] is a deployment in progress?
@@ -7307,12 +7307,12 @@ l_1e96:
 
 	jbsr	rst_28                            	| [$1e99: rst     $28] jump based on A
 
-	.long	l_1ea0	| 0       | #1EA0
+	.long	item_just_hit_1ea0	| 0       | #1EA0
 	.long	l_1f09	| 1       | #1F09
 	.long	l_1f23	| 2       | #1F23
 
 * arrive right when an item is hit
-l_1ea0:
+item_just_hit_1ea0:
 	lea	start_of_pie_sprites_69b8,a0   	| [$1ea5: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
 	move.b	unknown_6352,d0                 	| [$1ea0: ld      a,(unknown_6352)] load A with ???
 	cmp.b	#0x65,d0                         	| [$1ea3: cp      $65] == #65 ?
@@ -8033,7 +8033,7 @@ l_2259:
 	move.b	d0,(a0)                         	| [$2262: ld      (hl),a] store into the ladder's ???
 	                           	| [$2263: dec     l] HL now has the ladder's ???
 	addq.b	#1,-(a0)                         	| [$2264: inc     (hl)] increase
-	jbsr	l_22bd                            	| [$2265: call    $22bd] ???
+	jbsr	update_ladder_sprite_22bd                            	| [$2265: call    $22bd] ???
 	move.b	#0x78,d0                        	| [$2268: ld      a,$78] A := #78
 	cmp.b	(a0),d0                          	| [$226a: cp      (hl)] == (HL) ?
 	jne	l_2275                             	| [$226b: jp      nz,$2275] no, skip ahead
@@ -8102,7 +8102,7 @@ l_22a2:
 	move.b	#0x02,(a0)+                      	| [$22a9: ld      (hl),$02] else set (HL) to 2
 											| [$22ab: dec     l]
 	subq.b	#1,(a0)                         	| [$22ac: dec     (hl)] decrease ladder Y value - makes ladder move up
-	jbsr	l_22bd                            	| [$22ad: call    $22bd] update the sprite
+	jbsr	update_ladder_sprite_22bd                            	| [$22ad: call    $22bd] update the sprite
 	move.b	#0x68,d0                        	| [$22b0: ld      a,$68] A := #68
 	cmp.b	(a0),d0                          	| [$22b2: cp      (hl)] reached top of ladder movement?
 	beq.b	0f                               	| [...]
@@ -8122,7 +8122,7 @@ l_22a2:
 * called from #22AD above and from #2265
 * HL is preloaded with ladder Y position
 
-l_22bd:
+update_ladder_sprite_22bd:
 	move.b	(a0),d0                         	| [$22bd: ld      a,(hl)] load A with ladder Y value
 	move.l	a0,d7
 	sub.l	#ram_6000,d7
@@ -9262,7 +9262,7 @@ l_2808:
 	move.b	d0,d2                           	| [$280f: ld      c,a] copy to C
 	move.b	#0x04,d5
 	move.b	#0x07,d6                      	| [$2810: ld      hl,$0407] H := 4, L := 7
-	jbsr	l_286f                            	| [$2813: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
+	jbsr	check_collisions_for_enemies_286f                            	| [$2813: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
 	tst.b	invincible_flag
 	bne.b	1f
 	tst.b	d0                               	| [$2816: and     a] was there a collision ?
@@ -9295,18 +9295,19 @@ l_2826:
 	rts                                    	| [$2831: ret] return
 
 * hammer is active, do stuff for it
-
+* D1: 1 or 2 depending on the hammer being used
 l_2832:
 	move.b	(0x05,a3),d2                    	| [$2832: ld      c,(iy+$05)] C := +5 (X position???)
 	move.b	(0x09,a3),d5                    	| [$2835: ld      h,(iy+$09)] H := +9 (size?  width?)
 	move.b	(0x0a,a3),d6                    	| [$2838: ld      l,(iy+$0a)] L := +A (size?  height?)
-	jbsr	l_286f                            	| [$283b: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
+	jbsr	check_collisions_for_enemies_286f                            	| [$283b: call    $286f] checks for collisions based on the screen.  A := 1 if collision, otherwise zero
 	tst.b	d0                               	| [$283e: and     a] was there a collision?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$283f: ret     z] no, return [...]
 0:
 
 * hammer hit something
+* A2 is loaded with the array of the item which was hit
 
 	move.b	d0,item_hit_indicator_unknown_6350	| [$2840: ld      (item_hit_indicator_unknown_6350),a] store A into item hit indicator ???
 	move.b	counter_for_use_later_63b9,d0   	| [$2843: ld      a,(counter_for_use_later_63b9)] load A with the number of total items checked for collision?
@@ -9360,7 +9361,7 @@ l_286b:
 * called when hammer active from #283B - check for hammer collision with enemy sprites
 
 
-l_286f:
+check_collisions_for_enemies_286f:
 	move.b	screen_number_6227,d0           	| [$286f: ld      a,(screen_number_6227)] load A with screen number
 
 	movem.w	d5/d6,-(sp)                        	| [$2872: push    hl] save HL
@@ -9383,19 +9384,19 @@ l_2880:
 	move.b	d0,counter_for_use_later_63b9   	| [$2884: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$2887: ld      de,$0020] load DE with offset of #20 32
 	lea	start_of_barrel_info_table_6700,a2	| [$288a: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrels
-	jbsr	check_for_collision_with_enemies_2913                            	| [$288e: call    $2913] check for collisions with barrels
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$288e: call    $2913] check for collisions with barrels
 	move.b	#0x05,d1                        	| [$2891: ld      b,$05] B := 5
 	move.b	d1,d0                           	| [$2893: ld      a,b] A := 5
 	move.b	d0,counter_for_use_later_63b9   	| [$2894: ld      (counter_for_use_later_63b9),a] store counter for use later
-	move.b	#0x20,d4                        	| [$2897: ld      e,$20] E := #20
+	move.b	#0x20,d3                        	| [$2897: ld      e,$20] E := #20
 	lea	start_of_fires_table_6400,a2   	| [$2899: ld      ix,start_of_fires_table_6400] load IX with start of fires
-	jbsr	check_for_collision_with_enemies_2913                            	| [$289d: call    $2913] check for collisions with fires
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$289d: call    $2913] check for collisions with fires
 	move.b	#0x01,d1                        	| [$28a0: ld      b,$01] B := 1
 	move.b	d1,d0                           	| [$28a2: ld      a,b] A := 1
 	move.b	d0,counter_for_use_later_63b9   	| [$28a3: ld      (counter_for_use_later_63b9),a] store counter for use later
-	clr.b	d4                               	| [$28a6: ld      e,$00] E := #00
+	clr.b	d3                              	| [$28a6: ld      e,$00] E := #00
 	lea	oil_can_address_66a0,a2        	| [$28a8: ld      ix,oil_can_address_66a0] load IX with oil can fire location
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28ac: call    $2913] check for collision with oil can fire
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28ac: call    $2913] check for collision with oil can fire
 	rts                                    	| [$28af: ret] return
 
 * jump here from #3E8C when jumping/hammering ? on the pie factory
@@ -9407,19 +9408,19 @@ l_28b0:
 	move.b	d0,counter_for_use_later_63b9   	| [$28b4: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$28b7: ld      de,$0020] load DE with offset 32
 	lea	start_of_fires_table_6400,a2   	| [$28ba: ld      ix,start_of_fires_table_6400] load IX with start of fires
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28be: call    $2913] check for collisions with fires
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28be: call    $2913] check for collisions with fires
 	move.b	#0x06,d1                        	| [$28c1: ld      b,$06] B := 6
 	move.b	d1,d0                           	| [$28c3: ld      a,b] A := 6
 	move.b	d0,counter_for_use_later_63b9   	| [$28c4: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.b	#0x10,d3                        	| [$28c7: ld      e,$10] E := #10
 	lea	start_of_pies_65a0,a2          	| [$28c9: ld      ix,start_of_pies_65a0] load IX with start of pies
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28cd: call    $2913] check for collisions with pies
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28cd: call    $2913] check for collisions with pies
 	move.b	#0x01,d1                        	| [$28d0: ld      b,$01] B := 1
 	move.b	d1,d0                           	| [$28d2: ld      a,b] A := 1
 	move.b	d0,counter_for_use_later_63b9   	| [$28d3: ld      (counter_for_use_later_63b9),a] store counter for use later
 	clr.b	d3                               	| [$28d6: ld      e,$00] E := 0
 	lea	oil_can_address_66a0,a2        	| [$28d8: ld      ix,oil_can_address_66a0] load IX with oil can address
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28dc: call    $2913] check for collision with oil can fire
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28dc: call    $2913] check for collision with oil can fire
 	rts                                    	| [$28df: ret] return
 
 * jump here from #2873 or #3E8C when on the elevators
@@ -9431,13 +9432,13 @@ l_28e0:
 	move.b	d0,counter_for_use_later_63b9   	| [$28e4: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$28e7: ld      de,$0020] load offset 32
 	lea	start_of_fires_table_6400,a2   	| [$28ea: ld      ix,start_of_fires_table_6400] load start of addresses for fires
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28ee: call    $2913] check for collisions with fires
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28ee: call    $2913] check for collisions with fires
 	move.b	#0x0a,d1                        	| [$28f1: ld      b,$0a] B := #0A
 	move.b	d1,d0                           	| [$28f3: ld      a,b] A := #0A
 	move.b	d0,counter_for_use_later_63b9   	| [$28f4: ld      (counter_for_use_later_63b9),a] store counter for use later
 	move.b	#0x10,d3                        	| [$28f7: ld      e,$10] E := #10
 	lea	start_of_bouncer_memory_area_6500,a2	| [$28f9: ld      ix,start_of_bouncer_memory_area_6500] load IX with start of addresses for springs
-	jbsr	check_for_collision_with_enemies_2913                            	| [$28fd: call    $2913] check for collisions with springs
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28fd: call    $2913] check for collisions with springs
 	rts                                    	| [$2900: ret] return
 
 * jump here from #3E8C when on the rivets
@@ -9450,7 +9451,7 @@ l_2901:
 	move.b	d0,counter_for_use_later_63b9   	| [$2905: ld      (counter_for_use_later_63b9),a] store 7 into counter for use later
 	move.w	#0x0020,d3                      	| [$2908: ld      de,$0020] load DE with offset 32
 	lea	start_of_fires_table_6400,a2   	| [$290b: ld      ix,start_of_fires_table_6400] load IX with start of firefox arrays
-	jbsr	check_for_collision_with_enemies_2913                            	| [$290f: call    $2913] check for collisions with firefoxes/squares
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$290f: call    $2913] check for collisions with firefoxes/squares
 	rts                                    	| [$2912: ret] return
 
 * core routine gets called a lot
@@ -9460,9 +9461,9 @@ l_2901:
 * d5/d6 are used
 * seems to return a value in A as either 0 or 1
 * check for sprite collision ???
+* a2: array of enemies to check (sprite shadow table, ex 6400 or 6700, depends on levels)
 
-
-check_for_collision_with_enemies_2913:
+check_for_collision_with_enemy_type_2913:
 
 	move.l	a2,-(sp)                        	| [$2913: push    ix] push IX to stack
 
@@ -9555,7 +9556,7 @@ is_hammer_grabbed_2974:
 	move.b	#0x02,d1                        	| [$297f: ld      b,$02] B := 2 for the 2 hammers (?)
 	move.w	#0x0010,d3                      	| [$2981: ld      de,$0010] offset for each hammer 16
 	lea	software_address_of_hammer_sprite_6680,a2	| [$2984: ld      ix,software_address_of_hammer_sprite_6680] load IX with start of hammer sprites ?
-	jbsr	check_for_collision_with_enemies_2913                            	| [$2988: call    $2913] check for collision with hammer
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$2988: call    $2913] check for collision with hammer
 	rts                                    	| [$298b: ret] return
 
 * called from #323E
@@ -9690,7 +9691,7 @@ l_2a22:
 	move.b	#0x06,d1                        	| [$2a22: ld      b,$06] B := 6
 	move.w	#0x0010,d3                      	| [$2a24: ld      de,$0010] load DE with offset 16
 	lea	elevator_array_start_6600,a2   	| [$2a27: ld      ix,elevator_array_start_6600] load IX with elevator array start
-	jbsr	check_for_collision_with_enemies_2913                            	| [$2a2b: call    $2913] check for collision with elevators
+	jbsr	check_for_collision_with_enemy_type_2913                            	| [$2a2b: call    $2913] check for collision with elevators
 	rts                                    	| [$2a2e: ret] return
 
 * sub called during a barrel roll from #2057
