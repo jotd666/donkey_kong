@@ -51,7 +51,7 @@ ONE_TICK = 1
 	.endif
 	
 
-OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
+OPT_ENABLE_DOUBLE_BUFFERING = 1
 
 _custom = 0xDFF000
 
@@ -648,7 +648,7 @@ _vblank:
 	jbsr		donkey_kong_irq
 	clr.b	interrupt_mode
 	
-	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	bsr		switch_screen_buffers
 	.endif
 23:
@@ -1614,7 +1614,7 @@ osd_sound_stop:
 
 
 switch_screen_buffers:	
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
 	lea		bg_drawed_screen_ptr(pc),a0
@@ -2021,7 +2021,12 @@ update_bg_tile:
 	
 	* we update the drawed bitplanes and also the backbuffer
 	* that we use to erase the sprites with
+	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
 	move.l	bg_drawed_screen_ptr(pc),a1
+	.else
+	lea		bg_screen_data_1,a1
+	lea		bg_screen_data_2,a3
+	.endif
 	lea		bg_background_data,a2
 	* D3 = Y
 
@@ -2031,6 +2036,9 @@ update_bg_tile:
 	add.w	d3,d7
 	add.w	d7,a1
 	add.w	d7,a2
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d7,a3
+	.endif
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
@@ -2050,11 +2058,17 @@ update_bg_tile:
 	.rept	8
 	move.b	(a0)+,d0
 	move.b	d0,(offset,a1)	
-	move.b	d0,(offset,a2)	
+	move.b	d0,(offset,a2)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	move.b	d0,(offset,a3)
+	.endif
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
 	add.w	d5,a2
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a3
+	.endif
 	dbf		d4,4b
 0:
 	rts
@@ -2069,10 +2083,16 @@ update_bg_tile:
 	.rept	8
 	clr.b	(offset,a1)
 	clr.b	(offset,a2)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	clr.b	(offset,a3)
+	.endif
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	add.w	d5,a1
 	add.w	d5,a2
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	add.w	d5,a3
+	.endif
 	dbf		d4,111b
 2:
 	rts
@@ -2636,7 +2656,7 @@ one_out_of_five:
 bg_drawed_screen_ptr:
 	.long	bg_screen_data_1
 bg_displayed_screen_ptr:
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	.long	bg_screen_data_2
 	.else
 	.long	bg_screen_data_1
@@ -2821,7 +2841,7 @@ bg_background_data:
 bg_screen_data_1:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
-	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 bg_screen_data_2:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
