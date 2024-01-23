@@ -1502,16 +1502,7 @@ test_sprites:
 	.endif
 
 osd_sound_start:
-	cmp.b	#CREDIT_SND,d0
-	bcs.b	0f			| always play sampled sounds
-	tst.b	music_playing
-	beq.b	0f
-	* don't play AY-sound when music is playing
-	rts
-0:
 	movem.l	d0/d1/a0/a6,-(a7)
-	tst.b	d0
-	jmi	7f		| should stop the sound
 	and.w	#0xFF,d0
 	lea		_custom,a6
 	

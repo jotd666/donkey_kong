@@ -1582,7 +1582,8 @@ l_0189:
 
 	jbsr	clear_all_sounds_011c                            	| [$0195: call    $011c] no, then clear all sounds
 	move.b	#0x03,d0                        	| [$0198: ld      a,$03] load sound duration
-	move.b	d0,play_sound_for_bouncer_6083  	| [$019a: ld      (play_sound_for_bouncer_6083),a] plays the coin insert sound
+	move.w	#CREDIT_SND,D0
+	jbsr	osd_sound_start  	| [$019a: ld      (play_sound_for_bouncer_6083),a] plays the coin insert sound
 
 l_019d:
 	move.l	(sp)+,a0                        	| [$019d: pop     hl] restore HL from stack
@@ -2696,6 +2697,7 @@ l_066a:
 * arrive here when timer runs below 1000
 
 	move.b	#0x03,d0                        	| [$0678: ld      a,$03] else load A with warning sound
+	*jbsr	osd_sound_start
 	move.b	d0,background_music_value_6089  	| [$067a: ld      (background_music_value_6089),a] set warning sound
 	move.b	#0x70,d0                        	| [$067d: ld      a,$70] A := #70 = color code for red?
 	WRITE_TO_SCREEN	0x7486                       	| [$067f: ld      ($7486),a] store A into #7486 = paint score red (MSB) ?
@@ -4988,8 +4990,10 @@ l_128b:
 	move.b	#0x08,d0                        	| [$129e: ld      a,$08] load A with 8 frames of delay
 	move.b	d0,waittimermsb_6009            	| [$12a0: ld      (waittimermsb_6009),a] store into timer for sound delay
 	jbsr	l_30bd                            	| [$12a3: call    $30bd] clear sprites ?
-	move.b	#0x03,d0                        	| [$12a6: ld      a,$03] load A with duration of sound
-	move.b	d0,play_death_sound_6088        	| [$12a8: ld      (play_death_sound_6088),a] play death sound
+	                        	| [$12a6: ld      a,$03] load A with duration of sound
+	move.w	#DEAD_SND,d0
+	jbsr	osd_sound_start
+	        	| [$12a8: ld      (play_death_sound_6088),a] play death sound
 	rts                                    	| [$12ab: ret] return
 
 * arrive here when mario dies
@@ -5863,6 +5867,7 @@ l_1708:
 	move.b	#0x10,d0                        	| [$1724: ld      a,$10] A := #10
 	jbsr	clear_help_0514                            	| [$1726: call    $0514] clear "help" that the girl yells
 	lea	sound_buffer_address_608a,a0   	| [$1729: ld      hl,sound_buffer_address_608a] load sound address
+	**jbsr	osd_sound_start
 	move.b	#0x07,(a0)                      	| [$172c: ld      (hl),$07] play sound for end of level
 	addq.w	#1,a0                           	| [$172e: inc     hl] HL now has sound duration
 	move.b	#0x03,(a0)                      	| [$172f: ld      (hl),$03] set duration to 3
@@ -5983,6 +5988,7 @@ l_17b6:
 
 	jbsr	clear_all_sounds_011c                            	| [$17b7: call    $011c] clear all sounds
 	lea	sound_buffer_address_608a,a0   	| [$17ba: ld      hl,sound_buffer_address_608a] load HL with sound address
+	*jbsr	osd_sound_start
 	move.b	#0x0e,(a0)+                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
 												| [$17bf: inc     hl] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$17c0: ld      (hl),$03] set duration to 3
@@ -6199,10 +6205,12 @@ l_1910:
 0:
 
 	lea	sound_buffer_address_608a,a0   	| [$1913: ld      hl,sound_buffer_address_608a] load HL with sound address
+	*jbsr	osd_sound_start
 	move.b	#0x0c,(a0)                      	| [$1916: ld      (hl),$0c] play sound for rivets cleared
 	move.b	level_number_6229,d0       	| [$1918: ld      a,(level_number_6229)] load A with level #
 	ror.b	#1,d0                            	| [$191b: rrca] roll a right .  is this an odd level ?
 	jcs	l_1920                             	| [$191c: jr      c,$1920] Yes, skip next step
+	*jbsr	osd_sound_start
 
 	move.b	#0x05,(a0)                      	| [$191e: ld      (hl),$05] else play sound for even numbered rivets
 
@@ -7380,6 +7388,9 @@ l_1ede_2:
 	                           	| [$1efd: inc     l] HL := #6347 = counter for number of times to change between circle and small circle
 	move.b	#0x05,(a0)                      	| [$1efe: ld      (hl),$05] set to 5
 	lea	sound_buffer_address_608a,a0   	| [$1f00: ld      hl,sound_buffer_address_608a] load HL with sound buffer address
+	move.w	#KILL_ENEMY_SND,d0
+	jbsr	osd_sound_start
+
 	move.b	#0x06,(a0)+                      	| [$1f03: ld      (hl),$06] play sound for hammering object
 	                           	| [$1f05: inc     l] HL := 608B = sound duration
 	move.b	#0x03,(a0)                      	| [$1f06: ld      (hl),$03] set duration to 3
@@ -9514,6 +9525,7 @@ l_2954:
 	jbsr	is_hammer_grabbed_2974              | [$2957: call    $2974] load A with 1 if hammer is grabbed, 0 if no grab
 	move.b	d0,mario_is_grabbing_the_hammer_until_he_lands_6218	| [$295a: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into hammer grabbing indicator
 	ror.b	#2,d0                            	| [$295d: rrca] * 2
+	*jbsr	osd_sound_start
 	move.b	d0,play_sound_for_bonus_6085    	| [$295f: ld      (play_sound_for_bonus_6085),a] play sound for bonus
 	move.b	d1,d0                           	| [$2962: ld      a,b] A := B .  this indicates which hammer was grabbed if any
 	                               	| [$2963: and     a] was a hammer grabbed?
@@ -10563,8 +10575,9 @@ l_2e4b:
 
 	move.b	#0x04,(0x0d,a2)                 	| [$2e5f: ld      (ix+$0d),$04] set +D to 4 (???)
 	clr.b	d0                               	| [$2e63: xor     a] A := 0
-	move.b	d0,play_sound_for_bouncer_6083  	| [$2e64: ld      (play_sound_for_bouncer_6083),a] clear sound of bouncer
+								| [$2e64: ld      (play_sound_for_bouncer_6083),a] clear sound of bouncer
 	move.b	#0x03,d0                        	| [$2e67: ld      a,$03] load sound duration of 3
+	*jbsr	osd_sound_start
 	move.b	d0,play_sound_for_falling_bouncer_6084	| [$2e69: ld      (play_sound_for_falling_bouncer_6084),a] play sound for falling bouncer
 
 l_2e6c:
@@ -10602,7 +10615,7 @@ l_2e84:
 l_2e9c:
 	lea	game_rom+0x39aa,a0                      	| [$2e9c: ld      hl,$39aa] load HL with start of table data
 	move.b	#0x03,d0                        	| [$2e9f: ld      a,$03] load sound duration of 3
-	move.b	d0,play_sound_for_bouncer_6083  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a] play sound for bouncer
+	*jbsr	osd_sound_start  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a] play sound for bouncer
 	jra	l_2e4b                             	| [$2ea4: jp      $2e4b] jump back
 
 * jump here from #2E16

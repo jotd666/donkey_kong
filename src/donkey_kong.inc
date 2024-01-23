@@ -44,23 +44,12 @@
 
 
 
-	.equ	GUARD_KILLED_SND,                     0
-	.equ	PICKAXE_SND,                          1
-	.equ	PLAYER_CLIMB_SND,                     2
-	.equ	PLAYER_WALK_SND,                      3
-	.equ	PLAYER_KILLED_TALK_SND,               4
-	.equ	REWARD_TALK_SND,                      5
-	.equ	FALL_IN_WAGON_SND,                    6
-	.equ	PLAYER_GRABS_HANDLE_SND,              7
-	.equ	CREDIT_SND,                           8
-	.equ	TIME_WARN_SND,                        9
-	.equ	TAKE_BAG_SND,                         10
-	.equ	REWARD_TUNE_SND,                      11
-	.equ	PLAYER_KILLED_TUNE_SND,     		  12
-	.equ	TUNE1_SND,			                  13
-	.equ	TUNE2_SND,			                  14
-	.equ	GUARD_CLIMB_SND,                      15
-	.equ	GUARD_WALK_SND,                       16
+	.equ	BOOM_SND,                     0
+	.equ	CREDIT_SND,                          1
+	.equ	DEAD_SND,                     2
+	.equ	JUMPED_OVER_SND,                      3
+	.equ	KILL_ENEMY_SND,               4
+	.equ	START_SND,                      5
 
 
 
