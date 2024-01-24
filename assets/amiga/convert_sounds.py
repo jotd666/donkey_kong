@@ -31,6 +31,9 @@ sound_dict = {
 "JUMPED_OVER_SND"             :{"index":3,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "KILL_ENEMY_SND"             :{"index":4,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "START_SND"             :{"index":5,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"JUMPING_SND"             :{"index":6,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"WALKING_SND"             :{"index":7,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
+"BOUNCER_SND"             :{"index":8,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
 
 
 }

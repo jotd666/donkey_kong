@@ -16,6 +16,7 @@ AFB_68020 = 1
 NO68020 = 1
 
 SPRITE_Y_CORRECTION = 0
+SPRITE_X_CORRECTION = 0
 
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x7400
@@ -956,6 +957,9 @@ update_bobs:
 	moveq	#0,d0
 	move.b	(PREV_X,a4),d0
 	beq.b	11f		| y=0: inactive
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif	
 	moveq	#0,d1
 	move.b	(PREV_Y,a4),d1
 	* clear 16x16 area where the sprite was
@@ -973,6 +977,10 @@ update_bobs:
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
 	move.b	d0,(PREV_X,a6)
 	jeq		211f				| x=0: don't show
+
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif
 	
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2

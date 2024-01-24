@@ -1,13 +1,23 @@
-- hammer kills wrong firefox (_1ea0 rivets level)
-- pie factory: moving ladders are completely off (Y)
-- kludge to switch CLUT index of ladder to 7 when 3 is set
-- same kludge for elevators/conveyors?
+- hammer kills wrong firefox/pie (_1ea0 rivets level)
+  ok for barrels & fire
+- pie factory: moving ladders are shifted by 1, fixing the shifting causes issues ATM
+- pie factory: pies not erased at some point
+- playing a while: score seems to have been reset (to confirm)
+
+- crash on game over:
+	move.b	#0x03,d1                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
+	move.b	#0x04,d2                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
+draw_digits_0583:
+	move.b	(a0),d0          <= wrong addy
+	ror.b	#4,d0                            	| [$0584: rrca] * 4
+	
 - implement more sounds
 - "50m/75m/100m..." is shifted
 - elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
+  maybe mask issue when drawing reverted sprites?
 - implement dipswitches
+- girders: barrels change color just before rolling into oil can
 - insert coin with fire, start with up/down
-- playing a while: score seems to have been reset (to confirm)
 - pause
 - highscore save
 - fix level 22 kill screen: Like most kill screens, this kill screen is 

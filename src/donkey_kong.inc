@@ -15,6 +15,7 @@
 	OPT_START_WITH_CONVEYORS=0			| LEAVE AT 0!!!
 	OPT_START_WITH_ELEVATORS=0			| LEAVE AT 0!!!
 	OPT_START_LEVEL=1              | LEAVE AT 1!!!
+	OPT_START_SCREEN=1              | LEAVE AT 1!!!
 	.else
 	
     * hardware options
@@ -28,8 +29,8 @@
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
-	OPT_START_WITH_CONVEYORS=0
-	OPT_START_WITH_ELEVATORS=1
+	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
+	OPT_START_SCREEN=1
 
 	.endif
 	
@@ -50,6 +51,9 @@
 	.equ	JUMPED_OVER_SND,                      3
 	.equ	KILL_ENEMY_SND,               4
 	.equ	START_SND,                      5
+	.equ	JUMPING_SND,                      6
+	.equ	WALKING_SND,                      7
+	.equ	BOUNCER_SND,                      8
 
 
 

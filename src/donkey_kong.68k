@@ -2173,7 +2173,8 @@ l_0448:
 	jbsr	update_kong_sprites_004e                            	| [$0448: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$044b: ld      a,$03] load sound duration of 3
 	move.b	d0,boom_sound_address_6082      	| [$044d: ld      (boom_sound_address_6082),a] play boom sound using sound buffer
-
+	move.w	#BOOM_SND,d0
+	jbsr	osd_sound_start
 l_0450:
 	move.b	screen_number_6227,d0           	| [$0450: ld      a,(screen_number_6227)] load A with screen number
 	ror.b	#1,d0                            	| [$0453: rrca] is this the girders or the elevators ?
@@ -3614,6 +3615,9 @@ l_0b38:
 
 	move.b	#0x03,d0                        	| [$0b43: ld      a,$03] set boom sound duration
 	move.b	d0,boom_sound_address_6082      	| [$0b45: ld      (boom_sound_address_6082),a] play boom sound
+	move.w	#BOOM_SND,d0
+	jbsr	osd_sound_start
+	
 	lea	game_rom+0x392c,a1                      	| [$0b48: ld      de,$392c] load DE with table data start for first angled girder
 	jbsr	draw_the_screen_0da7                            	| [$0b4b: call    $0da7] draw the angled girder
 	move.b	#0x10,d0                        	| [$0b4e: ld      a,$10] A := #10 = clear character
@@ -3659,6 +3663,8 @@ l_0b86:
 	lea	game_rom+0x38cb,a0                      	| [$0b86: ld      hl,$38cb] load HL with start of table data
 	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
 	move.b	#0x03,d0                        	| [$0b8c: ld      a,$03] set boom sound duration
+	move.w	#BOOM_SND,d0
+	jbsr	osd_sound_start
 	move.b	d0,boom_sound_address_6082      	| [$0b8e: ld      (boom_sound_address_6082),a] play boom sound
 	lea	game_rom+0x38dc,a0                      	| [$0b91: ld      hl,$38dc] load HL with start of table data
 	move.b	kong_bounce_counter_638d,d0     	| [$0b94: ld      a,(kong_bounce_counter_638d)] load A with kong bounce counter
@@ -3708,8 +3714,8 @@ l_0bd1:
 	jbsr	rst_18                            	| [$0bd1: rst     $18] count down timer and only continue here if zero, else RET.  HL is loaded with WaitTimerMSB address
 	clr.b	d0                               	| [$0bd2: xor     a] A := 0
 	move.b	d0,intro_screen_counter_6385    	| [$0bd3: ld      (intro_screen_counter_6385),a] reset intro screen counter to zero
-	addq.b	#1,(a0)                         	| [$0bd6: inc     (hl)] increase timer in WaitTimerMSB
-	addq.w	#1,a0                           	| [$0bd7: inc     hl] HL := GameMode2
+	addq.b	#1,(a0)+                         	| [$0bd6: inc     (hl)] increase timer in WaitTimerMSB
+	                           	| [$0bd7: inc     hl] HL := GameMode2
 	addq.b	#1,(a0)                         	| [$0bd8: inc     (hl)] increase game mode2 (to 8?)
 	rts                                    	| [$0bd9: ret] return
 
@@ -3869,25 +3875,32 @@ l_0c92:
 	jbsr	osd_update_palette_bank
 	move.b	screen_number_6227,d0           	| [$0ca7: ld      a,(screen_number_6227)] load A with screen number
 	subq.b	#1,d0                           	| [$0caa: dec     a] decrease by 1
-	.ifne	OPT_START_WITH_CONVEYORS
+
+	.ifeq	OPT_START_SCREEN-2
 	move.b	#2,screen_number_6227
 	jra		draw_conveyors_screen_0cdf
-	.else
+	.endif
+
+	.ifeq	OPT_START_SCREEN-3
+	move.b	#3,screen_number_6227
+	jra	l_0cf2
+	.endif
+
+	.ifeq	OPT_START_SCREEN-4
+	move.b	#4,screen_number_6227
+	jra	rivets_0cb6
+	.endif
+
 	jeq	l_0cd4                             	| [$0cab: jp      z,$0cd4] if zero jump to #0Cd4 - we were on girders - continue on #0CC6
 
 	subq.b	#1,d0                           	| [$0cae: dec     a] if not decrease a again
 	jeq	draw_conveyors_screen_0cdf                             	| [$0caf: jp      z,$0cdf] if zero jump to #0CDf - we were on pie - continue on #0CC6
-	.endif
 
-	.ifne	OPT_START_WITH_CONVEYORS
-	move.b	#3,screen_number_6227
-	jra	l_0cf2
-	.else
+
 	subq.b	#1,d0                           	| [$0cb2: dec     a] if not decrease a again
 	jeq	l_0cf2                             	| [$0cb3: jp      z,$0cf2] iF zero jump to #0CF2 - we were on elevators - continue on #0CC6
-	.endif
                                         * else we are on rivets
-
+rivets_0cb6:
 	jbsr	l_0d43                            	| [$0cb6: call    $0d43] draws the blue vertical bars next to kong on rivets
 	lea	reg_palette_a,a0               	| [$0cb9: ld      hl,reg_palette_a] load HL with palette bank selector
 	move.b	#0x01,(a0)                      	| [$0cbc: ld      (hl),$01] set palette bank selector
@@ -6718,6 +6731,8 @@ l_1b8a:
 	move.b	d0,unknown_620e                 	| [$1ba9: ld      (unknown_620e),a] save mario's Y position when jump
 	lea	sound_buffer_address_for_jumping_6081,a0	| [$1bac: ld      hl,sound_buffer_address_for_jumping_6081] load HL with sound buffer address for jumping
 	move.b	#0x03,(a0)                      	| [$1baf: ld      (hl),$03] load sound buffer jumping sound for 3 units (3 frames?)
+	move.w	#JUMPING_SND,d0
+	jbsr	osd_sound_start
 	rts                                    	| [$1bb1: ret] return to main routine (#1983)
 
 * arrive here when mario is already jumping from #1AC7
@@ -6791,6 +6806,8 @@ l_1c05:
 	move.b	#0x01,d0                        	| [$1c2a: ld      a,$01] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1c2c: ld      (bonus_indicator_6340),a] store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 	move.b	d0,bonus_sound_indicator_6225   	| [$1c2f: ld      (bonus_sound_indicator_6225),a] store into bonus sound indicator
+	move.w	#JUMPED_OVER_SND,d0
+	jbsr	osd_sound_start
 
 	nop                                    	| [$1c32: nop] No operation [what was here ???]
 
@@ -7057,6 +7074,8 @@ l_1d8a:
 l_1d8f:
 	move.b	#0x03,d0                        	| [$1d8f: ld      a,$03] load sound duration of 3 for walking
 	move.b	d0,walking_sound_buffer_6080    	| [$1d91: ld      (walking_sound_buffer_6080),a] store into walking sound buffer
+	move.w	#WALKING_SND,d0
+	jbsr	osd_sound_start
 	rts                                    	| [$1d94: ret] return
 
 * arrive here when walking over a rivet, not jumping.  from #1AB9, or from #1C70
@@ -7130,6 +7149,7 @@ l_1dc9:
 
 	lea	play_sound_for_bonus_6085,a0   	| [$1de2: ld      hl,play_sound_for_bonus_6085] else load HL with bonus sound address
 	move.b	#0x03,(a0)                      	| [$1de5: ld      (hl),$03] play bonus sound for 3 duration
+	*jbsr	osd_sound_start
 	move.b	level_number_6229,d0       	| [$1de7: ld      a,(level_number_6229)] load A with level #
 	subq.b	#1,d0                           	| [$1dea: dec     a] decrease A.  is this level 1 ?
 	jeq	l_1e00                             	| [$1deb: jp      z,$1e00] yes, jump ahead for 300 pts
@@ -7211,6 +7231,7 @@ set_bonus_score_sprite_1e36:
 	move.b	d2,(a0)                         	| [$1e40: ld      (hl),c] store Y position
 	move.b	#0x05,d0                        	| [$1e41: ld      a,$05] A := 5 = binary 0101
 	jbsr	only_continues_if_given_level_0030                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
+	*jbsr	osd_sound_start
 	lea	play_sound_for_bonus_6085,a0   	| [$1e44: ld      hl,play_sound_for_bonus_6085] load HL with bonus sound address
 	move.b	#0x03,(a0)                      	| [$1e47: ld      (hl),$03] play bonus sound for 3 duration
 l_1e49:
@@ -7967,13 +7988,13 @@ l_2219:
 	move.l	a0,-(sp)                        	| [$2219: push    hl] save HL
 	jbsr	rst_28                            	| [$221a: rst     $28] jump based on A
 
-	.long	l_2227  | #2227         A = 0   ladder is all the way up
-	.long	l_2259  | #2259         A = 1   ladder is moving down
-	.long	l_2299  | #2299         A = 2   ladder is all the way down
-	.long	l_22a2  | #22A2         A = 3   ladder is moving up
+	.long	ladder_up_2227  | #2227         A = 0   ladder is all the way up
+	.long	ladder_moving_down_2259  | #2259         A = 1   ladder is moving down
+	.long	ladder_down_2299  | #2299         A = 2   ladder is all the way down
+	.long	ladder_moving_up_22a2  | #22A2         A = 3   ladder is moving up
 
 * ladder is all the way up
-l_2227:
+ladder_up_2227:
 	move.l	(sp)+,a0                        	| [$2227: pop     hl] restore HL - it has the ladder address
 	addq.w	#1,a0                           	| [$2228: inc     l] HL := #6289 or #6281 - timer for movement ???
 	subq.b	#1,(a0)                         	| [$2229: dec     (hl)] decrement.  at zero ?
@@ -8021,7 +8042,7 @@ l_2257:
 
 * arrive from #221A when ladder is moving down
 
-l_2259:
+ladder_moving_down_2259:
 	move.l	(sp)+,a0                        	| [$2259: pop     hl] restore HL = ladder status
 	addq.w	#4,a0                           	| [$225a: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$225e: dec     (hl)] decrease.  at zero?
@@ -8076,7 +8097,7 @@ l_2295_2:
 
 * arrive from #221A when ladder is all the way down
 
-l_2299:
+ladder_down_2299:
 	move.l	(sp)+,a0                        	| [$2299: pop     hl] restore HL
 	move.b	rngtimer1_6018,d0               	| [$229a: ld      a,(rngtimer1_6018)] load A with random timer
 	and.b	#0x3c,d0                         	| [$229d: and     $3c] mask bits.  result zero?
@@ -8091,7 +8112,7 @@ l_2299:
 * a rectractable ladder is moving up
 * HL popped from stack is either 6280 for left ladder or 6288 for right ladder
 
-l_22a2:
+ladder_moving_up_22a2:
 	move.l	(sp)+,a0                        	| [$22a2: pop     hl] restore HL
 	addq.w	#4,a0                           	| [$22a3: inc     l] * 4
 	subq.b	#1,(a0)                         	| [$22a7: dec     (hl)] decrease (HL).  zero?
@@ -8099,9 +8120,9 @@ l_22a2:
 	rts                                    	| [$22a8: ret     nz] no, return [...]
 0:
 
-	move.b	#0x02,(a0)+                      	| [$22a9: ld      (hl),$02] else set (HL) to 2
+	move.b	#0x02,(a0)                      	| [$22a9: ld      (hl),$02] else set (HL) to 2
 											| [$22ab: dec     l]
-	subq.b	#1,(a0)                         	| [$22ac: dec     (hl)] decrease ladder Y value - makes ladder move up
+	subq.b	#1,-(a0)                         	| [$22ac: dec     (hl)] decrease ladder Y value - makes ladder move up
 	jbsr	update_ladder_sprite_22bd                            	| [$22ad: call    $22bd] update the sprite
 	move.b	#0x68,d0                        	| [$22b0: ld      a,$68] A := #68
 	cmp.b	(a0),d0                          	| [$22b2: cp      (hl)] reached top of ladder movement?
@@ -8631,6 +8652,8 @@ l_24d0:
 	move.b	d0,(a2)                    	| [$24d0: ld      (ix+$00),a] clear out the barrel active indicator
 	move.b	d0,(0x03,a2)                    	| [$24d3: ld      (ix+$03),a] clear out the barrel X position
 	lea	boom_sound_address_6082,a0     	| [$24d6: ld      hl,boom_sound_address_6082] load HL with boom sound address
+	move.w	#BOOM_SND,d0
+	jbsr	osd_sound_start
 	move.b	#0x03,(a0)                      	| [$24d9: ld      (hl),$03] play boom sound for 3 units
 	move.l	(sp)+,a0                        	| [$24db: pop     hl] get HL from stack
 	move.b	the_oil_can_is_on_fire_6348,d0  	| [$24dc: ld      a,(the_oil_can_is_on_fire_6348)] turns to 1 when the oil can is on fire
@@ -10578,7 +10601,8 @@ l_2e4b:
 	clr.b	d0                               	| [$2e63: xor     a] A := 0
 								| [$2e64: ld      (play_sound_for_bouncer_6083),a] clear sound of bouncer
 	move.b	#0x03,d0                        	| [$2e67: ld      a,$03] load sound duration of 3
-	*jbsr	osd_sound_start
+	move.w	#BOUNCER_SND,d0
+	jbsr	osd_sound_start
 	move.b	d0,play_sound_for_falling_bouncer_6084	| [$2e69: ld      (play_sound_for_falling_bouncer_6084),a] play sound for falling bouncer
 
 l_2e6c:
@@ -12972,11 +12996,11 @@ l_3e99:
 	move.b	#NB_BARRELS,d1                        	| [$3e9e: ld      b,$0a] For B = 1 to #A barrels
 	move.w	#0x0020,d3                      	| [$3ea0: ld      de,$0020] load DE with offset 32
 	lea	start_of_barrel_info_table_6700,a2	| [$3ea3: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel info table
-	jbsr	l_3ec3                            	| [$3ea7: call    $3ec3] call sub below.  check for barrels under jump
+	jbsr	check_enemies_being_jumped_3ec3                            	| [$3ea7: call    $3ec3] call sub below.  check for barrels under jump
 
 	move.b	#0x05,d1                        	| [$3eaa: ld      b,$05] for B = 1 to 5 fires
 	lea	start_of_fires_table_6400,a2   	| [$3eac: ld      ix,start_of_fires_table_6400] start of fires table
-	jbsr	l_3ec3                            	| [$3eb0: call    $3ec3] check for fires being jumped
+	jbsr	check_enemies_being_jumped_3ec3                            	| [$3eb0: call    $3ec3] check for fires being jumped
 
 	move.b	numobstaclesjumped_6060,d0      	| [$3eb3: ld      a,(numobstaclesjumped_6060)] load A with counter for items jumped
 	                               	| [$3eb6: and     a] nothing jumped ?
@@ -13006,7 +13030,7 @@ l_3e99:
 * L is preloaded with height window value ?
 * DE is preloaded with offset to add for next sprite
 
-l_3ec3:
+check_enemies_being_jumped_3ec3:
 	btst.b	#0,(a2)                    	| [$3ec3: bit     0,(ix+$00)] is this barrel/fire active?
 	jeq	l_3efa                             	| [$3ec7: jp      z,$3efa] no, jump ahead to try next one
 
@@ -13043,14 +13067,14 @@ l_3ee9:
 * item was jumped
 
 l_3ef3:
-	move.b	numobstaclesjumped_6060,d0      	| [$3ef3: ld      a,(numobstaclesjumped_6060)] load A with counter of how many barrels/fires jumped
-	addq.b	#1,d0                           	| [$3ef6: inc     a] increase it
-	move.b	d0,numobstaclesjumped_6060      	| [$3ef7: ld      (numobstaclesjumped_6060),a] store
+	      	| [$3ef3: ld      a,(numobstaclesjumped_6060)] load A with counter of how many barrels/fires jumped
+	addq.b	#1,numobstaclesjumped_6060                           	| [$3ef6: inc     a] increase it
+	      	| [$3ef7: ld      (numobstaclesjumped_6060),a] store
 
 l_3efa:
 	add.w	d3,a2                            	| [$3efa: add     ix,de] add offset for next barrel or fire
 	subq.b	#1,d1                           	| [...]
-	jne	l_3ec3                             	| [$3efc: djnz    $3ec3] Next B
+	jne	check_enemies_being_jumped_3ec3                             	| [$3efc: djnz    $3ec3] Next B
 
 	rts                                    	| [$3efe: ret] return
 

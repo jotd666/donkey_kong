@@ -136,10 +136,10 @@ add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True)
 add_sprite_block(0x40,0x44,"flame",[1])  # barrel flame
 
 add_sprite(0x4B,"pie",0xE)
-add_sprite(0x44,"elevator",3)
+add_sprite(0x44,"elevator",0x23)
 add_sprite(0x45,"elevator_conveyor",0xF)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True)
-add_sprite(0x46,"moving_ladder",0x3)
+add_sprite(0x46,"moving_ladder",0x13)
 
 block_dict = {}
 
@@ -362,7 +362,12 @@ if True:
                             break
 
                     # plane list size varies depending on mirror or not
-                    csb[cidx] = plane_list
+                    # we allow to mask as only in some special cases there are clut indexes > 16
+                    # (but seen as masked in sprite dumps. Never mind, we can make them look correct
+                    # just by masking after having used the proper CLUT when creating the bitmap)
+                    # - moving ladder: seems to be 0x13
+                    # - elevator: seems to be 0x23
+                    csb[cidx & 0xF] = plane_list
 
             if dump_sprites:
                 scaled = ImageOps.scale(img,2,0)
