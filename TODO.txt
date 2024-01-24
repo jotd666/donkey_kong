@@ -4,7 +4,11 @@
 - pie factory: pies not erased at some point
 - playing a while: score seems to have been reset (to confirm)
 
-- crash on game over:
+- crash on game over: add F3 instant game over cheat
+
+	* caller: a0 is wrong
+	jbsr	l_057c                            	| [$15ad: call    $057c] ???
+	
 	move.b	#0x03,d1                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
 	move.b	#0x04,d2                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
 draw_digits_0583:

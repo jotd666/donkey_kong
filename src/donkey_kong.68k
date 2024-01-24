@@ -2439,9 +2439,9 @@ l_057c:
 draw_digits_0583:
 	move.b	(a0),d0                         	| [$0583: ld      a,(hl)] get digit
 	ror.b	#4,d0                            	| [$0584: rrca] * 4
-	jbsr	draw_on_screen_0593                            	| [$0588: call    $0593] draw to screen
-	move.b	(a0),d0                         	| [$058b: ld      a,(hl)] get digit
-	jbsr	draw_on_screen_0593                            	| [$058c: call    $0593] draw to screen
+	jbsr	draw_digit_on_screen_0593                            	| [$0588: call    $0593] draw to screen
+	move.b	(a0),d0                         	| [$058b: ld      a,(hl)] get digit (again)
+	jbsr	draw_digit_on_screen_0593                            	| [$058c: call    $0593] draw to screen
 	subq.w	#1,a0                           	| [$058f: dec     hl] next digit
 	subq.b	#1,d1                           	| [...]
 	jne	draw_digits_0583                             	| [$0590: djnz    $0583] Next B
@@ -2450,7 +2450,7 @@ draw_digits_0583:
 
 * called from #0588 and #058C above
 
-draw_on_screen_0593:
+draw_digit_on_screen_0593:
 	and.b	#0x0f,d0                         	| [$0593: and     $0f] mask out left 4 bits of A
 	exg		a2,d7
 	jbsr	osd_w_videoram                     	| [$0595: ld      (ix+$00),a] store A on screen
@@ -5617,6 +5617,10 @@ l_15a0:
 	LOAD_D5_16_FROM_D5D6
 	move.w	d5,a2                        	| [$15aa: push    hl] screen address
 											| [$15ab: pop     ix] load IX with HL
+	jbsr	osd_break
+	nop
+	nop
+	nop
 	jbsr	l_057c                            	| [$15ad: call    $057c] ???
 	move.b	#0x10,d0                        	| [$15b0: ld      a,$10] A := #10
 	move.b	d0,hsblinktimer_6032            	| [$15b2: ld      (hsblinktimer_6032),a] store into HSBlinkTimer

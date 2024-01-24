@@ -2430,6 +2430,13 @@ handle_keyboard:
 
     bsr	toggle_pause
 0:
+	cmp.b	#0x45,d0	| ESC key
+	bne.b	0f
+	* game over, no lives + kill mario
+	clr.b	mario_array_6200
+	clr.b	p1numlives_6040
+	clr.b	p2numlives_6048
+0:
 
 	btst	#4,cheat_flags+3
 	jeq		10f
@@ -2460,7 +2467,7 @@ handle_keyboard:
 0:
 	cmp.b	#0x53,d0	| F4 key
 	bne.b	0f
-	st.b	cheat_used
+	
 	move.w	#0x0FF,_custom+color
 0:
 	cmp.b	#0x54,d0	| F5 key
@@ -2469,11 +2476,6 @@ handle_keyboard:
 	move.w	#0x0FF,_custom+color
 0:
 
-	cmp.b	#0x55,d0	| F6 key
-	bne.b	0f
-	* game over, no lives
-	nop
-0:
 10:
 	.ifndef	RELEASE
 	cmp.b	#0x58,d0	| F9 key crashes game (restarts whdload)
