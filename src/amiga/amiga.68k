@@ -16,7 +16,7 @@ AFB_68020 = 1
 NO68020 = 1
 
 SPRITE_Y_CORRECTION = 0
-SPRITE_X_CORRECTION = 0
+SPRITE_X_CORRECTION = 1
 
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x7400
@@ -957,12 +957,15 @@ update_bobs:
 	moveq	#0,d0
 	move.b	(PREV_X,a4),d0
 	beq.b	11f		| y=0: inactive
-	.ifne	SPRITE_X_CORRECTION
-	add.w	#SPRITE_X_CORRECTION,d0
-	.endif	
 	moveq	#0,d1
 	move.b	(PREV_Y,a4),d1
 	* clear 16x16 area where the sprite was
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif	
 	bsr		restore_16x_background
 11:
 	addq	#4,a4
@@ -978,9 +981,6 @@ update_bobs:
 	move.b	d0,(PREV_X,a6)
 	jeq		211f				| x=0: don't show
 
-	.ifne	SPRITE_X_CORRECTION
-	add.w	#SPRITE_X_CORRECTION,d0
-	.endif
 	
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
@@ -1010,9 +1010,6 @@ update_bobs:
 	beq.b	211f			| Y set to 0: not shown
 
 	
-	.ifne	SPRITE_Y_CORRECTION
-	add.w	#SPRITE_Y_CORRECTION,d1
-	.endif
 	
 	move.b	d1,(PREV_Y,a6)
 	
@@ -1049,6 +1046,14 @@ update_bobs:
 	move.w	#16,d3	| height = 16 for all bobs
 	tst.b	d5
 	bne.b	14f
+
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif
+	
 	bsr		blit_planes_cookie_cut_16x
 21:
 	move.l	(a7)+,a0
@@ -1766,7 +1771,7 @@ platform_init:
 	* restrict borders: we don't see bobs on the borders!
     move.w #0x1C99,diwstrt(a5)
 	*         VVHH
-    move.w #0x2471,diwstop(a5)
+    move.w #0x2479,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12)+BORDERBLANK,bplcon0(a5)
@@ -2434,8 +2439,7 @@ handle_keyboard:
 	bne.b	0f
 	* game over, no lives + kill mario
 	clr.b	mario_array_6200
-	clr.b	p1numlives_6040
-	clr.b	p2numlives_6048
+	move.b	#1,number_of_lives_remaining_6228
 0:
 
 	btst	#4,cheat_flags+3
@@ -2463,7 +2467,14 @@ handle_keyboard:
 	cmp.b	#0x52,d0	| F3 key
 	bne.b	0f
 	st.b	cheat_used
-	* add 10000 points
+	* add 1000 points
+	movem.w	d0/d1,-(a7)
+	move.b	#0x8,d0
+	add.b	d0,d0		| clears X
+	move.b	player_1_score_address_60b2+1,d1
+	abcd	d0,d1
+	move.b	d1,player_1_score_address_60b2+1
+	movem.w	(a7)+,d0/d1
 0:
 	cmp.b	#0x53,d0	| F4 key
 	bne.b	0f

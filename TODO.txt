@@ -1,10 +1,11 @@
 - hammer kills wrong firefox/pie (_1ea0 rivets level)
-  ok for barrels & fire
-- pie factory: moving ladders are shifted by 1, fixing the shifting causes issues ATM
+  ok for barrels & fire:
+    index_of_item_hit_6354, offset_for_item_in_array_6353
+- game over with highscore: almost nothing displayed, + highscore trashed
 - pie factory: pies not erased at some point
 - playing a while: score seems to have been reset (to confirm)
 
-- crash on game over: add F3 instant game over cheat
+- crash on game over: add F4 instant game over cheat
 
 	* caller: a0 is wrong
 	jbsr	l_057c                            	| [$15ad: call    $057c] ???

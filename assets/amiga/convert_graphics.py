@@ -128,6 +128,7 @@ add_sprite_block(0x76,0x78,"heart",9)
 add_sprite(0x39,"sparkle",1)
 add_sprite(0x3A,"blank",15)
 add_sprite(0x3F,"blank",0xC)
+add_sprite(0x72,"square",0xC)
 
 
 

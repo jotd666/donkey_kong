@@ -260,7 +260,7 @@
 	.global	unknown_6a25
 	.global	hardware_sprite_memory_for_same_fire_6a28
 	.global	sprite_for_fire_above_oil_can_6a29
-	.global	location_of_item_hit_6a2c
+	.global	scoring_sprite_shadow_6a2c
 	.global	sprite_graphic_6a2d
 	.global	unknown_6a30
 	.global	stack_pointer_6c00
@@ -788,7 +788,7 @@ hardware_sprite_memory_for_same_fire_6a28:
 	ds.b	1
 sprite_for_fire_above_oil_can_6a29:
 	ds.b	3
-location_of_item_hit_6a2c:
+scoring_sprite_shadow_6a2c:
 	ds.b	1
 sprite_graphic_6a2d:
 	ds.b	3
