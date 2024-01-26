@@ -316,9 +316,6 @@ DSW1        = 0x7d80       | DIP switches
 * @TODO@ -- define constants for this
 
 
-NB_BARRELS = 10		| normal value is 10, use less to test
-NB_FIRES = 5		| normal value is 5, use less to test
-NB_PIES = 6			| normal value is 6, use less to test
 
 REG_MUSIC       = 0x7c00
 
@@ -3983,7 +3980,8 @@ l_0cf2:
 	jbsr	l_0d27                            	| [$0cf2: call    $0d27] draw elevator cables
 	move.b	#MUS_75M,d0                        	| [$0cf5: ld      a,$0a] A := #A
 	move.b	d0,background_music_value_6089  	| [$0cf7: ld      (background_music_value_6089),a] set music for elevators
-	jbsr	osd_sound_start
+	* no music in elevators
+	*jbsr	osd_sound_start
 	lea	game_rom+0x3be5,a1                      	| [$0cfa: ld      de,$3be5] load DE with start of table data for the elevators
 	jra	l_0cc6                             	| [$0cfd: jp      $0cc6] jump back
 
@@ -6551,6 +6549,7 @@ l_1a99:
 	jne	l_1a99                             	| [$1a9b: jp      nz,$1a99] no, loop again
 
 l_1a9e:
+	.ifeq	OPT_LEAVE_RIVETS
 	                        	| [$1a9e: ld      bc,$7400] start of video RAM is #7400 29696
 	add.w	#0x7400,d7                            	| [$1aa1: add     hl,bc] add offset computed based on which rivet is cleared
 	move.b	#0x10,d0                        	| [$1aa2: ld      a,$10] A := #10 = clear space
@@ -6560,6 +6559,8 @@ l_1a9e:
 	jbsr	osd_w_videoram                         	| [$1aa6: ld      (hl),a] erase the top of the rivet
 	addq.w	#2,d7                           	| [$1aa7: inc     l] * 2
 	jbsr	osd_w_videoram                         	| [$1aa9: ld      (hl),a] erase underneath the rivet [ not needed , there is nothing there to erase ???]
+	.endif
+	
 	move.b	#0x01,d0                        	| [$1aaa: ld      a,$01] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1aac: ld      (bonus_indicator_6340),a] store into #6340 - usually 0, changes when mario picks up bonus item. jumps over item turns to 1 quickly, then 2 until bonus disappears
 	move.b	d0,scoring_indicator_6342       	| [$1aaf: ld      (scoring_indicator_6342),a] store into scoring indicator
@@ -7386,7 +7387,9 @@ l_1eb4:
 	move.b	offset_for_item_in_array_6353,d3                 	| [$1eba: ld      a,(offset_for_item_in_array_6353)] load A with the offset for each item in the array
 												| [$1ebd: ld      e,a] copy to E.  DE now has the offset
 	move.b	index_of_item_hit_6354,d0                 	| [$1ec1: ld      a,(index_of_item_hit_6354)] load A with the index of the item hit
-	                               	| [$1ec4: and     a] == 0 ?
+	move.b	d3,0x200
+	move.b	d0,0x201
+	tst.b	d0                               	| [$1ec4: and     a] == 0 ?
 	jeq	l_1ecf                             	| [$1ec5: jp      z,$1ecf] yes, skip ahead, we use the default HL and IX
 
 	move.w	#0x04,d1                        	| [$1ebe: ld      bc,$0004] BC := size of sprite shadow structure

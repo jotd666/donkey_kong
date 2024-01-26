@@ -42,8 +42,10 @@ sound_dict = {
 "HAMMER_TUNE_SND"              :{"index":4,"pattern":2,"loops":True,"volume":32},
 "END_SCREEN_TUNE_SND"              :{"index":7,"pattern":4,"loops":False,"volume":32,"ticks":200},
 "END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":5,"loops":True,"volume":32},
-"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":6,"loops":True,"volume":32},
+"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":7,"loops":True,"volume":32},
 "PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":3,"loops":True,"volume":32},
+"GIRDERS_TUNE_SND"                 :{"index":9,"pattern":3,"loops":True,"volume":32},
+"RIVET_TUNE_SND"                    :{"index":9,"pattern":3,"loops":True,"volume":32},
 "DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":3,"loops":True,"volume":32},
 
 }

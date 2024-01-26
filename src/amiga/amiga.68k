@@ -1938,10 +1938,7 @@ osd_w_videoram:
     .ifeq OPT_DISABLE_BG_LAYER
 	movem.l	d0-d7/a0-a3,-(a7)
 	
-	cmp.w	#0x75C1,d7
-	bne		22f
-	move.b	#0,0x200
-22:
+
 	
 	sub.w	#SCREEN_ADDRESS,d7
 	bcs.b	0f
@@ -2255,7 +2252,6 @@ osd_r_videoram:
 
 	
 osd_read_in_2:
-	move.b	#1,0x200
 	moveq	#0,d0
 	movem.l	a0/d1,-(a7)
 	lea		keyboard_table(pc),a0
