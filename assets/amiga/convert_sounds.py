@@ -3,6 +3,7 @@ import shutil
 
 sox = "sox"
 gamename = "dkong"
+module_name = "donkey_kong"
 
 if not shutil.which("sox"):
     raise Exception("sox command not in path, please install it")
@@ -25,16 +26,25 @@ hq_sample_rate = 16000
 EMPTY_SND = "EMPTY_SND"
 sound_dict = {
 # samples
-"BOOM_SND"             :{"index":0,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"CREDIT_SND"             :{"index":1,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"DEAD_SND"             :{"index":2,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"JUMPED_OVER_SND"             :{"index":3,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"KILL_ENEMY_SND"             :{"index":4,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"START_SND"             :{"index":5,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"JUMPING_SND"             :{"index":6,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"WALKING_SND"             :{"index":7,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
-"BOUNCER_SND"             :{"index":8,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
+"BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"DEAD_SND"             :{"index":0x12,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"START_SND"             :{"index":0x15,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"JUMPING_SND"             :{"index":0x16,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"WALKING_SND"             :{"index":0x17,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
+"BOUNCER_SND"             :{"index":0x18,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
 
+# tunes match the MUS defines in donkey_kong.68k source
+"START_TUNE_SND"              :{"index":1,"pattern":0,"loops":False,"volume":32,"ticks":200},
+"LEVEL_TUNE_SND"              :{"index":2,"pattern":1,"loops":False,"volume":32,"ticks":150},
+"HAMMER_TUNE_SND"              :{"index":4,"pattern":2,"loops":True,"volume":32},
+"END_SCREEN_TUNE_SND"              :{"index":7,"pattern":4,"loops":False,"volume":32,"ticks":200},
+"END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":5,"loops":True,"volume":32},
+"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":6,"loops":True,"volume":32},
+"PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":3,"loops":True,"volume":32},
+"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":3,"loops":True,"volume":32},
 
 }
 
@@ -85,6 +95,13 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
 
     fw.write("\t.section\t.datachip\n")
     fw.write("\t.global\t{}\n".format(music_module_label))
+
+    # make sure next section will be aligned
+    with open(os.path.join(sound_dir,f"{module_name}_conv.mod"),"rb") as f:
+        contents = f.read()
+    fw.write("{}:".format(music_module_label))
+    write_asm(contents,fw)
+    fw.write("\t.align\t8\n")
 
     for wav_file,details in sound_dict.items():
         wav_name = os.path.basename(wav_file).lower()[:-4]

@@ -315,8 +315,10 @@ DSW1        = 0x7d80       | DIP switches
 * 7800-780F P8257 Control registers
 * @TODO@ -- define constants for this
 
-* normal value is 10, use less to test
-NB_BARRELS = 10
+
+NB_BARRELS = 10		| normal value is 10, use less to test
+NB_FIRES = 5		| normal value is 5, use less to test
+NB_PIES = 6			| normal value is 6, use less to test
 
 REG_MUSIC       = 0x7c00
 
@@ -2719,8 +2721,8 @@ l_066a:
 
 * arrive here when timer runs below 1000
 
-	move.b	#0x03,d0                        	| [$0678: ld      a,$03] else load A with warning sound
-	*jbsr	osd_sound_start
+	move.b	#MUS_OUTATIME,d0                        	| [$0678: ld      a,$03] else load A with warning sound
+	jbsr	osd_sound_start
 	move.b	d0,background_music_value_6089  	| [$067a: ld      (background_music_value_6089),a] set warning sound
 	move.b	#0x70,d0                        	| [$067d: ld      a,$70] A := #70 = color code for red?
 	WRITE_TO_SCREEN	0x7486                       	| [$067f: ld      ($7486),a] store A into #7486 = paint score red (MSB) ?
@@ -2862,7 +2864,7 @@ playing_game_06fe:
     .long	l_13bb                      | (13) #13BB    | set player 1, reset game mode2 to zero, set screen flip to not flipped
     .long	l_141e                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
     .long	l_1486                      | (15) #1486    | player enters initials in high score table
-    .long	l_1615                      | (16) #1615    | handle end of level animations
+    .long	end_of_level_animations_1615                      | (16) #1615    | handle end of level animations
     .long	l_196b                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
 
 * arrive from #00C9 when attract mode starts
@@ -3564,8 +3566,12 @@ l_0abf:
 	move.b	d0,kong_ladder_climb_counter_638e	| [$0ad4: ld      (kong_ladder_climb_counter_638e),a] store into kong ladder climb counter
 	clr.b	d0                               	| [$0ad7: xor     a] A := 0
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$0ad8: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite
+
+	move.w	#MUS_INTRO,d0
+	*jbsr	osd_sound_start
+	
 	lea	sound_buffer_address_608a,a0   	| [$0adb: ld      hl,sound_buffer_address_608a] load HL with music buffer
-	move.b	#0x01,(a0)+                      	| [$0ade: ld      (hl),$01] play scary music for start of game sound
+	move.b	#MUS_INTRO,(a0)+                      	| [$0ade: ld      (hl),$01] play scary music for start of game sound
 	                           	| [$0ae0: inc     hl] load HL with duration
 	move.b	#0x03,(a0)                      	| [$0ae1: ld      (hl),$03] set duration to 3
 	lea	intro_screen_counter_6385,a0   	| [$0ae3: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
@@ -3575,7 +3581,7 @@ l_0abf:
 * arrive from #0A79 when intro screen indicator == 2
 
 l_0ae8:
-	jbsr	l_306f                            	| [$0ae8: call    $306f] animate kong climbing up the ladder with girl under arm
+	jbsr	kong_climbing_ladder_with_girl_306f        	| [$0ae8: call    $306f] animate kong climbing up the ladder with girl under arm
 	move.b	kong_misc_counter_62af,d0   	| [$0aeb: ld      a,(kong_misc_counter_62af)] load A with kong climbing counter
 	and.b	#0x0f,d0                         	| [$0aee: and     $0f] mask bits, now between 0 and #F.  zero?
 	bne.b	0f                               	| [...]
@@ -3771,6 +3777,9 @@ height_pre_level_screen_0bda:
 	move.b	#0x02,(a0)+                      	| [$0bf5: ld      (hl),$02] play how high can you get sound?
 	                           	| [$0bf7: inc     hl] HL := #608B .  load HL with music timer ?
 	move.b	#0x03,(a0)                      	| [$0bf8: ld      (hl),$03] set to 3 units
+	move.b	#MUS_HOWHIGH,D0
+	jbsr	osd_sound_start
+	
 	lea	store_63a7,a0                  	| [$0bfa: ld      hl,store_63a7] load HL with address of counter
 	clr.b	(a0)                             	| [$0bfd: ld      (hl),$00] clear the counter
 	move.l	#0x76dc,d7                      	| [$0bff: ld      hl,$76dc] load HL with screen address to draw the number of meters ?
@@ -3927,8 +3936,9 @@ rivets_0cb6:
 	lea	reg_palette_a,a0               	| [$0cb9: ld      hl,reg_palette_a] load HL with palette bank selector
 	move.b	#0x01,(a0)                      	| [$0cbc: ld      (hl),$01] set palette bank selector
 	jbsr	osd_update_palette_bank
-	move.b	#0x0b,d0                        	| [$0cbe: ld      a,$0b] load A with music code For rivets
+	move.b	#MUS_100M,d0                        	| [$0cbe: ld      a,$0b] load A with music code For rivets
 	move.b	d0,background_music_value_6089  	| [$0cc0: ld      (background_music_value_6089),a] set music
+	jbsr	osd_sound_start
 	lea	game_rom+0x3c8b,a1                      	| [$0cc3: ld      de,$3c8b] load DE with start of table data for rivets
 
 * other screens return here
@@ -3948,8 +3958,9 @@ l_0cc6:
 
 l_0cd4:
 	lea	game_rom+0x3ae4,a1                      	| [$0cd4: ld      de,$3ae4] Load DE with start of table data for girders
-	move.b	#0x08,d0                        	| [$0cd7: ld      a,$08] A := 8 = music code for girders
+	move.b	#MUS_25M,d0                        	| [$0cd7: ld      a,$08] A := 8 = music code for girders
 	move.b	d0,background_music_value_6089  	| [$0cd9: ld      (background_music_value_6089),a] set music for girders
+	jbsr	osd_sound_start
 	jra	l_0cc6                             	| [$0cdc: jp      $0cc6] jump back
 
 * conveyors from #0CAF
@@ -3961,16 +3972,18 @@ draw_conveyors_screen_0cdf:
 	                           	| [$0ce7: inc     hl]
 	clr.b	(a0)                             	| [$0ce8: ld      (hl),$00] clear palette bank selector
 	jbsr	osd_update_palette_bank
-	move.b	#0x09,d0                        	| [$0cea: ld      a,$09] load A with conveyor music
+	move.b	#MUS_50M,d0                        	| [$0cea: ld      a,$09] load A with conveyor music
 	move.b	d0,background_music_value_6089  	| [$0cec: ld      (background_music_value_6089),a] set music for conveyors
+	jbsr	osd_sound_start
 	jra	l_0cc6                             	| [$0cef: jp      $0cc6] jump back
 
 * elevators from #0CB3
 
 l_0cf2:
 	jbsr	l_0d27                            	| [$0cf2: call    $0d27] draw elevator cables
-	move.b	#0x0a,d0                        	| [$0cf5: ld      a,$0a] A := #A
+	move.b	#MUS_75M,d0                        	| [$0cf5: ld      a,$0a] A := #A
 	move.b	d0,background_music_value_6089  	| [$0cf7: ld      (background_music_value_6089),a] set music for elevators
+	jbsr	osd_sound_start
 	lea	game_rom+0x3be5,a1                      	| [$0cfa: ld      de,$3be5] load DE with start of table data for the elevators
 	jra	l_0cc6                             	| [$0cfd: jp      $0cc6] jump back
 
@@ -4577,7 +4590,7 @@ l_0FD7:
 	jbsr	ldir                              	| [$0ffe: ldir] draw to screen
 
 	lea	game_rom+0x3e0c,a0                      	| [$1000: ld      hl,$3e0c] load HL with table data for hammers on girders
-	jbsr	l_11a6                            	| [$1003: call    $11a6] ???
+	jbsr	draw_hammers_11a6                            	| [$1003: call    $11a6] ???
 
 	lea	game_rom+0x101b,a0                      	| [$1006: ld      hl,$101b] set up copy job from table in #101B
 	lea	destination_6707,a1            	| [$1009: ld      de,destination_6707] set destination ?
@@ -4619,7 +4632,7 @@ l_101F:
 	lea	start_of_pies_65a0,a2          	| [$103a: ld      ix,start_of_pies_65a0] load IX with start of pies
 	lea	start_of_pie_sprites_69b8,a0   	| [$103e: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
 	move.w	#0x0010,d3                      	| [$1041: ld      de,$0010] DE := #10 16
-	move.b	#0x06,d1                        	| [$1044: ld      b,$06] B := 6
+	move.b	#NB_PIES,d1                        	| [$1044: ld      b,$06] B := 6
 	jbsr	l_11d3                            	| [$1046: call    $11d3]
 
 	lea	game_rom+0x3dfa,a0                      	| [$1049: ld      hl,$3dfa] load HL with start of table data
@@ -4641,7 +4654,7 @@ l_101F:
 	jbsr	ldir                              	| [$106e: ldir] draw pulleys
 
 	lea	game_rom+0x3e10,a0                      	| [$1070: ld      hl,$3e10] load HL with table data for hammers on conveyors
-	jbsr	l_11a6                            	| [$1073: call    $11a6] ???
+	jbsr	draw_hammers_11a6                            	| [$1073: call    $11a6] ???
 
 	lea	game_rom+0x3e3c,a0                      	| [$1076: ld      hl,$3e3c] load HL with table data for bonus items on conveyors
 	lea	start_of_bonus_items_6a0c,a1   	| [$1079: ld      de,start_of_bonus_items_6a0c] load DE with sprite destination
@@ -4760,7 +4773,7 @@ l_1131:
 	jbsr	l_122a                            	| [$113a: call    $122a] copy fire location data to screen?
 
 	lea	game_rom+0x3e14,a0                      	| [$113d: ld      hl,$3e14] load HL with start of table data for hammer locations
-	jbsr	l_11a6                            	| [$1140: call    $11a6] draw the hammers
+	jbsr	draw_hammers_11a6                            	| [$1140: call    $11a6] draw the hammers
 
 	lea	game_rom+0x3e54,a0                      	| [$1143: ld      hl,$3e54] load HL with start of bonus items for rivets
 	lea	start_of_bonus_items_6a0c,a1   	| [$1146: ld      de,start_of_bonus_items_6a0c] set destination sprite address
@@ -4822,7 +4835,7 @@ l_11a2:
 
 * called from 3 locations with HL preloaded with address of locations to draw to
 
-l_11a6:
+draw_hammers_11a6:
 	lea	sprite_destination_address_unknown_6683,a1	| [$11a6: ld      de,sprite_destination_address_unknown_6683] load DE with sprite destination address ???
 	move.b	#0x02,d1                        	| [$11a9: ld      bc,$020e] B := 2 for the 2 hammers.  C := #E for ??? 526
 	move.b	#0x0e,d2                        	| [$11a9: ld      bc,$020e] B := 2 for the 2 hammers.  C := #E for ??? 526
@@ -5718,7 +5731,7 @@ l_15fa:
 
 * arrive when GameMode2 == #16 (level completed).  called from #0701
 
-l_1615:
+end_of_level_animations_1615:
 	jbsr	l_30bd                            	| [$1615: call    $30bd] clear sprites
 	move.b	screen_number_6227,d0           	| [$1618: ld      a,(screen_number_6227)] load a with screen number
 	ror.b	#1,d0                            	| [$161b: rrca] roll right with carry.  is this the rivets or the conveyors?
@@ -5900,8 +5913,10 @@ l_1708:
 	move.b	#0x10,d0                        	| [$1724: ld      a,$10] A := #10
 	jbsr	clear_help_0514                            	| [$1726: call    $0514] clear "help" that the girl yells
 	lea	sound_buffer_address_608a,a0   	| [$1729: ld      hl,sound_buffer_address_608a] load sound address
-	**jbsr	osd_sound_start
-	move.b	#0x07,(a0)+                      	| [$172c: ld      (hl),$07] play sound for end of level
+	
+	move.b	#MUS_FANFARE,d0
+	move.b	d0,(a0)+                      	| [$172c: ld      (hl),$07] play sound for end of level
+	jbsr	osd_sound_start
 	                           	| [$172e: inc     hl] HL now has sound duration
 	move.b	#0x03,(a0)                      	| [$172f: ld      (hl),$03] set duration to 3
 	rts                                    	| [$1731: ret] return
@@ -5910,7 +5925,7 @@ l_1708:
 * jump here from #1622 when conveyors is finished.  step 3 of 5
 
 l_1732:
-	jbsr	l_306f                            	| [$1732: call    $306f] animate kong climbing up the ladder with girl under arm
+	jbsr	kong_climbing_ladder_with_girl_306f                            	| [$1732: call    $306f] animate kong climbing up the ladder with girl under arm
 	move.b	kong_sprite_y_position_6913,d0  	| [$1735: ld      a,(kong_sprite_y_position_6913)] load A with kong sprite Y position
 	cmp.b	#0x2c,d0                         	| [$1738: cp      $2c] < #2C ? (level of the girl)
 	bcs.b	0f                               	| [...]
@@ -5937,7 +5952,7 @@ l_1732:
 * jump here from #1622 when conveyors is finished.  step 4 of 5
 
 l_1757:
-	jbsr	l_306f                            	| [$1757: call    $306f] animate kong climbing up the ladder with girl under arm
+	jbsr	kong_climbing_ladder_with_girl_306f                            	| [$1757: call    $306f] animate kong climbing up the ladder with girl under arm
 	jbsr	l_176c                            	| [$175a: call    $176c] ???
 	addq.w	#1,a0                           	| [$175d: inc     hl]
 	addq.w	#1,d3                           	| [$175e: inc     de]
@@ -6238,26 +6253,25 @@ l_1910:
 0:
 
 	lea	sound_buffer_address_608a,a0   	| [$1913: ld      hl,sound_buffer_address_608a] load HL with sound address
-	*jbsr	osd_sound_start
-	move.b	#0x0c,(a0)                      	| [$1916: ld      (hl),$0c] play sound for rivets cleared
+	move.b	#MUS_ENDING2,d7                      	| [$1916: ld      (hl),$0c] play sound for rivets cleared
 	move.b	level_number_6229,d0       	| [$1918: ld      a,(level_number_6229)] load A with level #
 	ror.b	#1,d0                            	| [$191b: rrca] roll a right .  is this an odd level ?
 	jcs	l_1920                             	| [$191c: jr      c,$1920] Yes, skip next step
-	*jbsr	osd_sound_start
-
-	move.b	#0x05,(a0)                      	| [$191e: ld      (hl),$05] else play sound for even numbered rivets
-
+	move.b	#MUS_ENDING1,d7
 l_1920:
+	move.b	d7,(a0)                      	| [$191e: ld      (hl),$05] else play sound for even numbered rivets
+	move.b	d7,d0
+	jbsr	osd_sound_start
 	addq.w	#1,a0                           	| [$1920: inc     hl] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$1921: ld      (hl),$03] set duration to 3
 	lea	heart_sprite_6a23,a0           	| [$1923: ld      hl,heart_sprite_6a23] load HL with heart sprite
 	move.b	#0x40,(a0)                      	| [$1926: ld      (hl),$40] set heart sprite Y position
-	subq.w	#1,a0                           	| [$1928: dec     hl] decrement HL
-	move.b	#0x09,(a0)                      	| [$1929: ld      (hl),$09] set heart sprite color
-	subq.w	#1,a0                           	| [$192b: dec     hl] decrement HL
-	move.b	#0x76,(a0)                      	| [$192c: ld      (hl),$76] set heart sprite
-	subq.w	#1,a0                           	| [$192e: dec     hl] decrement HL
-	move.b	#0x8f,(a0)                      	| [$192f: ld      (hl),$8f] set heart sprite X position
+                           	| [$1928: dec     hl] decrement HL
+	move.b	#0x09,-(a0)                      	| [$1929: ld      (hl),$09] set heart sprite color
+                           	| [$192b: dec     hl] decrement HL
+	move.b	#0x76,-(a0)                      	| [$192c: ld      (hl),$76] set heart sprite
+                           	| [$192e: dec     hl] decrement HL
+	move.b	#0x8f,-(a0)                      	| [$192f: ld      (hl),$8f] set heart sprite X position
 	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1931: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
 	cmp.b	#0x80,d0                         	| [$1934: cp      $80] is mario on the left side of the screen?
 	bcs.b	0f                               	| [...]
@@ -7368,16 +7382,18 @@ item_just_hit_1ea0:
 l_1eb4:
 	LOAD_RAM_ADDRESS_LE	item_array_for_item_hit_6351,a2             	| [$1eb4: ld      ix,(item_array_for_item_hit_6351)] load IX with start of item array for the item hit
 	clr.w	d3                               	| [$1eb8: ld      d,$00] D := 0
+	* offset to add for each item, can be 0x20, 0x10 (depends on the object barrel, firefox...)
 	move.b	offset_for_item_in_array_6353,d3                 	| [$1eba: ld      a,(offset_for_item_in_array_6353)] load A with the offset for each item in the array
 												| [$1ebd: ld      e,a] copy to E.  DE now has the offset
-	move.w	#0x04,d1                        	| [$1ebe: ld      bc,$0004] BC := 4 4
 	move.b	index_of_item_hit_6354,d0                 	| [$1ec1: ld      a,(index_of_item_hit_6354)] load A with the index of the item hit
 	                               	| [$1ec4: and     a] == 0 ?
 	jeq	l_1ecf                             	| [$1ec5: jp      z,$1ecf] yes, skip ahead, we use the default HL and IX
 
+	move.w	#0x04,d1                        	| [$1ebe: ld      bc,$0004] BC := size of sprite shadow structure
+	* non-zero: apply index_of_item_hit_6354 offset on both sprites structure & shadow
 l_1ec8:
-	add.w	d1,a0                            	| [$1ec8: add     hl,bc] add offset
-	add.w	d3,a2                            	| [$1ec9: add     ix,de] add offset
+	add.w	d1,a0                            	| [$1ec8: add     hl,bc] add offset: sprite shadow structure
+	add.w	d3,a2                            	| [$1ec9: add     ix,de] add offset: object structure
 	subq.b	#1,d0                           	| [$1ecb: dec     a] decrease counter.  done ?
 	jne	l_1ec8                             	| [$1ecc: jp      nz,$1ec8] no, loop again
 
@@ -7404,7 +7420,7 @@ l_1ede:
 l_1ede_2:
 	move.b	d0,scoring_indicator_6342       	| [$1ede: ld      (scoring_indicator_6342),a] store A into scoring indicator
 	lea		scoring_sprite_shadow_6a2c,a4	| [$1ee1: ld      bc,scoring_sprite_shadow_6a2c] load BC with scoring sprite address None
-	move.b	(a0),d0                         	| [$1ee4: ld      a,(hl)] load A with sprite value ?
+	move.b	(a0),d0                         	| [$1ee4: ld      a,(hl)] load A with sprite value
 	clr.b	(a0)+                             	| [$1ee5: ld      (hl),$00] clear the sprite that was hit
 	move.b	d0,(a4)+                         	| [$1ee7: ld      (bc),a] store sprite value into the scoring sprite
 												| [$1ee8: inc     c] next
@@ -8694,7 +8710,7 @@ l_24ea:
 	jbsr	l_2523                            	| [$24ed: call    $2523] check for deployment of new pies
 	jbsr	l_2591                            	| [$24f0: call    $2591] update all pies positions based on direction of trays, remove pies in fire or off edge
 	lea	start_of_pies_65a0,a2          	| [$24f3: ld      ix,start_of_pies_65a0] load IX with start of pies
-	move.b	#0x06,d1                        	| [$24f7: ld      b,$06] for B = 1 to 6 pies
+	move.b	#NB_PIES,d1                        	| [$24f7: ld      b,$06] for B = 1 to 6 pies
 	lea	start_of_pie_sprites_69b8,a0   	| [$24f9: ld      hl,start_of_pie_sprites_69b8] load HL with hardware address for pies
 
 l_24fc:
@@ -8746,7 +8762,7 @@ l_2523:
 
 * look for a pie to deploy
 
-	move.b	#0x06,d1                        	| [$2530: ld      b,$06] for B = 1 to 6 pies
+	move.b	#NB_PIES,d1                        	| [$2530: ld      b,$06] for B = 1 to 6 pies
 	move.w	#0x0010,d3                      	| [$2532: ld      de,$0010] load DE with offset of #10 (16 decimal) 16
 	lea	start_of_pies_65a0,a2          	| [$2535: ld      ix,start_of_pies_65a0] load IX with start of pie sprites table
 
@@ -8812,7 +8828,7 @@ l_258f:
 l_2591:
 	lea	start_of_pies_65a0,a2          	| [$2591: ld      ix,start_of_pies_65a0] load IX with pie sprite buffer
 	move.w	#0x0010,d3                      	| [$2595: ld      de,$0010] load DE with offset 16
-	move.b	#0x06,d1                        	| [$2598: ld      b,$06] for B = 1 to 6
+	move.b	#NB_PIES,d1                        	| [$2598: ld      b,$06] for B = 1 to 6
 
 l_259a:
 	btst.b	#0,(a2)                    	| [$259a: bit     0,(ix+$00)] active ?
@@ -8860,7 +8876,7 @@ l_25cf:
 
 l_25d6:
 	lea	start_of_pie_sprites_69b8,a0   	| [$25d6: ld      hl,start_of_pie_sprites_69b8] load HL with start of pie sprites
-	move.b	#0x06,d0                        	| [$25d9: ld      a,$06] A := 6
+	move.b	#NB_PIES,d0                        	| [$25d9: ld      a,$06] A := 6
 	sub.b	d1,d0                            	| [$25db: sub     b] subtract the pie number that is removed.  zero ?
 l_25dc:
 	jeq	l_25e7                             	| [$25dc: jp      z,$25e7] yes, skip ahead
@@ -9354,9 +9370,9 @@ l_2832:
 * A2 is loaded with the array of the item which was hit
 
 	move.b	d0,item_hit_indicator_unknown_6350	| [$2840: ld      (item_hit_indicator_unknown_6350),a] store A into item hit indicator ???
-	move.b	counter_for_use_later_63b9,d0   	| [$2843: ld      a,(counter_for_use_later_63b9)] load A with the number of total items checked for collision?
-	sub.b	d1,d0                            	| [$2846: sub     b] subtract the number of item hit ?
-	move.b	d0,index_of_item_hit_6354                 	| [$2847: ld      (index_of_item_hit_6354),a] store into ???
+	move.b	nb_items_checked_for_collision_63b9,d0   	| [$2843: ld      a,(nb_items_checked_for_collision_63b9)] load A with the number of total items checked for collision?
+	sub.b	d1,d0                            	| [$2846: sub     b] subtract the index where element was found (in reverse)
+	move.b	d0,index_of_item_hit_6354                 	| [$2847: ld      (index_of_item_hit_6354),a]
 	* d3 has the offset see 281f						| [$284a: ld      a,e] load A with offset for each item
 	move.b	d3,offset_for_item_in_array_6353                 	| [$284b: ld      (offset_for_item_in_array_6353),a] store into ???
 	* here IX is 64xx (fireballs) or 67xx (barrels)
@@ -9403,7 +9419,7 @@ l_286b:
 
 
 * called when hammer active from #283B - check for hammer collision with enemy sprites
-
+* > D1: nb_objects - object index?
 
 check_collisions_for_enemies_286f:
 	move.b	screen_number_6227,d0           	| [$286f: ld      a,(screen_number_6227)] load A with screen number
@@ -9422,22 +9438,23 @@ check_collisions_for_enemies_286f:
 * girders - check for collisions with barrels and fires and oil can
 
 check_collisions_in_girders_2880:
-	movem.w	(sp)+,d5/d6                        	| [$2880: pop     hl] restore HL
+	movem.w	(sp)+,d5/d6                        	| [$2880: pop     hl] restore HL: get X,Y coords
 	move.b	#NB_BARRELS,d1                        	| [$2881: ld      b,$0a] B := #0A (10 decimal).  one for each barrel
 	move.b	d1,d0                           	| [$2883: ld      a,b] A := #0A
-	move.b	d0,counter_for_use_later_63b9   	| [$2884: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$2884: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$2887: ld      de,$0020] load DE with offset of #20 32
 	lea	start_of_barrel_info_table_6700,a2	| [$288a: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrels
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$288e: call    $2913] check for collisions with barrels
-	move.b	#0x05,d1                        	| [$2891: ld      b,$05] B := 5
+
+	move.b	#NB_FIRES,d1                        	| [$2891: ld      b,$05] B := 5
 	move.b	d1,d0                           	| [$2893: ld      a,b] A := 5
-	move.b	d0,counter_for_use_later_63b9   	| [$2894: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$2894: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.b	#0x20,d3                        	| [$2897: ld      e,$20] E := #20
 	lea	start_of_fires_table_6400,a2   	| [$2899: ld      ix,start_of_fires_table_6400] load IX with start of fires
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$289d: call    $2913] check for collisions with fires
 	move.b	#0x01,d1                        	| [$28a0: ld      b,$01] B := 1
 	move.b	d1,d0                           	| [$28a2: ld      a,b] A := 1
-	move.b	d0,counter_for_use_later_63b9   	| [$28a3: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28a3: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	clr.b	d3                              	| [$28a6: ld      e,$00] E := #00
 	lea	oil_can_address_66a0,a2        	| [$28a8: ld      ix,oil_can_address_66a0] load IX with oil can fire location
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28ac: call    $2913] check for collision with oil can fire
@@ -9447,21 +9464,21 @@ check_collisions_in_girders_2880:
 
 check_collisions_in_conveyors_28b0:
 	movem.w	(sp)+,d5/d6                        	| [$28b0: pop     hl] restore HL
-	move.b	#0x05,d1                        	| [$28b1: ld      b,$05] B := 5 fires
+	move.b	#NB_FIRES,d1                        	| [$28b1: ld      b,$05] B := 5 fires
 	move.b	d1,d0                           	| [$28b3: ld      a,b] A := 5 fires
-	move.b	d0,counter_for_use_later_63b9   	| [$28b4: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28b4: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$28b7: ld      de,$0020] load DE with offset 32
 	lea	start_of_fires_table_6400,a2   	| [$28ba: ld      ix,start_of_fires_table_6400] load IX with start of fires
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28be: call    $2913] check for collisions with fires
-	move.b	#0x06,d1                        	| [$28c1: ld      b,$06] B := 6
+	move.b	#NB_PIES,d1                        	| [$28c1: ld      b,$06] B := 6
 	move.b	d1,d0                           	| [$28c3: ld      a,b] A := 6
-	move.b	d0,counter_for_use_later_63b9   	| [$28c4: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28c4: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.b	#0x10,d3                        	| [$28c7: ld      e,$10] E := #10
 	lea	start_of_pies_65a0,a2          	| [$28c9: ld      ix,start_of_pies_65a0] load IX with start of pies
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28cd: call    $2913] check for collisions with pies
 	move.b	#0x01,d1                        	| [$28d0: ld      b,$01] B := 1
 	move.b	d1,d0                           	| [$28d2: ld      a,b] A := 1
-	move.b	d0,counter_for_use_later_63b9   	| [$28d3: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28d3: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	clr.b	d3                               	| [$28d6: ld      e,$00] E := 0
 	lea	oil_can_address_66a0,a2        	| [$28d8: ld      ix,oil_can_address_66a0] load IX with oil can address
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28dc: call    $2913] check for collision with oil can fire
@@ -9471,15 +9488,15 @@ check_collisions_in_conveyors_28b0:
 
 check_collisions_in_elevators_28e0:
 	movem.w	(sp)+,d5/d6                        	| [$28e0: pop     hl] restore HL
-	move.b	#0x05,d1                        	| [$28e1: ld      b,$05] B := 5
+	move.b	#NB_FIRES,d1                        	| [$28e1: ld      b,$05] B := 5
 	move.b	d1,d0                           	| [$28e3: ld      a,b] A := 5
-	move.b	d0,counter_for_use_later_63b9   	| [$28e4: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28e4: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.w	#0x0020,d3                      	| [$28e7: ld      de,$0020] load offset 32
 	lea	start_of_fires_table_6400,a2   	| [$28ea: ld      ix,start_of_fires_table_6400] load start of addresses for fires
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28ee: call    $2913] check for collisions with fires
 	move.b	#0x0a,d1                        	| [$28f1: ld      b,$0a] B := #0A
 	move.b	d1,d0                           	| [$28f3: ld      a,b] A := #0A
-	move.b	d0,counter_for_use_later_63b9   	| [$28f4: ld      (counter_for_use_later_63b9),a] store counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28f4: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.b	#0x10,d3                        	| [$28f7: ld      e,$10] E := #10
 	lea	start_of_bouncer_memory_area_6500,a2	| [$28f9: ld      ix,start_of_bouncer_memory_area_6500] load IX with start of addresses for springs
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28fd: call    $2913] check for collisions with springs
@@ -9492,7 +9509,7 @@ check_collisions_in_rivets_2901:
 	movem.w	(sp)+,d5/d6                        	| [$2901: pop     hl] restore HL
 	move.b	#0x07,d1                        	| [$2902: ld      b,$07] B := 7
 	move.b	d1,d0                           	| [$2904: ld      a,b] A := 7
-	move.b	d0,counter_for_use_later_63b9   	| [$2905: ld      (counter_for_use_later_63b9),a] store 7 into counter for use later
+	move.b	d0,nb_items_checked_for_collision_63b9   	| [$2905: ld      (nb_items_checked_for_collision_63b9),a] store 7 into counter for use later
 	move.w	#0x0020,d3                      	| [$2908: ld      de,$0020] load DE with offset 32
 	lea	start_of_fires_table_6400,a2   	| [$290b: ld      ix,start_of_fires_table_6400] load IX with start of firefox arrays
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$290f: call    $2913] check for collisions with firefoxes/squares
@@ -9506,6 +9523,8 @@ check_collisions_in_rivets_2901:
 * seems to return a value in A as either 0 or 1
 * check for sprite collision ???
 * a2: array of enemies to check (sprite shadow table, ex 6400 or 6700, depends on levels)
+* > D0: 1 collision, 0 no collision
+* > D1: remaining items to check (to compute index of object that collides)
 
 check_for_collision_with_enemy_type_2913:
 
@@ -9524,6 +9543,7 @@ l_2915:
 	neg.b	d0                               	| [$2923: neg] A = 0 - A (negate with 2's complement)
 
 l_2925:
+	* intersection of object bounds
 	addq.b	#1,d0                           	| [$2925: inc     a] A := A + 1
 	sub.b	d6,d0                            	| [$2926: sub     l] subtract L [???]
 	jcs	l_2930                             	| [$2927: jp      c,$2930] on carry, skip next 2 steps
@@ -9551,7 +9571,7 @@ l_2945:
 	move.b	#0x01,d0                        	| [$2945: ld      a,$01] A := 1 - code for collision
 	move.l	(sp)+,a2                        	| [$2947: pop     ix] restore IX
 	addq.w	#4,sp                           	| [$2949: inc     sp] * 2
-	rts                                    	| [$294b: ret] return to higher subroutine
+	rts                                    	| [$294b: ret] skip other collision tests, return to higher subroutine
 
 l_294c:
 	add.w	d3,a2                            	| [$294c: add     ix,de] add offset for next sprite
@@ -10264,7 +10284,7 @@ l_2c4f:
 	move.w	#0x0020,d3                      	| [$2c61: ld      de,$0020] now check if all 5 fires are out 32
 	lea	start_of_fires_table_6400,a0   	| [$2c64: ld      hl,start_of_fires_table_6400] #6400 by 20's contian 1 if these fires exist
 
-	move.b	#0x05,d1                        	| [$2c67: ld      b,$05] FOR B = 1 to 5
+	move.b	#NB_FIRES,d1                        	| [$2c67: ld      b,$05] FOR B = 1 to 5
 
 l_2c69:
 	move.b	(a0),d0                         	| [$2c69: ld      a,(hl)] get fire status
@@ -10720,7 +10740,9 @@ l_2eed:
 	                               	| [$2efc: xor     a] A := 0
 	clr.b	mario_is_grabbing_the_hammer_until_he_lands_6218	| [$2efd: ld      (mario_is_grabbing_the_hammer_until_he_lands_6218),a] store into grabbing the hammer indicator. the grab is complete.
 	lea	background_music_value_6089,a0 	| [$2f00: ld      hl,background_music_value_6089] load HL with music address
-	move.b	#0x04,(a0)                      	| [$2f03: ld      (hl),$04] set music for hammer
+	move.b	#MUS_HAMMER,d0
+	move.b	d0,(a0)                      	| [$2f03: ld      (hl),$04] set music for hammer
+	jbsr	osd_sound_start
 	move.b	#0x06,(0x09,a2)                 	| [$2f05: ld      (ix+$09),$06] set width ?
 	move.b	#0x03,(0x0a,a2)                 	| [$2f09: ld      (ix+$0a),$03] set height ?
 	move.b	#0x1e,d1                        	| [$2f0d: ld      b,$1e] B := #1E
@@ -10781,6 +10803,7 @@ l_2f43:
 	clr.b	(a2)                        	| [$2f72: ld      (ix+$00),$00] clear hammer active bit
 	move.b	restored_when_hammer_runs_out_6389,d0	| [$2f76: ld      a,(restored_when_hammer_runs_out_6389)] load A with previous background music
 	move.b	d0,background_music_value_6089  	| [$2f79: ld      (background_music_value_6089),a] set music with what it was before the hammer was grabbed
+	jbsr	osd_sound_start
 
 *
 
@@ -11023,7 +11046,7 @@ l_3069:
 
 * called from 3 locations
 
-l_306f:
+kong_climbing_ladder_with_girl_306f:
 	lea	kong_misc_counter_62af,a0  	| [$306f: ld      hl,kong_misc_counter_62af] load HL with kong climbing counter
 	addq.b	#1,(a0)                         	| [$3072: inc     (hl)] increase
 	move.b	(a0),d0                         	| [$3073: ld      a,(hl)] load A with the counter
@@ -11232,7 +11255,7 @@ l_313c:
 	lea	start_of_fires_table_6400,a2   	| [$313c: ld      ix,start_of_fires_table_6400] load IX with start of fire address
 	clr.b	d0                               	| [$3140: xor     a] \ Reset # of fires onscreen to 0, this routine will count them.
 	move.b	d0,unknown_63a1                 	| [$3141: ld      (unknown_63a1),a] /
-	move.b	#0x05,d1                        	| [$3144: ld      b,$05] For B = 1 to 5 firefoxes
+	move.b	#NB_FIRES,d1                        	| [$3144: ld      b,$05] For B = 1 to 5 firefoxes
 	move.w	#0x0020,d3                      	| [$3146: ld      de,$0020] load DE with offset to add for next firefox 32
 
 l_3149:
@@ -11321,7 +11344,7 @@ l_31d0:
 	move.b	unknown_63a2,d0                 	| [$31d0: ld      a,(unknown_63a2)] \  Increment index of current fireball being processed
 	addq.b	#1,d0                           	| [$31d3: inc     a]|
 	move.b	d0,unknown_63a2                 	| [$31d4: ld      (unknown_63a2),a] /
-	cmp.b	#0x05,d0                         	| [$31d7: cp      $05] \ Loop if index is less than 5
+	cmp.b	#NB_FIRES,d0                         	| [$31d7: cp      $05] \ Loop if index is less than 5
 	jne	l_31be                             	| [$31d9: jp      nz,$31be] /
 
 	rts                                    	| [$31dc: ret] return
@@ -11940,7 +11963,7 @@ l_34ed:
 l_34f3:
 	lea	start_of_fires_table_6400,a0   	| [$34f3: ld      hl,start_of_fires_table_6400] start of fire/firefox data
 	lea	start_of_firefox_sprites_69d0,a1	| [$34f6: ld      de,start_of_firefox_sprites_69d0] start of firefox sprites (hardware)
-	move.b	#0x05,d1                        	| [$34f9: ld      b,$05] For B = 1 to 5
+	move.b	#NB_FIRES,d1                        	| [$34f9: ld      b,$05] For B = 1 to 5
 
 l_34fb:
 	move.b	(a0),d0                         	| [$34fb: ld      a,(hl)] get firefox data
@@ -13024,7 +13047,7 @@ l_3e99:
 	lea	start_of_barrel_info_table_6700,a2	| [$3ea3: ld      ix,start_of_barrel_info_table_6700] load IX with start of barrel info table
 	jbsr	check_enemies_being_jumped_3ec3                            	| [$3ea7: call    $3ec3] call sub below.  check for barrels under jump
 
-	move.b	#0x05,d1                        	| [$3eaa: ld      b,$05] for B = 1 to 5 fires
+	move.b	#NB_FIRES,d1                        	| [$3eaa: ld      b,$05] for B = 1 to 5 fires
 	lea	start_of_fires_table_6400,a2   	| [$3eac: ld      ix,start_of_fires_table_6400] start of fires table
 	jbsr	check_enemies_being_jumped_3ec3                            	| [$3eb0: call    $3ec3] check for fires being jumped
 

@@ -182,7 +182,7 @@
 	.global	unknown_63b5
 	.global	kongs_position_63b7
 	.global	mario_dead_flag_63b8
-	.global	counter_for_use_later_63b9
+	.global	nb_items_checked_for_collision_63b9
 	.global	timer_unknown_63c0
 	.global	store_63c2
 	.global	unknown_63c4
@@ -632,7 +632,7 @@ kongs_position_63b7:
 	ds.b	1
 mario_dead_flag_63b8:
 	ds.b	1
-counter_for_use_later_63b9:
+nb_items_checked_for_collision_63b9:
 	ds.b	7
 timer_unknown_63c0:
 	ds.b	2

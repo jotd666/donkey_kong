@@ -1,22 +1,15 @@
-- hammer kills wrong firefox/pie (_1ea0 rivets level)
+- sprites completely misplaced (only once) when jumping at stage 3
+- hammer kills wrong firefox/pie (item_just_hit_1ea0 rivets level)
   ok for barrels & fire:
     index_of_item_hit_6354, offset_for_item_in_array_6353
+	either explosion sprites is misplaced (but kills the proper flame)
+	or properly placed but kills another one
 - game over with highscore: almost nothing displayed, + highscore trashed
 - pie factory: pies not erased at some point
 - playing a while: score seems to have been reset (to confirm)
-
-- crash on game over: add F4 instant game over cheat
-
-	* caller: a0 is wrong
-	jbsr	l_057c                            	| [$15ad: call    $057c] ???
-	
-	move.b	#0x03,d1                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
-	move.b	#0x04,d2                        	| [$0580: ld      bc,$0304] For B = 1 to 3 772
-draw_digits_0583:
-	move.b	(a0),d0          <= wrong addy
-	ror.b	#4,d0                            	| [$0584: rrca] * 4
-	
-- implement more sounds
+- start music not played (pattern 0)
+- implement more sounds: gorilla screams, ...
+- rip more tunes
 - "50m/75m/100m..." is shifted
 - elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
   maybe mask issue when drawing reverted sprites?

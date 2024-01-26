@@ -30,7 +30,7 @@
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
-	OPT_START_SCREEN=1
+	OPT_START_SCREEN=2
 
 	.endif
 	
@@ -45,15 +45,15 @@
 
 
 
-	.equ	BOOM_SND,                     0
-	.equ	CREDIT_SND,                          1
-	.equ	DEAD_SND,                     2
-	.equ	JUMPED_OVER_SND,                      3
-	.equ	KILL_ENEMY_SND,               4
-	.equ	START_SND,                      5
-	.equ	JUMPING_SND,                      6
-	.equ	WALKING_SND,                      7
-	.equ	BOUNCER_SND,                      8
+	.equ	BOOM_SND,                     0+0x10
+	.equ	CREDIT_SND,                   1+0x10
+	.equ	DEAD_SND,                     2+0x10
+	.equ	JUMPED_OVER_SND,              3+0x10
+	.equ	KILL_ENEMY_SND,               4+0x10
+	.equ	START_SND,                    5+0x10
+	.equ	JUMPING_SND,                  6+0x10
+	.equ	WALKING_SND,                  7+0x10
+	.equ	BOUNCER_SND,                  8+0x10
 
 
 
