@@ -1407,7 +1407,7 @@ l_00b5:
 	subq.b	#1,(a0)                         	| [$00b8: dec     (hl)] decrease this timer
 	jbsr	random_0057                            	| [$00b9: call    $0057] update the random number gen
 	jbsr	handle_insert_coins_017b                            	| [$00bc: call    $017b] check for credits being inserted and handle them
-	jbsr	l_00e0                            	| [$00bf: call    $00e0] update all sounds
+	**jbsr	update_sounds_00e0                            	| [$00bf: call    $00e0] update all sounds
 										| [$00c2: ld      hl,$00d2] load HL with return address
 
 	pea		l_00d2                        	| [$00c5: push    hl] push to stack so any RETs go there (#00D2)
@@ -1439,7 +1439,7 @@ l_00d2:
 * called from #00BF
 * updates all sounds
 
-l_00e0:
+update_sounds_00e0:
 	lea	walking_sound_buffer_6080,a0   	| [$00e0: ld      hl,walking_sound_buffer_6080] source data at sound buffer
 	lea	reg_sfx,a1                     	| [$00e3: ld      de,reg_sfx] set destination to sound outputs
 	move.b	nocredits_6007,d0               	| [$00e6: ld      a,(nocredits_6007)] load A with credit indicator
@@ -2412,8 +2412,8 @@ l_0550:
 	lea	high_score_60b8,a0             	| [$0553: ld      hl,high_score_60b8] load HL with high score address
 
 l_0556:
-	move.b	(a1)+,d0                         	| [$0556: ld      a,(de)] load A with player score byte
-	move.b	d0,(a0)+                         	| [$0557: ld      (hl),a] store into high score byte
+	move.b	(a1)+,(a0)+                         	| [$0556: ld      a,(de)] load A with player score byte
+							| [$0557: ld      (hl),a] store into high score byte
 												| [$0558: inc     de] next address
 												| [$0559: inc     hl] next address
 	subq.b	#1,d1                           	| [...]
@@ -2507,16 +2507,28 @@ l_05ab:
 	lea	high_score_60b8,a0             	| [$05b0: ld      hl,high_score_60b8] load HL with high score
 
 l_05b3:
-	clr.b	d0                               	| [$05b3: xor     a] A := 0
-	move.b	d0,(a0)                         	| [$05b4: ld      (hl),a] clear score
-	addq.w	#1,a0                           	| [$05b5: inc     hl] next score memory
-	move.b	d0,(a0)                         	| [$05b6: ld      (hl),a] clear score
-	addq.w	#1,a0                           	| [$05b7: inc     hl] next score memory
-	move.b	d0,(a0)                         	| [$05b8: ld      (hl),a] clear score
+	                               	| [$05b3: xor     a] A := 0
+	clr.b	(a0)                         	| [$05b4: ld      (hl),a] clear score
+	                           	| [$05b5: inc     hl] next score memory
+	clr.b	(1,a0)                         	| [$05b6: ld      (hl),a] clear score
+	                           	| [$05b7: inc     hl] next score memory
+	clr.b	(2,a0)                         	| [$05b8: ld      (hl),a] clear score
 	move.w	(sp)+,d0                        	| [$05b9: pop     af] restore AF
+	
+	.ifne	OPT_START_SCORE
+	cmp.l	#player_1_score_address_60b2,a0
+	bne.b	0f
+	move.l	#OPT_START_SCORE,d0
+	move.b	d0,(2,a0)
+	lsr.l	#8,d0
+	move.b	d0,(1,a0)
+	lsr.l	#8,d0
+	move.b	d0,(a0)
+0:
+	.endif
 	jra	l_05c6                             	| [$05ba: jp      $05c6] jump ahead to task 2
 
-* never arrive here ???
+* never arrives here ???
 
 l_05bd:
 	subq.b	#1,d0                           	| [$05bd: dec     a] decrease A
@@ -6326,7 +6338,7 @@ l_1977:
 
 l_197a:
 	jbsr	check_for_bonus_items_1dbd                            	| [$197a: call    $1dbd] check for bonus items and jumping scores, rivets
-	jbsr	l_1e8c                            	| [$197d: call    $1e8c] do stuff for items hit with hammer
+	jbsr	handle_item_hit_with_hammer_1e8c                            	| [$197d: call    $1e8c] do stuff for items hit with hammer
 	jbsr	l_1ac3                            	| [$1980: call    $1ac3] check for jumping
 	jbsr	handle_barrel_rolls_1f72         	| [$1983: call    $1f72] roll barrels
 	jbsr	handle_barrel_rolls_2c8f 	     	| [$1986: call    $2c8f] roll barrels ?
@@ -7346,8 +7358,8 @@ l_1e85:
 * called from main routine at #197D
 * handles items hit with hammer
 
-l_1e8c:
-	move.b	item_hit_indicator_unknown_6350,d0	| [$1e8c: ld      a,(item_hit_indicator_unknown_6350)] load A with hammer hit item indicator
+handle_item_hit_with_hammer_1e8c:
+	tst.b	item_hit_indicator_unknown_6350	| [$1e8c: ld      a,(item_hit_indicator_unknown_6350)] load A with hammer hit item indicator
 	                               	| [$1e8f: and     a] is an item being smashed ?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$1e90: ret     z] no, return [...]
@@ -7369,7 +7381,7 @@ l_1e96:
 	.long	l_1f23	| 2       | #1F23
 
 * arrive right when an item is hit
-item_just_hit_1ea0:
+item_just_hit_1ea0:	
 	lea	start_of_pie_sprites_69b8,a0   	| [$1ea5: ld      hl,start_of_pie_sprites_69b8] load HL with sprites for pies
 	move.b	unknown_6352,d0                 	| [$1ea0: ld      a,(unknown_6352)] load A with ???
 	cmp.b	#0x65,d0                         	| [$1ea3: cp      $65] == #65 ?
@@ -7387,9 +7399,7 @@ l_1eb4:
 	move.b	offset_for_item_in_array_6353,d3                 	| [$1eba: ld      a,(offset_for_item_in_array_6353)] load A with the offset for each item in the array
 												| [$1ebd: ld      e,a] copy to E.  DE now has the offset
 	move.b	index_of_item_hit_6354,d0                 	| [$1ec1: ld      a,(index_of_item_hit_6354)] load A with the index of the item hit
-	move.b	d3,0x200
-	move.b	d0,0x201
-	tst.b	d0                               	| [$1ec4: and     a] == 0 ?
+												| [$1ec4: and     a] == 0 ?
 	jeq	l_1ecf                             	| [$1ec5: jp      z,$1ecf] yes, skip ahead, we use the default HL and IX
 
 	move.w	#0x04,d1                        	| [$1ebe: ld      bc,$0004] BC := size of sprite shadow structure
@@ -7422,22 +7432,22 @@ l_1ede:
 	move.b	#0x02,d0                        	| [$1ed7: ld      a,$02] A := 2, used for 300 pts
 l_1ede_2:
 	move.b	d0,scoring_indicator_6342       	| [$1ede: ld      (scoring_indicator_6342),a] store A into scoring indicator
-	lea		scoring_sprite_shadow_6a2c,a4	| [$1ee1: ld      bc,scoring_sprite_shadow_6a2c] load BC with scoring sprite address None
-	move.b	(a0),d0                         	| [$1ee4: ld      a,(hl)] load A with sprite value
-	clr.b	(a0)+                             	| [$1ee5: ld      (hl),$00] clear the sprite that was hit
-	move.b	d0,(a4)+                         	| [$1ee7: ld      (bc),a] store sprite value into the scoring sprite
+	lea		scoring_sprite_shadow_6a2c,a4	| [$1ee1: ld      bc,scoring_sprite_shadow_6a2c] load BC with scoring sprite address
+	move.b	(a0),d0                         	| [$1ee4: ld      a,(hl)] load A with sprite Y value (X on rotated display like amiga)
+	clr.b	(a0)+                             	| [$1ee5: ld      (hl),$00] clear the sprite Y that was hit: no longer visible
+	move.b	d0,(a4)+                         	| [$1ee7: ld      (bc),a] store sprite Y value into the scoring sprite
 												| [$1ee8: inc     c] next
 	                           	| [$1ee9: inc     l] next
-	move.b	#0x60,d0                        	| [$1eea: ld      a,$60] A := #60 = sprite for large bluewhite circle
-	move.b	d0,(a4)+                         	| [$1eec: ld      (bc),a] store into sprite graphic
+	move.b	#0x60,(a4)+                        	| [$1eea: ld      a,$60] A := #60 = sprite for large bluewhite circle
+											| [$1eec: ld      (bc),a] store into sprite graphic
 											| [$1eed: inc     c] next
-	addq.w	#1,a0                           	| [$1eee: inc     l] next
-	move.b	#0x0c,d0                        	| [$1eef: ld      a,$0c] A := #0C = color code
-	move.b	d0,(a4)+                         	| [$1ef1: ld      (bc),a] store into sprite color
-	                           	| [$1ef2: inc     c] next
-	addq.w	#1,a0                           	| [$1ef3: inc     l] next
-	move.b	(a0),d0                         	| [$1ef4: ld      a,(hl)] load A with Y value for sprite hit
-	move.b	d0,(a4)                         	| [$1ef5: ld      (bc),a] store into Y value for scoring sprite
+												| [$1eee: inc     l] we don't need this value
+	move.b	#0x0c,(a4)+                        	| [$1eef: ld      a,$0c] A := #0C = color code
+												| [$1ef1: ld      (bc),a] store into sprite color
+												| [$1ef2: inc     c] next
+												| [$1ef3: inc     l] next
+	move.b	(2,a0),(a4)                         	| [$1ef4: ld      a,(hl)] load A with X value for sprite hit
+												| [$1ef5: ld      (bc),a] store into X value for scoring sprite
 	lea	item_hit_phase_counter_address_6345,a0	| [$1ef6: ld      hl,item_hit_phase_counter_address_6345] load HL with item hit phase counter address
 
 * #6345 - usually 0.  changes to 1, then 2 when items are hit with the hammer
@@ -7524,16 +7534,16 @@ handle_mario_falling_1f46:
 
 * mario is falling
 
-	clr.b	d0                               	| [$1f4b: xor     a] A := 0
-	move.b	d0,unknown_6204                 	| [$1f4c: ld      (unknown_6204),a]
-	move.b	d0,unknown_6206                 	| [$1f4f: ld      (unknown_6206),a]
-	move.b	d0,mario_falling_indicator_6221 	| [$1f52: ld      (mario_falling_indicator_6221),a] clear mario falling indicator
-	move.b	d0,mario_jump_direction_6210    	| [$1f55: ld      (mario_jump_direction_6210),a] clear jump direction
-	move.b	d0,unknown_6211                 	| [$1f58: ld      (unknown_6211),a]
-	move.b	d0,this_indicator_6212          	| [$1f5b: ld      (this_indicator_6212),a] clear this indicator (???)
-	move.b	d0,unknown_6213                 	| [$1f5e: ld      (unknown_6213),a]
-	move.b	d0,jump_counter_6214            	| [$1f61: ld      (jump_counter_6214),a] clear jump counter
-	addq.b	#1,d0                           	| [$1f64: inc     a] A := 1
+											| [$1f4b: xor     a] A := 0
+	clr.b	unknown_6204                 	| [$1f4c: ld      (unknown_6204),a]
+	clr.b	unknown_6206                 	| [$1f4f: ld      (unknown_6206),a]
+	clr.b	mario_falling_indicator_6221 	| [$1f52: ld      (mario_falling_indicator_6221),a] clear mario falling indicator
+	clr.b	mario_jump_direction_6210    	| [$1f55: ld      (mario_jump_direction_6210),a] clear jump direction
+	clr.b	unknown_6211                 	| [$1f58: ld      (unknown_6211),a]
+	clr.b	this_indicator_6212          	| [$1f5b: ld      (this_indicator_6212),a] clear this indicator (???)
+	clr.b	unknown_6213                 	| [$1f5e: ld      (unknown_6213),a]
+	clr.b	jump_counter_6214            	| [$1f61: ld      (jump_counter_6214),a] clear jump counter
+	moveq	#1,d0                           	| [$1f64: inc     a] A := 1
 	move.b	d0,jumping_status_6216          	| [$1f65: ld      (jumping_status_6216),a] set jump indicator
 	move.b	d0,mario_jump_apex_621f         	| [$1f68: ld      (mario_jump_apex_621f),a] set #621F = 1 when mario is at apex or on way down after jump, 0 otherwise.
 	move.b	mario_y_position_6205,d0	| [$1f6b: ld      a,(mario_y_position_6205)] load A with ???
@@ -8744,9 +8754,9 @@ l_2517:
 	rts                                    	| [$251b: ret] return
 
 l_251c:
-	move.b	d6,d0                           	| [$251c: ld      a,l] A := L
-	addq.b	#0x04,d0                        	| [$251d: add     a,$04] add 4
-	move.b	d0,d6                           	| [$251f: ld      l,a] store into L
+											| [$251c: ld      a,l] A := L
+	addq.w	#0x04,a0                        	| [$251d: add     a,$04] add 4
+											| [$251f: ld      l,a] store into L
 	jra	l_2517                             	| [$2520: jp      $2517] loop back for next pie
 
 * called from #24ED above
@@ -8884,7 +8894,7 @@ l_25d6:
 l_25dc:
 	jeq	l_25e7                             	| [$25dc: jp      z,$25e7] yes, skip ahead
 
-	addq.b	#4,d6                           	| [$25df: inc     l] * 4
+	addq.w	#4,a0                           	| [$25df: inc     l] * 4
 	subq.b	#1,d0                           	| [$25e3: dec     a] decrease A
 	jra	l_25dc                             	| [$25e4: jp      $25dc] loop again
 
@@ -9497,7 +9507,7 @@ check_collisions_in_elevators_28e0:
 	move.w	#0x0020,d3                      	| [$28e7: ld      de,$0020] load offset 32
 	lea	start_of_fires_table_6400,a2   	| [$28ea: ld      ix,start_of_fires_table_6400] load start of addresses for fires
 	jbsr	check_for_collision_with_enemy_type_2913                            	| [$28ee: call    $2913] check for collisions with fires
-	move.b	#0x0a,d1                        	| [$28f1: ld      b,$0a] B := #0A
+	move.b	#0x0a,d1                        	| [$28f1: ld      b,$0a] B := #0A 10 bouncers (same slots as barrels)
 	move.b	d1,d0                           	| [$28f3: ld      a,b] A := #0A
 	move.b	d0,nb_items_checked_for_collision_63b9   	| [$28f4: ld      (nb_items_checked_for_collision_63b9),a] store counter for use later
 	move.b	#0x10,d3                        	| [$28f7: ld      e,$10] E := #10
@@ -12007,9 +12017,9 @@ l_351e:
 	addq.w	#0x05,a0                        	| [$351e: ld      a,$05] A := 5
 											| [$3520: add     a,l] add to L
 											| [$3521: ld      l,a] store into L.  HL is now 5 more than before
-	move.b	#0x04,d0                        	| [$3522: ld      a,$04] A := 4
-	add.b	d4,d0                            	| [$3524: add     a,e] add to E
-	move.b	d0,d4                           	| [$3525: ld      e,a] store into E.  DE is now 4 more than before.  next sprite
+	                        	| [$3522: ld      a,$04] A := 4
+	addq.w	#4,a1                            	| [$3524: add     a,e] add to E
+	                           	| [$3525: ld      e,a] store into E.  DE is now 4 more than before.  next sprite
 	jra	l_3517                             	| [$3526: jp      $3517] jump back
 
 * table data

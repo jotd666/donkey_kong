@@ -28,11 +28,6 @@
 
 	.else
 
-	NB_BARRELS = 10
-	NB_FIRES = 2
-	NB_PIES = 6
-	* don't remove rivets, allows to chase fires more efficiently
-    OPT_LEAVE_RIVETS=1
 	
     * hardware options
     OPT_DISABLE_BG_LAYER=0
@@ -40,13 +35,18 @@
    
 	* permanent cheats/hacks to test game
     * score is BCD format
+	NB_BARRELS = 10
+	NB_FIRES = 5
+	NB_PIES = 6
+	* don't remove rivets, allows to chase fires more efficiently
 	* all options are zeroed for release
-    OPT_START_SCORE=0x0
+    OPT_LEAVE_RIVETS=0
+    OPT_START_SCORE=0x9900
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
-	OPT_START_SCREEN=4
+	OPT_START_SCREEN=1
 
 	.endif
 	

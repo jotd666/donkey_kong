@@ -1,12 +1,5 @@
-- sprites completely misplaced (only once) when jumping at stage 3
-- hammer kills wrong firefox/pie (item_just_hit_1ea0 rivets level)
-  ok for barrels & fire:
-    index_of_item_hit_6354, offset_for_item_in_array_6353 saved 0x200 in 1ec1
-	either explosion sprites is misplaced (but kills the proper flame)
-	or properly placed but kills another one
-   when index 0 index_of_item_hit_6354 then bug else OK
-- pie factory: pies not erased at some point
-- playing a while: score seems to have been reset (to confirm)
+- sprites completely trashed/misplaced stage 3 updating bouncer
+- score 9900 => 0
 - start music not played (pattern 0)
 - implement more sounds: gorilla screams, ...
 - rip more tunes/sounds:

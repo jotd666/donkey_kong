@@ -31,10 +31,10 @@ SCORE_FILE_SIZE = 0x6
 * RAMs have 4 bytes per sprite, only the order
 * and some bits differ
 
+TARGET_SPRITE_X = 0   | this is Y in the original code, set 0 to hide sprite
 TARGET_SPRITE_ATTRIBUTES = 2
 TARGET_SPRITE_CODE = 1
 TARGET_SPRITE_Y = 3
-TARGET_SPRITE_X = 0
 
 
 
@@ -956,7 +956,7 @@ update_bobs:
 1:
 	moveq	#0,d0
 	move.b	(PREV_X,a4),d0
-	beq.b	11f		| y=0: inactive
+	beq.b	11f		| x=0: inactive
 	moveq	#0,d1
 	move.b	(PREV_Y,a4),d1
 	* clear 16x16 area where the sprite was
