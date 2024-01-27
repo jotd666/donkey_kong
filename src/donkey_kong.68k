@@ -2371,16 +2371,17 @@ add_to_score_051c:
 	lea	item_scoring_table_3529,a0                      	| [$0525: ld      hl,$3529] #3529 holds table data for scoring
 	add.w	d1,a0                            	| [$052a: add     hl,bc] add offset for scoring table
  	CLEAR_XC_FLAGS                               	| [$052b: and     a] clear carry flag
-	move.w	#3,d1                        	| [$052c: ld      b,$03] for B = 1 to 3
+	move.w	#2,d1                        	| [$052c: ld      b,$03] for B = 1 to 3
 l_052e:
 	move.b	(a1),d0                         	| [$052e: ld      a,(de)] load A with current score
 	move.b	(a0)+,d7
 	abcd	D7,d0								| [adc     a,(hl) & daa]      | add the amount the player just scored + decimal adjust
 	move.b	d0,(a1)+                         	| [$0531: ld      (de),a] store result in score
-	                           	| [$0532: inc     de] next byte of score
+	* using DBF preserves X flag that abcd uses to propagate carry (else score resets to 0 after 9900)
+	dbf		d1,l_052e                          	| [$0532: inc     de] next byte of score
 	                           	| [$0533: inc     hl] next byte of score to add
-	subq.b	#1,d1                           	| [...]
-	jne	l_052e                             	| [$0534: djnz    $052e] Next B
+	                           	| [...]
+	                             	| [$0534: djnz    $052e] Next B
 
 	move.l	a1,-(sp)                        	| [$0536: push    de] save DE
 	subq.w	#1,a1                           	| [$0537: dec     de] DE is now the last byte of score
