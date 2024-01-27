@@ -129,6 +129,7 @@ RAM_END	= 0x7000
 	lea		load_any_address_be_error(pc),a0
 	jbsr	osd_break
 111:
+	.endif
 	* > 0x6000, is that < ram end?
 	cmp.w	#0x900,d7
 	bcs.b	112f
@@ -140,7 +141,6 @@ RAM_END	= 0x7000
 	lea		ram_6000,\reg
 	bra.b	113f
 110:
-	.endif
 	lea		game_rom,\reg
 113:
 	add.w	d7,\reg
@@ -5423,7 +5423,7 @@ l_1459:
 	move.b	d0,waittimermsb_6009            	| [$1462: ld      (waittimermsb_6009),a] clear timer
 	lea	gamemode2_600a,a0              	| [$1465: ld      hl,gamemode2_600a] load HL with game mode2 address
 	addq.b	#1,(a0)                         	| [$1468: inc     (hl)] increase game mode2 to #15
-	lea	game_rom+0x030d,a1                      	| [$1469: ld      de,$030d] load task data for text #D "NAME REGISTRATION"
+	move.w	#0x030d,d3                      	| [$1469: ld      de,$030d] load task data for text #D "NAME REGISTRATION"
 	move.b	#0x0c,d1                        	| [$146c: ld      b,$0c] set counter for #0C items (12 decimal)
 
 l_146e:
@@ -5462,16 +5462,16 @@ l_1486:
 	jbsr	osd_update_palette_bank
 	move.b	#0x01,(a0)                      	| [$1497: ld      (hl),$01] set timer to 1
 	lea	hscursordelay_6030,a0          	| [$1499: ld      hl,hscursordelay_6030] load HL with HSCursorDelay
-	move.b	#0x0a,(a0)                      	| [$149c: ld      (hl),$0a]
-	addq.w	#1,a0                           	| [$149e: inc     hl] HL := HSBlinkToggle
-	clr.b	(a0)                             	| [$149f: ld      (hl),$00]
-	addq.w	#1,a0                           	| [$14a1: inc     hl] HL := HSBlinkTimer
-	move.b	#0x10,(a0)                      	| [$14a2: ld      (hl),$10]
-	addq.w	#1,a0                           	| [$14a4: inc     hl] HL := HSRegiTime
-	move.b	#0x1e,(a0)                      	| [$14a5: ld      (hl),$1e]
-	addq.w	#1,a0                           	| [$14a7: inc     hl] HL := HSTimer
-	move.b	#0x3e,(a0)                      	| [$14a8: ld      (hl),$3e] set outer loop timer
-	addq.w	#1,a0                           	| [$14aa: inc     hl] HL := HSCursorPos
+	move.b	#0x0a,(a0)+                      	| [$149c: ld      (hl),$0a]
+	                           	| [$149e: inc     hl] HL := HSBlinkToggle
+	clr.b	(a0)+                             	| [$149f: ld      (hl),$00]
+	                           	| [$14a1: inc     hl] HL := HSBlinkTimer
+	move.b	#0x10,(a0)+                      	| [$14a2: ld      (hl),$10]
+	                           	| [$14a4: inc     hl] HL := HSRegiTime
+	move.b	#0x1e,(a0)+                      	| [$14a5: ld      (hl),$1e]
+	                           	| [$14a7: inc     hl] HL := HSTimer
+	move.b	#0x3e,(a0)+                      	| [$14a8: ld      (hl),$3e] set outer loop timer
+	                           	| [$14aa: inc     hl] HL := HSCursorPos
 	clr.b	(a0)                             	| [$14ab: ld      (hl),$00] set high score digit selected
 	move.w	#0x75e8,d7                      	| [$14ad: ld      hl,$75e8] load HL with screen position for first player initial
 	move.w	d7,hsinitialpos_6036            	| [$14b0: ld      (hsinitialpos_6036),hl] save into this indicator

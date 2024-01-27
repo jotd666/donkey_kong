@@ -1945,10 +1945,13 @@ osd_w_videoram:
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
+	.ifndef		RELEASE
+
 	* should not happen
 	lea		write_videoram_out_of_range_error(pc),a0
 	jbsr	osd_break
 	nop	
+	.endif
 	bra.b	0f
 	
 1:
@@ -2236,12 +2239,14 @@ osd_r_videoram:
 	cmp.w	#0x400,d7
 	bcs.b	1f
 0:
+	.ifndef		RELEASE
 	* should not happen
 	lea		read_videoram_out_of_range_error(pc),a0
 	jbsr	osd_break
 	clr.b	d0
 	move.b	D1,d1
 	nop
+	.endif
 	bra.b	2f
 1:
 	lea		bg_videoram,a0
@@ -2310,7 +2315,7 @@ osd_read_in_0:
 0:
 	btst	#JPB_BTN_DOWN,d1
 	beq.b	0f
-	bclr	#3,d0
+	bset	#3,d0
 0:
 	btst	#JPB_BTN_LEFT,d1
 	beq.b	0f
