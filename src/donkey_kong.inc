@@ -46,7 +46,8 @@
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
-	OPT_START_SCREEN=3
+	* setting this != 1 shows the same screen again and again
+	OPT_START_SCREEN=1
 
 	.endif
 	
@@ -69,7 +70,8 @@
 	.equ	START_SND,                    5+0x10
 	.equ	JUMPING_SND,                  6+0x10
 	.equ	WALKING_SND,                  7+0x10
-	.equ	BOUNCER_SND,                  8+0x10
+	.equ	BOUNCER_FALLS_SND,                  8+0x10
+	.equ	BOUNCER_BOUNCES_SND,                  9+0x10
 	.equ	GORILLA_YELLS_SND,            0xF
 
 

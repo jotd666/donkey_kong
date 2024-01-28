@@ -23,7 +23,7 @@ SCREEN_ADDRESS = 0x7400
 
 
 BORDERBLANK = 0
-SCORE_FILE_SIZE = 0x6
+SCORE_FILE_SIZE = 0xAA
 
 * if the alloc_sprite & update_sprite routines
 * are reused, changing those offsets can make
@@ -992,7 +992,7 @@ update_bobs:
 	move.l	bob_previous_drawed_positions(pc),a6
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
-
+	moveq	#0,d0
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
 	move.b	d0,(PREV_X,a6)
 	jeq		211f				| x=0: don't show
@@ -1022,6 +1022,7 @@ update_bobs:
 	move.b	d2,d2
 	bra.b	211f
 11:
+	moveq	#0,d1
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	211f			| Y set to 0: not shown
 
@@ -2379,11 +2380,7 @@ osd_read_high_scores:
 	beq.b	1f
 	bsr		get_hiscore_name
 	move.l	a3,a1
-	jsr		resload_LoadFile(a2)
-	* set highest score entry
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+
-    move.b    (a3)+,(a4)+		
+	jsr		resload_LoadFile(a2)		
 	bra.b	1f
 0:
 	tst.b	highscore_loaded
@@ -2401,8 +2398,11 @@ osd_read_high_scores:
 	
 osd_write_high_scores:
 	movem.l	d0-d7/a0-a6,-(a7)
+	.ifdef	RELEASE
 	tst.b	cheat_used		| don't save score if cheat on
 	bne.b	1f
+	.endif
+	
 	move.l	_resload(pc),d0
 	beq.b	0f
 	move.l	d0,a2

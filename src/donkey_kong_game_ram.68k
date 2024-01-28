@@ -26,7 +26,7 @@
 	.global	hstimer_6034
 	.global	hscursorpos_6035
 	.global	hsinitialpos_6036
-	.global	unknown_ram_address_6038
+	.global	highscore_entry_address_6038
 	.global	unknown_ram_address_603a
 	.global	p1numlives_6040
 	.global	p2numlives_6048
@@ -320,7 +320,7 @@ hscursorpos_6035:
 	ds.b	1
 hsinitialpos_6036:
 	ds.b	2
-unknown_ram_address_6038:
+highscore_entry_address_6038:
 	ds.b	2
 unknown_ram_address_603a:
 	ds.b	6

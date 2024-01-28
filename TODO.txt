@@ -1,16 +1,11 @@
-- sprites completely trashed/misplaced stage 3 updating bouncer
-- start music not played (pattern 0)
-- implement more sounds: gorilla screams, ...
-- rip more tunes/sounds:
-MUS_INTRO       = 0x01     | ok but not playing
+- highscore insertion seems wrong: score wrongly inserted
+  then changes after entering it!
+- rip/convert more tunes/sounds:
 MUS_OUTATIME    = 0x03     | Running out of time
 MUS_25M         = 0x08     | Music for barrel stage
 MUS_100M        = 0x0b     | Music for rivet stage
 MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
-	jbsr	only_continues_if_given_level_0030                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
-	*jbsr	osd_sound_start
-sound for bouncer bouncing (not falling) _start  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a
 
 - elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
   maybe mask issue when drawing reverted sprites?
@@ -18,9 +13,4 @@ sound for bouncer bouncing (not falling) _start  	| [$2ea1: ld      (play_sound_
 - girders: barrels change color just before rolling into oil can
 - insert coin with fire, start with up/down
 - pause
-- highscore save
-- fix level 22 kill screen: Like most kill screens, this kill screen is 
-the result of integer overflow on an 8 bit variable. 
-The amount of time allowed for any given screen is 
-determined algorithmically during play by the level the player is on. The timer is calculated in seconds as 10×(level + 4), and has a maximum value of 80. When the level reaches 22, the game reads 10×(22+4) or 260 seconds. However, the 8-bit counter rolls over at 256, meaning the game calculates 4. This causes the timer to be set so low that there is 4 seconds for the player to complete the level, simply not enough time for the screen to possibly be completed
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!

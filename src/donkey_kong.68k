@@ -1654,7 +1654,7 @@ l_01c3:
 	move.b	d0,level_number_6229       	| [$01d6: ld      (level_number_6229),a] initialize level to 1
 	move.b	d0,number_of_lives_remaining_6228	| [$01d9: ld      (number_of_lives_remaining_6228),a] set number of lives remaining to 1
 	jbsr	l_06b8                            	| [$01dc: call    $06b8] if a game is played or credits exist, display remaining lives-1 and level
-	jbsr	l_0207                            	| [$01df: call    $0207] set all dip switch settings and create default high score table from ROM
+	jbsr	read_dip_load_highs_0207                            	| [$01df: call    $0207] set all dip switch settings and create default high score table from ROM
 	move.b	#0x01,d0                        	| [$01e2: ld      a,$01] A := 1
 	move.b	d0,reg_flipscreen               	| [$01e4: ld      (reg_flipscreen),a] store into flip screen setting
 	move.b	d0,gamemode1_6005               	| [$01e7: ld      (gamemode1_6005),a] store into game mode 1
@@ -1674,14 +1674,14 @@ l_01c3:
 
 * this sub reads and sets the dip switch settings, and creates the default high score table
 
-l_0207:
+read_dip_load_highs_0207:
 	jbsr	osd_read_dsw_1                         	| [$0207: ld      a,(dsw1)] load A with Dip switch settings
 	move.b	d0,d2                           	| [$020a: ld      c,a] copy to C
 	lea	startinglives_6020,a0          	| [$020b: ld      hl,startinglives_6020] set destination address to initial number of lives
 	and.b	#0x03,d0                         	| [$020e: and     $03] mask bits, now between 0 and 3 inclusive
 	addq.b	#0x03,d0                        	| [$0210: add     a,$03] Add 3, now between 3 and 6 inclusive
-	move.b	d0,(a0)                         	| [$0212: ld      (hl),a] store in initial number of lives
-	addq.w	#1,a0                           	| [$0213: inc     hl] next HL, now at ExtraLifeThreshold = score needed for extra life
+	move.b	d0,(a0)+                         	| [$0212: ld      (hl),a] store in initial number of lives
+	                           	| [$0213: inc     hl] next HL, now at ExtraLifeThreshold = score needed for extra life
 	move.b	d2,d0                           	| [$0214: ld      a,c] load A with original value of dip switches
 	ror.b	#2,d0                            	| [$0215: rrca] * 2
 	and.b	#0x03,d0                         	| [$0217: and     $03] mask bits, now between 0 and 3
@@ -1704,8 +1704,8 @@ l_0226:
 	move.b	d0,(a0)+                         	| [$0226: ld      (hl),a] store the result in score for extra life
 	                           	| [$0227: inc     hl] HL := CoinsPerCredit
 	move.b	d2,d0                           	| [$0228: ld      a,c] load A with dipswitch
-	move.b	#0x01,d1                        	| [$0229: ld      bc,$0101] B := 1, C := 1 257
-	move.b	#0x01,d2                        	| [$0229: ld      bc,$0101] B := 1, C := 1 257
+	move.b	#0x01,d1                        	| [$0229: ld      bc,$0101] B := 1, C := 1
+	move.b	#0x01,d2                        	| [$0229: ld      bc,$0101] B := 1, C := 1
 	move.b	#1,d3                      	| [$022c: ld      de,$0102] D := 1, E := 2
 	move.b	#2,d4                      	| [$022c: ld      de,$0102] D := 1, E := 2
 	and.b	#0x70,d0                         	| [$022f: and     $70] mask bits.  turns off all except the 3 used for coins/credits
@@ -1746,10 +1746,16 @@ l_0259:
 	move.b	#0x01,d0                        	| [$0253: ld      a,$01] A := 1
 l_0259_2:
 	move.b	d0,(a0)                         	| [$0259: ld      (hl),a] store into upright / cocktail
+
+
 	lea	game_rom+0x3565,a0                      	| [$025a: ld      hl,$3565] source = #3565 = default high score table
 	lea	high_score_ram_6100,a1         	| [$025d: ld      de,high_score_ram_6100] dest = #6100 = high score RAM
 	move.w	#0xaa,d1                        	| [$0260: ld      bc,$00aa] byte counter = #AA 170
 	jbsr	ldir                              	| [$0263: ldir] copy high score table into RAM
+	
+	* now is a good time to try to load saved highscores if they exist
+	lea	high_score_ram_6100,a0         	| [$025d: ld      de,high_score_ram_6100] dest = #6100 = high score RAM
+	jbsr	osd_read_high_scores
 	rts                                    	| [$0265: ret] return
 
 * come here from game power-on
@@ -1991,10 +1997,10 @@ l_0350:
 	lea	address_of_player_2_score_60b6,a0	| [$035e: ld      hl,address_of_player_2_score_60b6] else load HL with address of player 2 score
 
 l_0361:
-	move.b	(a0),d0                         	| [$0361: ld      a,(hl)] load A with a byte of the player's score
+	move.b	(a0)+,d0                         	| [$0361: ld      a,(hl)] load A with a byte of the player's score
 	and.b	#0xf0,d0                         	| [$0362: and     $f0] mask bits
 	move.b	d0,d1                           	| [$0364: ld      b,a] copy to B
-	addq.w	#1,a0                           	| [$0365: inc     hl] next score byte
+	                           	| [$0365: inc     hl] next score byte
 	move.b	(a0),d0                         	| [$0366: ld      a,(hl)] load A with byte of player's score
 	and.b	#0x0f,d0                         	| [$0367: and     $0f] mask bits
 	or.b	d1,d0                             	| [$0369: or      b] mix together the 2 score bytes
@@ -2873,7 +2879,7 @@ playing_game_06fe:
     .long	l_13aa                      | (12) #13AA    | flip screen if needed, reset game mode2 to zero, set player 2
     .long	l_13bb                      | (13) #13BB    | set player 1, reset game mode2 to zero, set screen flip to not flipped
     .long	l_141e                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
-    .long	l_1486                      | (15) #1486    | player enters initials in high score table
+    .long	enter_initials_1486                      | (15) #1486    | player enters initials in high score table
     .long	end_of_level_animations_1615                      | (16) #1615    | handle end of level animations
     .long	l_196b                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
 
@@ -3578,7 +3584,7 @@ l_0abf:
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$0ad8: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite
 
 	move.w	#MUS_INTRO,d0
-	*jbsr	osd_sound_start
+	jbsr	osd_sound_start
 	
 	lea	sound_buffer_address_608a,a0   	| [$0adb: ld      hl,sound_buffer_address_608a] load HL with music buffer
 	move.b	#MUS_INTRO,(a0)+                      	| [$0ade: ld      (hl),$01] play scary music for start of game sound
@@ -4511,6 +4517,11 @@ l_0f68:
 	add.b	d1,d0                            	| [$0f84: add     a,b] add B into A  (add once = 9x)
 	add.b	d1,d0                            	| [$0f85: add     a,b] add B  into A  (add again = 10x)
 	add.b	#0x28,d0                         	| [$0f86: add     a,$28] add #28 (40 decimal) to A
+	jcc		0f
+	* integer wraps at level 22 (10*22+40 = 260)
+	* to avoid kill screen, saturate it, allowing to play theorically forever
+	move.b	#0x50,d0
+0:
 	cmp.b	#0x51,d0                         	| [$0f88: cp      $51] < #51 ?
 	jcs	l_0f8e                             	| [$0f8a: jr      c,$0f8e] yes, skip next step
 
@@ -5464,7 +5475,7 @@ l_1475:
 * game is over - high score entry
 
 
-l_1486:
+enter_initials_1486:
 	jbsr	l_0616                            	| [$1486: call    $0616] draw credits on screen
 	lea	waittimermsb_6009,a0           	| [$1489: ld      hl,waittimermsb_6009] load HL with timer
 	move.b	(a0),d0                         	| [$148c: ld      a,(hl)] load A with timer value
@@ -5507,7 +5518,7 @@ l_14c1:
 	jne	l_14c1                             	| [$14c7: djnz    $14c1] Next B
 
 l_14c9:
-	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_6038                 	| [$14c9: ld      (unknown_ram_address_6038),hl] store HL into Unk6038
+	STORE_RAM_ADDRESS_LE	a0,highscore_entry_address_6038                 	| [$14c9: ld      (highscore_entry_address_6038),hl] store HL into Unk6038
 	move.w	#0xfff3,d3                      	| [$14cc: ld      de,$fff3] load DE with offset of -#13
 	add.w	d3,a0                            	| [$14cf: add     hl,de] add offset
 	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
@@ -5522,8 +5533,8 @@ l_14dc:
 	jne	l_14fc                             	| [$14e0: jp      nz,$14fc] no, skip ahead
 
 	move.b	#0x3e,(a0)                      	| [$14e3: ld      (hl),$3e] reset outer loop timer
-	subq.w	#1,a0                           	| [$14e5: dec     hl] HL := HSRegiTime
-	subq.b	#1,(a0)                         	| [$14e6: dec     (hl)] decrease.  at zero?
+												| [$14e5: dec     hl] HL := HSRegiTime
+	subq.b	#1,-(a0)                         	| [$14e6: dec     (hl)] decrease.  at zero?
 	jeq	l_15c6                             	| [$14e7: jp      z,$15c6] yes, skip ahead to handle
 
 	move.b	(a0),d0                         	| [$14ea: ld      a,(hl)] else load A with time remaining
@@ -5658,7 +5669,7 @@ l_158a:
 	lea	game_rom+0x01bf,a1                      	| [$159d: ld      de,$01bf]
 
 l_15a0:
-	LOAD_RAM_ADDRESS_LE	unknown_ram_address_6038,a3             	| [$15a0: ld      iy,(unknown_ram_address_6038)] load IY with Unk6038
+	LOAD_RAM_ADDRESS_LE	highscore_entry_address_6038,a3             	| [$15a0: ld      iy,(highscore_entry_address_6038)] load IY with Unk6038
 	move.b	(0x04,a3),d6                    	| [$15a4: ld      l,(iy+$04)]
 	move.b	(0x05,a3),d5                    	| [$15a7: ld      h,(iy+$05)]
 	LOAD_D5_16_FROM_D5D6
@@ -5672,7 +5683,7 @@ l_15a0:
 l_15b8:
 	clr.b	d0                               	| [$15b8: xor     a] A := 0
 	move.b	d0,hsblinktoggle_6031           	| [$15b9: ld      (hsblinktoggle_6031),a] store into HSBlinkToggle
-	LOAD_RAM_ADDRESS_LE		unknown_ram_address_6038,a1             	| [$15bc: ld      de,(unknown_ram_address_6038)]
+	LOAD_RAM_ADDRESS_LE		highscore_entry_address_6038,a1             	| [$15bc: ld      de,(highscore_entry_address_6038)]
 	addq.w	#3,a1                           	| [$15c0: inc     de] * 3
 	jra	l_15a0                             	| [$15c3: jp      $15a0] jump back
 
@@ -5680,7 +5691,7 @@ l_15b8:
 * high score entry complete ???
 
 l_15c6:
-	LOAD_RAM_ADDRESS_LE	unknown_ram_address_6038,a1             	| [$15c6: ld      de,(unknown_ram_address_6038)] load DE with address of high score entry indicator
+	LOAD_RAM_ADDRESS_LE	highscore_entry_address_6038,a1             	| [$15c6: ld      de,(highscore_entry_address_6038)] load DE with address of high score entry indicator
 	clr.b	d0                               	| [$15ca: xor     a] A := 0
 	move.b	d0,(a1)                         	| [$15cb: ld      (de),a] store.  this clears the high score indicator
 	lea	waittimermsb_6009,a0           	| [$15cc: ld      hl,waittimermsb_6009] load HL with timer
@@ -5700,6 +5711,10 @@ l_15df:
 	subq.b	#1,d1                           	| [...]
 	jne	l_15df                             	| [$15e6: djnz    $15df] next B
 
+	* now is a good time to save highscore
+	lea		high_score_ram_6100,a0
+	jbsr	osd_write_high_scores
+	
 	move.b	#0x05,d1                        	| [$15e8: ld      b,$05] For B = 1 to 5
 	move.w	#0x0314,d3                      	| [$15ea: ld      de,$0314] load task data for text #14 - start of high score table
 
@@ -6165,6 +6180,8 @@ l_186f:
 	jbsr	update_kong_sprites_004e                            	| [$1873: call    $004e] update kong's sprites
 	move.b	#0x03,d0                        	| [$1876: ld      a,$03] A := 3
 	move.b	d0,play_sound_for_falling_bouncer_6084	| [$1878: ld      (play_sound_for_falling_bouncer_6084),a] play falling sound
+	move.w	#BOUNCER_FALLS_SND,d0
+	jbsr	osd_sound_start
 	lea	end_of_level_counter_6388,a0   	| [$187b: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$187e: inc     (hl)] increase
 	rts                                    	| [$187f: ret] return
@@ -7284,7 +7301,8 @@ set_bonus_score_sprite_1e36:
 	move.b	d2,(a0)                         	| [$1e40: ld      (hl),c] store Y position
 	move.b	#0x05,d0                        	| [$1e41: ld      a,$05] A := 5 = binary 0101
 	jbsr	only_continues_if_given_level_0030                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
-	*jbsr	osd_sound_start
+	move.w	#JUMPED_OVER_SND,d0
+	jbsr	osd_sound_start
 	lea	play_sound_for_bonus_6085,a0   	| [$1e44: ld      hl,play_sound_for_bonus_6085] load HL with bonus sound address
 	move.b	#0x03,(a0)                      	| [$1e47: ld      (hl),$03] play bonus sound for 3 duration
 l_1e49:
@@ -10665,7 +10683,7 @@ l_2e4b:
 	move.b	#0x04,(0x0d,a2)                 	| [$2e5f: ld      (ix+$0d),$04] set +D to 4 (???)
 	clr.b	d0                               	| [$2e63: xor     a] A := 0
 								| [$2e64: ld      (play_sound_for_bouncer_6083),a] clear sound of bouncer
-	move.w	#BOUNCER_SND,d0
+	move.w	#BOUNCER_FALLS_SND,d0
 	jbsr	osd_sound_start
 	*move.b	#0x03,d0                        	| [$2e67: ld      a,$03] load sound duration of 3
 	*move.b	d0,play_sound_for_falling_bouncer_6084	| [$2e69: ld      (play_sound_for_falling_bouncer_6084),a] play sound for falling bouncer
@@ -10704,8 +10722,9 @@ l_2e84:
 
 l_2e9c:
 	lea	game_rom+0x39aa,a0                      	| [$2e9c: ld      hl,$39aa] load HL with start of table data
-	move.b	#0x03,d0                        	| [$2e9f: ld      a,$03] load sound duration of 3
-	*jbsr	osd_sound_start  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a] play sound for bouncer
+	*move.b	#0x03,d0                        	| [$2e9f: ld      a,$03] load sound duration of 3
+	move.w	#BOUNCER_BOUNCES_SND,D0
+	jbsr	osd_sound_start  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a] play sound for bouncer
 	jra	l_2e4b                             	| [$2ea4: jp      $2e4b] jump back
 
 * jump here from #2E16
