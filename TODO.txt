@@ -1,5 +1,4 @@
 - sprites completely trashed/misplaced stage 3 updating bouncer
-- score 9900 => 0
 - start music not played (pattern 0)
 - implement more sounds: gorilla screams, ...
 - rip more tunes/sounds:
@@ -7,12 +6,12 @@ MUS_INTRO       = 0x01     | ok but not playing
 MUS_OUTATIME    = 0x03     | Running out of time
 MUS_25M         = 0x08     | Music for barrel stage
 MUS_100M        = 0x0b     | Music for rivet stage
-MUS_RM_RIVET    = 0x0d     | Used when rivet removed
 MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
-MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert.
+MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
+	jbsr	only_continues_if_given_level_0030                            	| [$1e43: rst     $30] only allow continue on girders and elevators, others do RET here [no bonus sound for killing firefox with hammer]
+	*jbsr	osd_sound_start
+sound for bouncer bouncing (not falling) _start  	| [$2ea1: ld      (play_sound_for_bouncer_6083),a
 
-
-- "50m/75m/100m..." is shifted
 - elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
   maybe mask issue when drawing reverted sprites?
 - implement dipswitches

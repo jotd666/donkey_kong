@@ -591,6 +591,8 @@ _vblank:
 	btst	#5,d0
 	beq.b		1f
 
+	jbsr	really_update_sprites
+
 	move.l	_joypad_state(pc),d1
 	moveq	#1,d0
 	jsr	_read_joystick
@@ -618,7 +620,7 @@ _vblank:
 	* ack vbl twice (040/pistorm bug)
 	move.w	#0x20,(intreq,a5)
 	move.w	#0x20,(intreq,a5)	
-	bra.b	3f
+	jra	3f
 1:
 	* has to be copper
 	* we're going to ack copper interrupt now
@@ -647,6 +649,10 @@ _vblank:
 	* also set SR accordingly
 	st.b	interrupt_mode
 	jbsr		donkey_kong_irq
+	cmp.b	#ONE_TICK*2,vb_ticks_count
+	bne.b	0f
+	jbsr		donkey_kong_irq	
+0:
 	clr.b	interrupt_mode
 	
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
@@ -755,9 +761,19 @@ is_moonbase_displayed:
 
 
 osd_update_sprites:
+	* maybe should disable interrupts here
+	lea		sprite_buffer(pc),a1
+	move.w	#NB_TARGET_SPRITES-1,d7
+0:
+	move.l	(a0)+,(a1)+
+	dbf		d7,0b
+	rts
 	
+really_update_sprites:
+
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
+	lea		sprite_buffer(pc),a0
 	move.l	a0,a6
 
 	*move.l	a6,a0
@@ -2722,6 +2738,8 @@ _end_of_ng_code:
 		
 	.align 2
 
+sprite_buffer:
+	ds.l	NB_TARGET_SPRITES
 	
 bob_previous_positions_1:
 	ds.l	NB_TARGET_SPRITES

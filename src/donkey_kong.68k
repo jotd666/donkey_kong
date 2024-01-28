@@ -3732,9 +3732,10 @@ l_0bb3:
 	move.b	waittimermsb_6009,d0            	| [$0bb6: ld      a,(waittimermsb_6009)] load A with timer value
 	cmp.b	#0x90,d0                         	| [$0bb9: cp      $90] == #90 ?
 	jne	l_0bc8                             	| [$0bbb: jr      nz,$0bc8] no, skip ahead
-
-	move.b	#0x0f,(a0)                      	| [$0bbd: ld      (hl),$0f] play sound #0F = X X X kong sound
-	addq.w	#1,a0                           	| [$0bbf: inc     hl] HL := GameMode2
+	move.b	#MUS_DK_ROAR,d0					| AKA GORILLA_YELLS_SND
+	move.b	d0,(a0)+                      	| [$0bbd: ld      (hl),$0f] play sound #0F = X X X kong sound
+	                           	| [$0bbf: inc     hl] HL := GameMode2
+	jbsr	osd_sound_start
 	move.b	#0x03,(a0)                      	| [$0bc0: ld      (hl),$03] set game mode2 to 3
 	lea	unknown_6919,a0                	| [$0bc2: ld      hl,unknown_6919] load HL with kong's face sprite
 	addq.b	#1,(a0)                         	| [$0bc5: inc     (hl)] increase - kong is now showing teeth
@@ -3793,7 +3794,7 @@ height_pre_level_screen_0bda:
 	lea	store_63a7,a0                  	| [$0bfa: ld      hl,store_63a7] load HL with address of counter
 	clr.b	(a0)                             	| [$0bfd: ld      (hl),$00] clear the counter
 	move.l	#0x76dc,d7                      	| [$0bff: ld      hl,$76dc] load HL with screen address to draw the number of meters ?
-	move.w	d7,result_63a8                  	| [$0c02: ld      (result_63a8),hl] store - used at #0C54
+	move.w	d7,screen_pointer_for_meters_63a8                  	| [$0c02: ld      (screen_pointer_for_meters_63a8),hl] store - used at #0C54
 	move.b	number_of_goofys_to_draw_622e,d0	| [$0c05: ld      a,(number_of_goofys_to_draw_622e)] load A with number of goofy kongs to draw
 	cmp.b	#0x06,d0                         	| [$0c08: cp      $06] < 6 ?
 	jcs	l_0c11                             	| [$0c0a: jr      c,$0c11] yes, skip next 2 steps [BUG.  change to 0C0A  1805   JR #0C11 to fix]
@@ -3846,11 +3847,11 @@ l_0c43:
 	move.b	d0,store_63a7                   	| [$0c47: ld      (store_63a7),a] store
 	subq.b	#1,d0                           	| [$0c4a: dec     a] decrease
 	asl.b	#2,d0                            	| [$0c4b: sla     a] * 2
-
+	
 	move.w	d7,-(sp)                        	| [$0c4f: push    hl] save HL
 	lea	game_rom+0x3cf0,a0                      	| [$0c50: ld      hl,$3cf0] load HL with start of table data for 25m, 50m, etc.
 	movem.w	d1/d2,-(sp)                    	| [$0c53: push    bc] save BC
-	move.w	result_63a8,d7              	| [$0c54: ld      ix,(result_63a8)] load IX with screen VRAM address to draw number of meters
+	move.w	screen_pointer_for_meters_63a8,d7              	| [$0c54: ld      ix,(screen_pointer_for_meters_63a8)] load IX with screen VRAM address to draw number of meters
 	move.w	d7,a2
 	clr.w	d1                               	| [$0c59: ld      b,$00] B := 0
 	move.b	d0,d1                           	| [$0c58: ld      c,a] C := A, used for offset
@@ -3878,9 +3879,9 @@ l_0c43:
 
 												| [$0c6f: push    ix] transfer IX to HL (part 1/2)
 												| [$0c71: pop     hl] transfer IX to HL (part 2/2)
-	move.w  #0xfffc,d3                      	| [$0c72: ld      de,$fffc] load offset for next screen location
-	add.w	d3,d7                            	| [$0c75: add     hl,de] add offset
-	move.w	d7,result_63a8                  	| [$0c76: ld      (result_63a8),hl] store result
+												| [$0c72: ld      de,$fffc] load offset for next screen location
+	sub.w	#4-0x20,d7                            	| [$0c75: add     hl,de] add offset
+	move.w	d7,screen_pointer_for_meters_63a8                  	| [$0c76: ld      (screen_pointer_for_meters_63a8),hl] store result
 	move.w	(sp)+,d7                        	| [$0c79: pop     hl] restore HL
 	move.w	#0xff5f,d3                      	| [$0c7a: ld      de,$ff5f] load DE with offset for goofy
 	add.w	d3,d7                            	| [$0c7d: add     hl,de] add offset to draw next goofy
@@ -4833,7 +4834,7 @@ l_1186:
 
 	lea	start_of_bouncer_memory_area_6500,a2	| [$1192: ld      ix,start_of_bouncer_memory_area_6500] load IX with ???
 	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$1196: ld      hl,start_of_bouncers_or_barrels_sprites_6980] load HL with sprite start (???)
-	move.b	#0x0a,d1                        	| [$1199: ld      b,$0a] B := #A
+	move.b	#NB_BARRELS,d1                        	| [$1199: ld      b,$0a] B := #A
 	move.w	#0x0010,d3                      	| [$119b: ld      de,$0010] load DE with offset 16
 	jbsr	l_11d3                            	| [$119e: call    $11d3] copy
 
@@ -6041,14 +6042,15 @@ l_179d:
 	rts                                    	| [$17b5: ret] return
 
 l_17b6:
-	nop                                    	| [$17b6: nop]
+	                                    	| [$17b6: nop]
 
 * arrive when rivets is cleared
 
 	jbsr	clear_all_sounds_011c                            	| [$17b7: call    $011c] clear all sounds
 	lea	sound_buffer_address_608a,a0   	| [$17ba: ld      hl,sound_buffer_address_608a] load HL with sound address
-	*jbsr	osd_sound_start
-	move.b	#0x0e,(a0)+                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
+	move.b	#MUS_DK_FALLS,d0
+	jbsr	osd_sound_start
+	move.b	d0,(a0)+                      	| [$17bd: ld      (hl),$0e] play sound for rivets falling and kong beating chest
 												| [$17bf: inc     hl] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$17c0: ld      (hl),$03] set duration to 3
 	move.b	#0x10,d0                        	| [$17c2: ld      a,$10] A := #10 = code for clear space
@@ -7139,7 +7141,9 @@ play_bonus_sound_1d95:
 * play bonus sound
 
 	lea	sound_buffer_address_608a,a0   	| [$1d9d: ld      hl,sound_buffer_address_608a] else load HL with sound address
-	move.b	#0x0d,(a0)+                      	| [$1da0: ld      (hl),$0d] play bonus sound
+	move.b	#JUMPED_OVER_SND,d0
+	move.b	d0,(a0)+                      	| [$1da0: ld      (hl),$0d] play bonus sound
+	jbsr	osd_sound_start
 	                           	| [$1da2: inc     l] HL := #608B = sound duration
 	move.b	#0x03,(a0)                      	| [$1da3: ld      (hl),$03] set sound duration to 3
 	rts                                    	| [$1da5: ret] return
@@ -8659,7 +8663,7 @@ l_2488:
 l_249e:
 	addq.w	#1,a0                           	| [$249e: inc     hl]
 	move.b	(a0)+,d0                         	| [$249f: ld      a,(hl)]
-	move.b	d0,(0x00,a3)                    	| [$24a0: ld      (iy+$00),a]
+	move.b	d0,(a3)                    	| [$24a0: ld      (iy+$00),a]
 												| [$24a3: inc     hl]
 	move.b	(a0),d0                         	| [$24a4: ld      a,(hl)]
 	move.b	d0,(0x15,a3)                    	| [$24a5: ld      (iy+$15),a]
@@ -10599,6 +10603,7 @@ l_2df1:
 * called during the elevators.  used to move the bouncers ????
 
 update_bouncers_if_on_elevators_2e04:
+
 	move.b	#0x04,d0                        	| [$2e04: ld      a,$04] A := 4 (0100 binary) to check for elevators screen
 	jbsr	only_continues_if_given_level_0030                            	| [$2e06: rst     $30] if not elevators it will return to program
 
@@ -10606,7 +10611,7 @@ update_bouncers_if_on_elevators_2e04:
 
 	lea	start_of_bouncer_memory_area_6500,a2	| [$2e08: ld      ix,start_of_bouncer_memory_area_6500] load IX with start of bouncer memory area
 	lea	start_of_bouncers_or_barrels_sprites_6980,a3	| [$2e0c: ld      iy,start_of_bouncers_or_barrels_sprites_6980] start of sprite memory for bouncers
-	move.b	#0x0a,d1                        	| [$2e10: ld      b,$0a] for B = 1 to #0A (ten) .  do for all ten sprites
+	move.b	#NB_BARRELS,d1                        	| [$2e10: ld      b,$0a] for B = 1 to #0A (ten) .  do for all ten sprites
 
 l_2e12:
 	move.b	(a2),d0                    	| [$2e12: ld      a,(ix+$00)] load A with sprite status
@@ -10660,26 +10665,26 @@ l_2e4b:
 	move.b	#0x04,(0x0d,a2)                 	| [$2e5f: ld      (ix+$0d),$04] set +D to 4 (???)
 	clr.b	d0                               	| [$2e63: xor     a] A := 0
 								| [$2e64: ld      (play_sound_for_bouncer_6083),a] clear sound of bouncer
-	move.b	#0x03,d0                        	| [$2e67: ld      a,$03] load sound duration of 3
 	move.w	#BOUNCER_SND,d0
 	jbsr	osd_sound_start
-	move.b	d0,play_sound_for_falling_bouncer_6084	| [$2e69: ld      (play_sound_for_falling_bouncer_6084),a] play sound for falling bouncer
+	*move.b	#0x03,d0                        	| [$2e67: ld      a,$03] load sound duration of 3
+	*move.b	d0,play_sound_for_falling_bouncer_6084	| [$2e69: ld      (play_sound_for_falling_bouncer_6084),a] play sound for falling bouncer
 
 l_2e6c:
 	move.b	(0x03,a2),d0                    	| [$2e6c: ld      a,(ix+$03)] load A with X position
-	move.b	d0,(0x00,a3)                    	| [$2e6f: ld      (iy+$00),a] store into sprite
+	move.b	d0,(a3)                    	| [$2e6f: ld      (iy+$00),a] store into sprite
 	move.b	(0x05,a2),d0                    	| [$2e72: ld      a,(ix+$05)] load A with Y position
 	move.b	d0,(0x03,a3)                    	| [$2e75: ld      (iy+$03),a] store into sprite
 
 l_2e78:
-	move.w	#0x0010,d3                      	| [$2e78: ld      de,$0010] set offset to add 16
-	add.w	d3,a2                            	| [$2e7b: add     ix,de] next sprite (IX)
-	move.b	#0x04,d3                        	| [$2e7d: ld      e,$04] E := 4
-	add.w	d3,a3                            	| [$2e7f: add     iy,de] next sprite (IY)
-	subq.b	#1,d1                           	| [...]
-	jne	l_2e12                             	| [$2e81: djnz    $2e12] Next Bouncer
+													| [$2e78: ld      de,$0010] set offset to add 16
+	add.w	#0x10,a2                            	| [$2e7b: add     ix,de] next sprite (IX)
+													| [$2e7d: ld      e,$04] E := 4
+	addq.w	#4,a3                       	     	| [$2e7f: add     iy,de] next sprite (IY)
+	subq.b	#1,d1                       	    	| [...]
+	jne	l_2e12                          		   	| [$2e81: djnz    $2e12] Next Bouncer
 
-	rts                                    	| [$2e83: ret] return
+	rts                               		     	| [$2e83: ret] return
 
 * arrive when bouncer is going straight down
 * need to check when falling off bottom of screen

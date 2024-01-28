@@ -46,7 +46,7 @@
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
-	OPT_START_SCREEN=1
+	OPT_START_SCREEN=3
 
 	.endif
 	
@@ -70,6 +70,7 @@
 	.equ	JUMPING_SND,                  6+0x10
 	.equ	WALKING_SND,                  7+0x10
 	.equ	BOUNCER_SND,                  8+0x10
+	.equ	GORILLA_YELLS_SND,            0xF
 
 
 

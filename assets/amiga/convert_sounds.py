@@ -20,21 +20,22 @@ outfile = os.path.join(src_dir,"sounds.68k")
 sndfile = os.path.join(src_dir,"sound_entries.68k")
 
 hq_sample_rate = 16000
-
+lq_sample_rate = 11050
 
 
 EMPTY_SND = "EMPTY_SND"
 sound_dict = {
 # samples
-"BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
 "CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"DEAD_SND"             :{"index":0x12,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"DEAD_SND"             :{"index":0x12,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
 "JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "START_SND"             :{"index":0x15,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"JUMPING_SND"             :{"index":0x16,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"JUMPING_SND"             :{"index":0x16,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
 "WALKING_SND"             :{"index":0x17,"channel":2,"sample_rate":hq_sample_rate,"priority":1},
 "BOUNCER_SND"             :{"index":0x18,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
+"GORILLA_YELLS_SND"       :{"index":0xF,"channel":3,"sample_rate":lq_sample_rate,"priority":1},  # also matches MUS define
 
 # tunes match the MUS defines in donkey_kong.68k source
 "START_TUNE_SND"              :{"index":1,"pattern":0,"loops":False,"volume":32,"ticks":200},

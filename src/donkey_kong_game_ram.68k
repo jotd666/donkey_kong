@@ -170,7 +170,7 @@
 	.global	upper_right_pie_tray_vector_63a5
 	.global	pie_direction_lower_level_63a6
 	.global	store_63a7
-	.global	result_63a8
+	.global	screen_pointer_for_meters_63a8
 	.global	current_screen_address_63ab
 	.global	unknown_63ad
 	.global	original_data_item__63af
@@ -608,7 +608,7 @@ pie_direction_lower_level_63a6:
 	ds.b	1
 store_63a7:
 	ds.b	1
-result_63a8:
+screen_pointer_for_meters_63a8:
 	ds.b	3
 current_screen_address_63ab:
 	ds.b	2
