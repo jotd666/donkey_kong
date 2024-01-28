@@ -1008,7 +1008,6 @@ update_bobs:
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
 	btst	#7,d3		| test Y flip mode
 	sne		d5
-	* ATM flip y not considered
 	and.b	#0xF,d3	| get attributes
 
 	move.w	d2,d4
@@ -1061,8 +1060,6 @@ update_bobs:
 	move.l	d2,a3
 	moveq	#0,d2	| no y-clip
 	move.w	#16,d3	| height = 16 for all bobs
-	tst.b	d5
-	bne.b	14f
 
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
@@ -1070,6 +1067,10 @@ update_bobs:
 	.ifne	SPRITE_X_CORRECTION
 	add.w	#SPRITE_X_CORRECTION,d0
 	.endif
+
+	tst.b	d5
+	bne.b	14f
+
 	
 	bsr		blit_planes_cookie_cut_16x
 21:
@@ -1289,6 +1290,7 @@ blit_planes_any_internal_cookie_cut:
 	tst.w	d4
 	bpl.b	1f
 	* inverted y blit
+	
 	sub.w	d4,d1	| pre-add height to d1
 	subq.w	#1,d1	| minus one
 1:	
@@ -1357,26 +1359,18 @@ blit_planes_any_internal_cookie_cut:
 	beq.b	7f
 	subq	#1,d3
 6:
-	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
-	bsr.b	start_process_1_plane
-	
-	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
-	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	jbsr	process_1_plane
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,6b
 7:
-	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
-	bsr.b	start_process_1_plane
-	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
-	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	jbsr	process_1_plane
     
     movem.l (a7)+,d0-d7/a2/a4
     rts
 	
-start_process_1_plane:
+process_1_plane:
+	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
 	move.l (a0)+,d0
 	beq.b	60f
 	move.l	d0,a4
@@ -1388,11 +1382,18 @@ start_process_1_plane:
 	or.l	d6,d1
 	move.l	d1,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
  	clr.w	bltbdat(a5)	|B word is zero
+	
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	rts
 61:
 	* non-zero: set data source & bltcon
 	move.l	d7,bltcon0(a5)	| sets con0 and con1: C-A+B->D cookie cut full
 	move.l	a4,bltbpt(a5)	|source graphic top left corner
+	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
+	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	rts
 
 	
@@ -2554,8 +2555,8 @@ beamdelay:
 	dbf	d0,0b
 	rts
 
-	
-	MUL_TABLE	NB_BYTES_PER_ROW,256
+	* add 16 to account for reverted Y blit
+	MUL_TABLE	NB_BYTES_PER_ROW,256+16
 
 
 	.align	4		| leave this long word alignment

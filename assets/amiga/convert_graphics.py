@@ -346,7 +346,8 @@ if True:
                         for ci in range(0,len(bitplanes),bitplane_size):
                             plane = bitplanes[ci:ci+bitplane_size]
                             if not any(plane):
-                                # only zeroes
+                                # only zeroes: null pointer so engine is able to optimize
+                                # by not reading the zeroed data
                                 plane_list.append(None)
                             else:
                                 plane_index = bitplane_cache.get(plane)

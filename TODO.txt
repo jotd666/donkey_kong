@@ -7,10 +7,8 @@ MUS_100M        = 0x0b     | Music for rivet stage
 MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
-- elevator/conveyors: colors are wrong, lower elevator conveyors remain drawn
-  maybe mask issue when drawing reverted sprites?
 - implement dipswitches
-- girders: barrels change color just before rolling into oil can
 - insert coin with fire, start with up/down
 - pause
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
+- elevator: colors slightly off (clarify with Mark)
