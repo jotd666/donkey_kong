@@ -2775,6 +2775,9 @@ add_bonus_to_player_score_0691:
 * jump here from #0632
 
 l_06a8:
+	tst.b	infinite_time_flag
+	jne	l_066a
+	
 	moveq	#1,d7
 	sbcd	d7,d0                        	| [$06a8: sub     $01] subtract 1 from bonus timer
 	jne	l_06b1                             	| [$06aa: jr      nz,$06b1] If not zero, skip next 2 steps
@@ -2878,7 +2881,7 @@ playing_game_06fe:
     .long	l_13a1                      | (11) #13A1    | check for game over status on a 2 player game
     .long	l_13aa                      | (12) #13AA    | flip screen if needed, reset game mode2 to zero, set player 2
     .long	l_13bb                      | (13) #13BB    | set player 1, reset game mode2 to zero, set screen flip to not flipped
-    .long	l_141e                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
+    .long	check_for_a_high_score_141e                      | (14) #141E    | draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
     .long	enter_initials_1486                      | (15) #1486    | player enters initials in high score table
     .long	end_of_level_animations_1615                      | (16) #1615    | handle end of level animations
     .long	l_196b                      | (17) #196B    | clear screen and all sprites, set game mode2 to #12 for player1 or #13 for player2
@@ -5154,7 +5157,7 @@ l_12f2:
 
 	move.b	#0x01,d0                        	| [$130a: ld      a,$01] A := 1
 	lea	player_1_score_address_60b2,a0 	| [$130c: ld      hl,player_1_score_address_60b2] load HL with player 1 score address
-	jbsr	l_13ca                            	| [$130f: call    $13ca] check for high score entry ???
+	jbsr	compute_highscore_insertion_position_13ca                            	| [$130f: call    $13ca] check for high score entry ???
 	move.w	#0x76d4,d7                      	| [$1312: ld      hl,$76d4] load HL with screen VRAM address ???
 	move.b	twoplayergame_600f,d0           	| [$1315: ld      a,(twoplayergame_600f)] load A with number of players
 	                               	| [$1318: and     a] 1 player game?
@@ -5210,7 +5213,7 @@ l_1344:
 
 	move.b	#0x03,d0                        	| [$135c: ld      a,$03] A := 3
 	lea	player_2_score_address_60b5,a0 	| [$135e: ld      hl,player_2_score_address_60b5] load HL with player 2 score address
-	jbsr	l_13ca                            	| [$1361: call    $13ca] check for high score entry ???
+	jbsr	compute_highscore_insertion_position_13ca                            	| [$1361: call    $13ca] check for high score entry ???
 	move.w  #0x0303,d3                      	| [$1364: ld      de,$0303] load task data for text #3 "PLAYER <II>"
 	jbsr	insert_task_309f                            	| [$1367: call    $309f] insert task to draw text
 	move.w  #0x0300,d3                      	| [$136a: ld      de,$0300] load task data for text #0 "GAME OVER"
@@ -5302,46 +5305,47 @@ l_13bb:
 * then it sets #61B7 through #61C4 to #10 (???)
 *
 
-l_13ca:
+compute_highscore_insertion_position_13ca:
 	lea	address_for_unknown_61c6,a1    	| [$13ca: ld      de,address_for_unknown_61c6] load DE with address for ???
 	move.b	d0,(a1)                         	| [$13cd: ld      (de),a] store A into it
 	jbsr	rst_08                            	| [$13ce: rst     $8] continue if there are credits or the game is being played, else RET
+
 
 	addq.w	#1,a1                           	| [$13cf: inc     de] DE := #61C7
 	move.w	#0x03,d1                        	| [$13d0: ld      bc,$0003] set counter to 3 3
 	jbsr	ldir                              	| [$13d3: ldir] copy players score into this area
 	move.b	#0x03,d1                        	| [$13d5: ld      b,$03] for B = 1 to 3
-	lea	unknown_61b1,a0                	| [$13d7: ld      hl,unknown_61b1] load HL with ???
+	lea	score_and_name_line_61b1,a0    	| [$13d7: ld      hl,score_and_name_line_61b1] load HL with ???
 
 l_13da:
-	subq.w	#1,a1                           	| [$13da: dec     de] count down DE.  first time it has #61C9 after the DEC
-	move.b	(a1),d0                         	| [$13db: ld      a,(de)] load A with this
+	                           	| [$13da: dec     de] count down DE.  first time it has #61C9 after the DEC
+	move.b	-(a1),d0                         	| [$13db: ld      a,(de)] load A with this
 	ror.b	#4,d0                            	| [$13dc: rrca] * 4
 	and.b	#0x0f,d0                         	| [$13e0: and     $0f] mask bits, now between 0 and #F.  this will give the thousands of the score on the 2nd loop.
-	move.b	d0,(a0)                         	| [$13e2: ld      (hl),a] store into (HL) ???
-	addq.w	#1,a0                           	| [$13e3: inc     hl] next
+	move.b	d0,(a0)+                         	| [$13e2: ld      (hl),a] store into (HL) ???
+	                           	| [$13e3: inc     hl] next
 	move.b	(a1),d0                         	| [$13e4: ld      a,(de)] load A with this
 	and.b	#0x0f,d0                         	| [$13e5: and     $0f] mask bits.  this will give the hundreds of the score on the 2nd loop
-	move.b	d0,(a0)                         	| [$13e7: ld      (hl),a] store into (HL)
-	addq.w	#1,a0                           	| [$13e8: inc     hl] next
+	move.b	d0,(a0)+                         	| [$13e7: ld      (hl),a] store into (HL)
+											| [$13e8: inc     hl] next
 	subq.b	#1,d1                           	| [...]
 	jne	l_13da                             	| [$13e9: djnz    $13da] next B
 
-* sets #61B7 through #61C4 to #10 (???)
+* sets #61B7 through #61C4 to #10
 
 	move.b	#0x0e,d1                        	| [$13eb: ld      b,$0e] for B = 1 to #E
 
+	* blank chars for the name
 l_13ed:
 	move.b	#0x10,(a0)                      	| [$13ed: ld      (hl),$10] store #10 into memory at (HL)
 	addq.w	#1,a0                           	| [$13ef: inc     hl] next HL
 	subq.b	#1,d1                           	| [...]
 	jne	l_13ed                             	| [$13f0: djnz    $13ed] next B
 
-*
 
-	move.b	#0x3f,(a0)                      	| [$13f2: ld      (hl),$3f] store #3F into #61C5 = end code ?
+	move.b	#0x3f,(a0)                      	| [$13f2: ld      (hl),$3f] store #3F into #61C5 = end code for score string
 
-	move.b	#0x05,d1                        	| [$13f4: ld      b,$05] for B = 1 to 5.  Do for each high score in top 5
+	move.b	#0x05,d1                        	| [$13f4: ld      b,$05] for B = 1 to 5.  Do for each high score in top 5 (at worst)
 	lea	lowest_high_score_address_61a5,a0	| [$13f6: ld      hl,lowest_high_score_address_61a5] load HL with lowest high score address
 	lea	copy_of_player_score_61c7,a1   	| [$13f9: ld      de,copy_of_player_score_61c7] load DE with copy of player score
 
@@ -5350,11 +5354,11 @@ l_13fc:
 	sub.b	(a0)+,d0                          	| [$13fd: sub     (hl)] subtract next lowest high score
 												| [$13fe: inc     hl] next
 												| [$13ff: inc     de] next
-	move.b	(a1),d0                         	| [$1400: ld      a,(de)] load A with next digit of player's score
+	move.b	(a1)+,d0                         	| [$1400: ld      a,(de)] load A with next digit of player's score
 	move.b	(a0)+,d7
-	subx.b	d7,d0                         	| [$1401: sbc     a,(hl)] subtract with carry next lowest high score
-	                           	| [$1402: inc     hl] next
-	addq.w	#1,a1                           	| [$1403: inc     de] next
+	subx.b	d7,d0                         		| [$1401: sbc     a,(hl)] subtract with carry next lowest high score
+												| [$1402: inc     hl] next
+												| [$1403: inc     de] next
 	move.b	(a1),d0                         	| [$1404: ld      a,(de)] load A with next digit of player's score
 	move.b	(a0),d7
 	subx.b	d7,d0                         	| [$1405: sbc     a,(hl)] subtract with carry next lowest high score
@@ -5363,10 +5367,11 @@ l_13fc:
 0:
 
 * player has made a high score for entry in top 5
+* D1 = 5 at start
 
-	movem.w	d1/d2,-(sp)                    	| [$1407: push    bc] else save BC
+	move.w	d1,-(sp)                    	| [$1407: push    bc] else save BC
 
-	move.b	#19,d1                          	| [$1408: ld      b,#19] for B = 1 to #19
+	move.b	#0x19,d1                          	| [$1408: ld      b,#$19] for B = 1 to #19
 
         * exchange the values in (HL) and (DE) for #19 bytes
         * this causes the high score to percolate up the high score list
@@ -5382,13 +5387,13 @@ l_140a:
 	subq.b	#1,d1                           	| [...]
 	jne		l_140a                               	| [$1411: djnz    #140A] Next B
 
-	move.w	#10,d1                        	| [$1413: ld      bc,$fff5] load BC with -#A 65525
-	sub.w	d1,a0                            	| [$1416: add     hl,bc] add to HL.  HL now has #A less than before
-	exg	a1,a0                              	| [$1417: ex      de,hl] DE <> HL
-	sub.w	d1,a0                            	| [$1418: add     hl,bc] add to HL, now has #A less than before
-	exg	a1,a0                              	| [$1419: ex      de,hl] DE <> HL
+	move.w	#11,d1                        	| [$1413: ld      bc,$fff5] load BC with -#B 65525
+	sub.w	d1,a0                            	| [$1416: add     hl,bc] add to HL.  HL now has #B less than before
+	                              	| [$1417: ex      de,hl] DE <> HL
+	sub.w	d1,a1                            	| [$1418: add     hl,bc] add to HL, now has #B less than before
+	                              	| [$1419: ex      de,hl] DE <> HL
 
-	movem.w	(sp)+,d1/d2                    	| [$141a: pop     bc] restore BC
+	move.w	(sp)+,d1                    	| [$141a: pop     bc] restore BC
 	subq.b	#1,d1                           	| [...]
 	jne	l_13fc                             	| [$141b: djnz    $13fc] Next B
 
@@ -5397,7 +5402,7 @@ l_140a:
 * jump here from #0701 when GameMode2 == #14 (game is over)
 * draw credits on screen, clears screen and sprites, checks for high score, flips screen if necessary
 
-l_141e:
+check_for_a_high_score_141e:
 	jbsr	l_0616                            	| [$141e: call    $0616] draw credits on screen
 	jbsr	rst_18                            	| [$1421: rst     $18] count down timer and only continue here if zero, else RET
 
@@ -5426,7 +5431,7 @@ l_1445:
 	cmp.b	(a0),d0                          	| [$1445: cp      (hl)] compare.  same?
 	jeq	l_144f                             	| [$1446: jp      z,$144f] yes, skip ahead and being high score entry for pl2
 
-	add.w	d3,a0                            	| [$1449: add     hl,de] add offset for next
+	add.w	d3,a0                            	| [$1449: add     hl,de] add offset for next table high score entry
 	subq.b	#1,d1                           	| [...]
 	jne	l_1445                             	| [$144a: djnz    $1445] Next B
 
@@ -5518,14 +5523,14 @@ l_14c1:
 	jne	l_14c1                             	| [$14c7: djnz    $14c1] Next B
 
 l_14c9:
-	STORE_RAM_ADDRESS_LE	a0,highscore_entry_address_6038                 	| [$14c9: ld      (highscore_entry_address_6038),hl] store HL into Unk6038
+	STORE_RAM_ADDRESS_LE	a0,highscore_entry_address_6038 	| [$14c9: ld      (highscore_entry_address_6038),hl]
 	move.w	#0xfff3,d3                      	| [$14cc: ld      de,$fff3] load DE with offset of -#13
 	add.w	d3,a0                            	| [$14cf: add     hl,de] add offset
 	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
 	clr.b	d1                               	| [$14d3: ld      b,$00] B := 0
 	move.b	hscursorpos_6035,d0             	| [$14d5: ld      a,(hscursorpos_6035)] load A with high score entry digit selected
 	move.b	d0,d2                           	| [$14d8: ld      c,a] copy to C
-	jbsr	l_15fa                            	| [$14d9: call    $15fa] ???
+	jbsr	set_letter_selector_sprite_15fa                            	| [$14d9: call    $15fa] ???
 
 l_14dc:
 	lea	hstimer_6034,a0                	| [$14dc: ld      hl,hstimer_6034] load HL with outer loop timer
@@ -5590,7 +5595,7 @@ l_152d:
 	move.b	d0,hscursorpos_6035             	| [$152d: ld      (hscursorpos_6035),a] store into high score entry digit selected
 	move.b	d0,d2                           	| [$1530: ld      c,a] C := A
 	clr.b	d1                               	| [$1531: ld      b,$00] B := 0
-	jbsr	l_15fa                            	| [$1533: call    $15fa] ???
+	jbsr	set_letter_selector_sprite_15fa                            	| [$1533: call    $15fa] ???
 	jra	l_158a                             	| [$1536: jp      $158a] skip ahead
 
 l_1539:
@@ -5732,7 +5737,7 @@ l_15f9:
 * sets the sprite to the square selector for intials entry
 * called from #14D9 and #1533
 
-l_15fa:
+set_letter_selector_sprite_15fa:
 	move.l	a1,-(sp)                        	| [$15fa: push    de] save DE
 
 	move.l	a0,-(sp)                        	| [$15fb: push    hl] save HL
@@ -12082,7 +12087,7 @@ item_scoring_table_3529:
 * 3rd byte is the place.  1 through 5
 * 4th and 5th bytes are either "ST" or "ND" or "RD" or "TH"
 * 6th and 7th bytes are #10 for blank spaces
-* 8th through 13th bytes are teh score digits
+* 8th through 13th bytes are the score digits
 * 14 through end are #10 for blank spaces, ended by #3F end code
 * after this is the actual score
 * the last 2 bytes are ???

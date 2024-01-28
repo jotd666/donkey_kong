@@ -76,8 +76,6 @@ infinite_lives_flag:
 	.byte	0
 infinite_time_flag:
 	.byte	0
-start_level:
-	.byte	0
 highscores_need_saving:
 	.byte	0
 vb_ticks_count:

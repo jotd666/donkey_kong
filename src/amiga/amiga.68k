@@ -310,38 +310,23 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
-	move.l	start_level_option(pc),d0
-	move.b	d0,start_level
+	moveq	#0,d0
 	
-	*move.l	dip_switch_difficulty(pc),d0
-	*lsl.b	#3,d0
-	
-	move.b	dip_switch_start_lives+3(pc),d1
+	move.b	dip_switch_start_lives+3(pc),d0
 	bne.b	1f
-	moveq	#2,d1	| 3 lives is default
-1:
-	* DSW 0 = 2 lives
-	subq.b	#1,d1
-	or.b	d1,d0
+*   bit 3 : \bonus at
+*   bit 2 : / 00 = 7000  01 = 10000  10 = 15000  11 = 20000: leave to 0 (7000)
+*   bit 1 : \ 00 = 3 lives  01 = 4 lives
+*   bit 0 : / 10 = 5 lives  11 = 6 lives
 
+	move.b	d0,dip_switches
 	
-	move.l	misc_options,d1
-	btst	#0,d1
-	*sne		hard_bags_flag
-	btst	#1,d1
-	beq.b	0f
-	bset	#5,d0
-0:
-	btst	#2,d1
-	beq.b	0f
-	bset	#6,d0
-0:
+	move.l	misc_options(pc),d1
 	.ifndef	RELEASE
 	btst	#31,d1
 	sne		break_at_startup_flag
 	.endif
 	
-	move.b	d0,dip_switches
 
 
 	
@@ -353,8 +338,6 @@ _user:
 	sne		infinite_lives_flag
 	btst	#2,d0
 	sne		infinite_time_flag
-	btst	#3,d0
-	*sne		infinite_pickaxe_time_flag
 	
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
@@ -1365,7 +1348,7 @@ blit_planes_any_internal_cookie_cut:
 	dbf		d3,6b
 7:
 	jbsr	process_1_plane
-    
+   
     movem.l (a7)+,d0-d7/a2/a4
     rts
 	
@@ -1382,18 +1365,16 @@ process_1_plane:
 	or.l	d6,d1
 	move.l	d1,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
  	clr.w	bltbdat(a5)	|B word is zero
-	
-	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
-	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	rts
+	bra.b	62f
 61:
 	* non-zero: set data source & bltcon
 	move.l	d7,bltcon0(a5)	| sets con0 and con1: C-A+B->D cookie cut full
 	move.l	a4,bltbpt(a5)	|source graphic top left corner
-	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
+62:
+ 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
 	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	
 	rts
 
 	
@@ -2359,13 +2340,7 @@ osd_read_dsw_1:
 	
 
 	rts
-osd_read_dsw_2:
-	* actual dipswitches
-	move.b	dip_switches(pc),d0
-	
 
-	rts
-	
 
 		
 osd_read_high_scores:
@@ -2635,7 +2610,7 @@ dip_switch_start_lives:
 		.long	0
 	.long	0
 dip_switches:
-		.byte	0x20	| default english
+		.byte	0x0
 		.byte	0
 
 system_vbr:

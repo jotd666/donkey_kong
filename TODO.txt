@@ -1,5 +1,3 @@
-- highscore insertion seems wrong: score wrongly inserted
-  then changes after entering it!
 - rip/convert more tunes/sounds:
 MUS_OUTATIME    = 0x03     | Running out of time
 MUS_25M         = 0x08     | Music for barrel stage
@@ -7,8 +5,13 @@ MUS_100M        = 0x0b     | Music for rivet stage
 MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
-- implement dipswitches
+- nb lives dip switch is wrong
+- CLI args
 - insert coin with fire, start with up/down
 - pause
+
+minor:
+
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
 - elevator: colors slightly off (clarify with Mark)
+- dipswitches extra life at 7000 ...

@@ -38,12 +38,12 @@ _expmem
 _config
 	dc.b	"C1:X:invincibility:0;"
 	dc.b	"C1:X:infinite lives:1;"
+	dc.b	"C1:X:infinite time:2;"
 	dc.b	"C1:X:cheat keys:4;"
 	IFD		CHIP_ONLY
 	dc.b	"C3:X:break at startup:31;"
 	ENDC
-;	dc.b    "C4:L:difficulty:easy,medium,hard,hardest;"
-	dc.b    "C5:L:start lives:default,2,3,4,5;"
+	dc.b    "C5:L:start lives:3,4,5,6;"
 	dc.b	0
 
 	IFD BARFLY

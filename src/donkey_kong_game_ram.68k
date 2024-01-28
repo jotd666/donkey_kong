@@ -55,7 +55,7 @@
 	.global	high_score_ram_6100
 	.global	address_of_high_score_indicator_611c
 	.global	lowest_high_score_address_61a5
-	.global	unknown_61b1
+	.global	score_and_name_line_61b1
 	.global	address_for_unknown_61c6
 	.global	copy_of_player_score_61c7
 	.global	mario_array_6200
@@ -378,7 +378,7 @@ address_of_high_score_indicator_611c:
 	ds.b	137
 lowest_high_score_address_61a5:
 	ds.b	12
-unknown_61b1:
+score_and_name_line_61b1:
 	ds.b	21
 address_for_unknown_61c6:
 	ds.b	1

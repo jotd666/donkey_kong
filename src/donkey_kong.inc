@@ -41,7 +41,7 @@
 	* don't remove rivets, allows to chase fires more efficiently
 	* all options are zeroed for release
     OPT_LEAVE_RIVETS=0
-    OPT_START_SCORE=0x5000
+    OPT_START_SCORE=0x7000
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
 	OPT_START_LEVEL=1

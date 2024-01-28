@@ -3158,7 +3158,7 @@ Init_0266:
 0BFA: 21 A7 63    ld      hl,store_63a7    ; load HL with address of counter
 0BFD: 36 00       ld      (hl),$00    ; clear the counter
 0BFF: 21 DC 76    ld      hl,$76dc    ; load HL with screen address to draw the number of meters ?
-0C02: 22 A8 63    ld      (result_63a8),hl  ; store - used at #0C54
+0C02: 22 A8 63    ld      (screen_pointer_for_meters_63a8),hl  ; store - used at #0C54
 0C05: 3A 2E 62    ld      a,(number_of_goofys_to_draw_622e)   ; load A with number of goofy kongs to draw
 0C08: FE 06       cp      $06         ; < 6 ?
 0C0A: 38 05       jr      c,$0c11     ; yes, skip next 2 steps [BUG.  change to 0C0A  1805   JR #0C11 to fix]
@@ -3210,7 +3210,7 @@ Init_0266:
 0C4F: E5          push    hl          ; save HL
 0C50: 21 F0 3C    ld      hl,$3cf0    ; load HL with start of table data for 25m, 50m, etc.
 0C53: C5          push    bc          ; save BC
-0C54: DD 2A A8 63 ld      ix,(result_63a8)  ; load IX with screen VRAM address to draw number of meters
+0C54: DD 2A A8 63 ld      ix,(screen_pointer_for_meters_63a8)  ; load IX with screen VRAM address to draw number of meters
 0C58: 4F          ld      c,a         ; C := A, used for offset
 0C59: 06 00       ld      b,$00       ; B := 0
 0C5B: 09          add     hl,bc       ; add offset
@@ -3228,7 +3228,7 @@ Init_0266:
 0C71: E1          pop     hl          ; transfer IX to HL (part 2/2)
 0C72: 11 FC FF    ld      de,$fffc    ; load offset for next screen location
 0C75: 19          add     hl,de       ; add offset
-0C76: 22 A8 63    ld      (result_63a8),hl  ; store result
+0C76: 22 A8 63    ld      (screen_pointer_for_meters_63a8),hl  ; store result
 0C79: E1          pop     hl          ; restore HL
 0C7A: 11 5F FF    ld      de,$ff5f    ; load DE with offset for goofy
 0C7D: 19          add     hl,de       ; add offset to draw next goofy
@@ -4468,7 +4468,7 @@ Init_0266:
 13D0: 01 03 00    ld      bc,$0003    ; set counter to 3
 13D3: ED B0       ldir                ; copy players score into this area
 13D5: 06 03       ld      b,$03       ; for B = 1 to 3
-13D7: 21 B1 61    ld      hl,unknown_61b1    ; load HL with ???
+13D7: 21 B1 61    ld      hl,score_and_name_line_61b1    ; load HL with ???
 
 13DA: 1B          dec     de          ; count down DE.  first time it has #61C9 after the DEC
 13DB: 1A          ld      a,(de)      ; load A with this
@@ -4517,7 +4517,7 @@ Init_0266:
 
 1407: C5          push    bc          ; else save BC
 
-1408: 06 19       ld      b,#19           ; for B = 1 to #19
+1408: 06 19       ld      b,#$19           ; for B = 1 to #19 (jotd: value was wrong: 19 in decimal!)
 
         ; exchange the values in (HL) and (DE) for #19 bytes
         ; this causes the high score to percolate up the high score list
@@ -4650,7 +4650,7 @@ Init_0266:
 14C6: 19          add     hl,de       ; add offset for next HL
 14C7: 10 F8       djnz    $14c1       ; Next B
 
-14C9: 22 38 60    ld      (unknown_ram_address_6038),hl; store HL into Unk6038
+14C9: 22 38 60    ld      (highscore_entry_address_6038),hl; store HL into Unk6038
 14CC: 11 F3 FF    ld      de,$fff3    ; load DE with offset of -#13
 14CF: 19          add     hl,de       ; add offset
 14D0: 22 3A 60    ld      (unknown_ram_address_603a),hl  ; store result into ???
@@ -4784,7 +4784,7 @@ Init_0266:
 159A: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
 159D: 11 BF 01    ld      de,$01bf
 
-15A0: FD 2A 38 60 ld      iy,(unknown_ram_address_6038) ; load IY with Unk6038
+15A0: FD 2A 38 60 ld      iy,(highscore_entry_address_6038) ; load IY with Unk6038
 15A4: FD 6E 04    ld      l,(iy+$04)
 15A7: FD 66 05    ld      h,(iy+$05)
 15AA: E5          push    hl
@@ -4796,7 +4796,7 @@ Init_0266:
 
 15B8: AF          xor     a           ; A := 0
 15B9: 32 31 60    ld      (hsblinktoggle_6031),a; store into HSBlinkToggle
-15BC: ED 5B 38 60 ld      de,(unknown_ram_address_6038)
+15BC: ED 5B 38 60 ld      de,(highscore_entry_address_6038)
 15C0: 13          inc     de
 15C1: 13          inc     de
 15C2: 13          inc     de
@@ -4805,7 +4805,7 @@ Init_0266:
 ; arrive here from #14E7
 ; high score entry complete ???
 
-15C6: ED 5B 38 60 ld      de,(unknown_ram_address_6038) ; load DE with address of high score entry indicator
+15C6: ED 5B 38 60 ld      de,(highscore_entry_address_6038) ; load DE with address of high score entry indicator
 15CA: AF          xor     a           ; A := 0
 15CB: 12          ld      (de),a      ; store.  this clears the high score indicator
 15CC: 21 09 60    ld      hl,waittimermsb_6009; load HL with timer
