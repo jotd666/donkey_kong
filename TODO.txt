@@ -5,9 +5,7 @@ MUS_100M        = 0x0b     | Music for rivet stage
 MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
-- nb lives dip switch is wrong
 - CLI args
-- insert coin with fire, start with up/down
 - pause
 
 minor:

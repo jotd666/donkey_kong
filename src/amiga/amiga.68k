@@ -313,7 +313,7 @@ _user:
 	moveq	#0,d0
 	
 	move.b	dip_switch_start_lives+3(pc),d0
-	bne.b	1f
+	
 *   bit 3 : \bonus at
 *   bit 2 : / 00 = 7000  01 = 10000  10 = 15000  11 = 20000: leave to 0 (7000)
 *   bit 1 : \ 00 = 3 lives  01 = 4 lives
@@ -2257,7 +2257,7 @@ osd_r_videoram:
 	
 osd_read_in_2:
 	moveq	#0,d0
-	movem.l	a0/d1,-(a7)
+	movem.l	a0/d1-d2,-(a7)
 	lea		keyboard_table(pc),a0
 	* misc control keys
 
@@ -2273,7 +2273,36 @@ osd_read_in_2:
 	beq.b	0f
 	bset	#3,d0
 0:	
-	movem.l	(a7)+,a0/d1
+	cmp.b	#3,gamemode1_6005
+	beq.b	1f
+	* not playing: ability to insert coin with "fire"
+	* and start game with up/down
+	move.l	_joypad_state(pc),d1
+	move.l	_previous_joypad_state(pc),d2
+	* save prev state as game loops within vblank
+	* pushing fire would either lockup the game
+	* or insert a lot of credits simulatenously
+	move.l	d1,_previous_joypad_state
+
+	* game not in play, accept start 1P game with "up"
+	btst	#JPB_BTN_UP,d1
+	beq.b	0f
+	bset	#2,d0
+0:
+	* game not in play, accept start 2P game with "down"
+	btst	#JPB_BTN_DOWN,d1
+	beq.b	0f
+	bset	#3,d0
+0:
+	btst	#JPB_BTN_RED,d1
+	beq.b	1f
+	btst	#JPB_BTN_RED,d2
+	bne.b	1f
+	* game not in play, accept insert coin with fire
+	bset	#7,d0
+1:
+	
+	movem.l	(a7)+,a0/d1-d2
 	rts
 	
 osd_read_in_1:
