@@ -6,6 +6,9 @@ MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
 - reduce to 4 bitplanes with sprites to save bandwidth
+  => compute palettes per level, use current screen global variable
+     (attract mode DONKEY KONG title is also a case)
+- 25 Hz refresh
 - fix CLI args
 - pause
 

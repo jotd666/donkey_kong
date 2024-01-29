@@ -91,7 +91,7 @@ def dump_asm_bytes(*args,**kwargs):
 
 sprite_config = dict()
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False):
+def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4]):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
@@ -99,33 +99,33 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False):
             # merge
             sprite_config[i]["cluts"].extend(cluts)
         else:
-            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror}
+            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror,"levels":levels}
 
-def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False):
-    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror)
+def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4]):
+    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels)
 
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
 add_sprite_block(0x7B,0x80,"score_sprite",7)
 add_sprite_block(0x10,0x14,"princess",9,mirror=True)
-add_sprite_block(0x60,0x64,"shattered",12)
+add_sprite_block(0x60,0x64,"shattered",12,levels=[1,2,4])
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 add_sprite(7,"blank",2)
 
-add_sprite_block(0x15,0x19,"barrel",11,mirror=True)
-add_sprite(0x49,"oil_barrel",12)
-add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True)
-add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True)
+add_sprite_block(0x15,0x19,"barrel",11,mirror=True,levels=[1])
+add_sprite(0x49,"oil_barrel",12,levels=[1,2])
+add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
+add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4])
 add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
-add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True)
-add_sprite_block(0x3b,0x3d,"bouncer",0)
-add_sprite_block(0x73,0x76,"bonus",0xA)
+add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4])
+add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
+add_sprite_block(0x73,0x76,"bonus",0xA,levels=[2,3,4])
 add_sprite_block(0x76,0x78,"heart",9)
-add_sprite(0x39,"sparkle",1)
+add_sprite(0x39,"sparkle",1,[4])
 add_sprite(0x3A,"blank",15)
 add_sprite(0x3F,"blank",0xC)
 add_sprite(0x72,"square",0xC)
@@ -133,14 +133,15 @@ add_sprite(0x72,"square",0xC)
 
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
-add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True)
-add_sprite_block(0x40,0x44,"flame",[1])  # barrel flame
+add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
+add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
 
-add_sprite(0x4B,"pie",0xE)
-add_sprite(0x44,"elevator",0x23)
-add_sprite(0x45,"elevator_conveyor",0xF)
-add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True)
-add_sprite(0x46,"moving_ladder",0x13)
+add_sprite(0x4B,"pie",0xE,levels=[2])
+add_sprite(0x44,"elevator",0x23,levels=[3])
+add_sprite(0x45,"elevator_conveyor",0xF,levels=[3])
+add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
+add_sprite(0x46,"moving_ladder",0x13,levels=[2])
+
 
 block_dict = {}
 
@@ -208,18 +209,53 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite):
         sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
 
 
+bobs_used_colors = collections.Counter()
+sprites_used_colors = collections.Counter()
+hsize = 16
 
+def generate_16x16_image(cidx,sprdat):
+    img = Image.new('RGB',(16,hsize))
+    spritepal = get_sprite_clut(cidx)
 
-
-#add_sprite_block(0x9,0x10,"falling_jeep",jeep_cluts,True)
-
-
+    d = iter(sprdat)
+    for j in range(16):
+        for i in range(16):
+            v = next(d)
+            color = spritepal[v]
+            if sprconf:
+                (sprites_used_colors if is_sprite else bobs_used_colors)[color] += 1
+            img.putpixel((i,j),color)
+    return img
 
 def switch_values(t,a,b):
     t[a],t[b] = t[b],t[a]
 
 
+# MAME shows more accurate colors but Mark provided 5 bit colors only
 tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
+
+level_palette = dict()
+
+# first pass: compute each level palette knowing the sprites that can be used in it
+for level in [1,2,3,4]:
+    colors = set()
+    for k,sprdat in enumerate(block_dict["sprite"]["data"]):
+        sprconf = sprite_config.get(k)
+        if sprconf:
+            levels = sprconf["levels"]
+            is_sprite = sprconf["is_sprite"]
+            if not is_sprite and level in levels:
+                clut_range = sprconf["cluts"]
+                name = sprconf["name"]
+                for clut in clut_range:
+                    img = generate_16x16_image(clut,sprdat)
+                    for x in range(img.size[0]):
+                        for y in range(img.size[1]):
+                            colors.add(img.getpixel((x,y)))
+    colors.discard((0,0,0))  # remove black!
+    print(level,len(colors))
+
+
 
 # unique colors, much smaller (18)
 # start by fake colors (black first, then 3 colors not in palette
@@ -267,8 +303,6 @@ if True:
             scaled.save(os.path.join(dump_tiles_dir,f"char_{k:02x}.png"))
 
 
-bobs_used_colors = collections.Counter()
-sprites_used_colors = collections.Counter()
 
 sprites = dict()
 bitplane_cache = dict()
@@ -287,18 +321,7 @@ if True:
             is_sprite = False
 
         for cidx in clut_range:
-            hsize = 16
-            img = Image.new('RGB',(16,hsize))
-            spritepal = get_sprite_clut(cidx)
-
-            d = iter(sprdat)
-            for j in range(16):
-                for i in range(16):
-                    v = next(d)
-                    color = spritepal[v]
-                    if sprconf:
-                        (sprites_used_colors if is_sprite else bobs_used_colors)[color] += 1
-                    img.putpixel((i,j),color)
+            img = generate_16x16_image(cidx,sprdat)
 
             # only consider sprites/cluts which are pre-registered
             if sprconf:
@@ -318,6 +341,8 @@ if True:
                         # example: pengo all-black enemies. If this case occurs, just omit this dummy config
                         # the amiga engine will manage anyway
                         #
+                        spritepal = get_sprite_clut(cidx)
+
                         cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
                                 palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
                 else:
@@ -332,8 +357,6 @@ if True:
                     # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
                     # as we forcefully removed it from the palette to make it fit to 16 colors, don't worry, the
                     # copper will put the proper color back again
-##                    img_to_raw = replace_color(img,brown_rock_color,blue_dark_mountain_color)
-##                    img_to_raw = replace_color(img_to_raw,almost_black_color,deep_brown_color)
                     img_to_raw = img
 
                     plane_list = []

@@ -753,7 +753,10 @@ osd_update_sprites:
 	rts
 	
 really_update_sprites:
-
+*	eor		#1,sprite_toggle
+*	bne.b	0f
+*	rts
+*0:
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
 	lea		sprite_buffer(pc),a0
@@ -766,6 +769,9 @@ really_update_sprites:
 	
 	movem.l	(a7)+,a0-a6/d0-d7
 	rts
+	
+sprite_toggle:
+	dc.w	0
 	
 update_hardware_sprites:
 	* clear host sprites
@@ -1622,7 +1628,8 @@ osd_sound_stop:
 	
 
 
-switch_screen_buffers:	
+switch_screen_buffers:
+
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
