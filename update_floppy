@@ -1,5 +1,5 @@
 .key nope
-set game tetris
+set game donkey_kong
 ;propack p a $game
 copy $game.RNC DF0:$game
 protect DF0:$game RWED

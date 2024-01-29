@@ -4,6 +4,21 @@ ROM_END = 0x4000
 RAM_START = 0x6000
 RAM_END	= 0x7000
 
+	* read register to var, little endian
+	.macro	MOVE_TO_VAR	reg,var
+	move.b	\reg,\var
+	ror.w	#8,\reg
+	move.b	\reg,\var+1
+	ror.w	#8,\reg	
+	.endm
+	
+	* read var to register, little endian
+	.macro	MOVE_TO_REG	var,reg
+	move.b	\var+1,\reg	
+	ror.w	#8,\reg
+	move.b	\var,\reg
+	.endm
+	
 	.macro CLEAR_XC_FLAGS
 	move.w	d7,-(a7)
 	moveq	#0,d7
@@ -129,13 +144,13 @@ RAM_END	= 0x7000
 	lea		load_any_address_be_error(pc),a0
 	jbsr	osd_break
 111:
-	.endif
 	* > 0x6000, is that < ram end?
 	cmp.w	#0x900,d7
 	bcs.b	112f
 	add.w	#0x6000,d7
 	lea		load_any_address_be_error(pc),a0
 	jbsr	osd_break
+	.endif
 112:
 	* RAM
 	lea		ram_6000,\reg
@@ -3272,7 +3287,7 @@ l_090f:
 	subq.b	#1,d1                           	| [...]
 	jne	l_090f                             	| [$0911: djnz    $090f] Next B
 
-	move.w	#0x0000,d5                      	| [$0913: ld      hl,$0000] clear HL 0
+	clr.w	d5                      	| [$0913: ld      hl,$0000] clear HL 0
 	jra	l_0938                             	| [$0916: jp      $0938] skip ahead
 
 * 2 players start
@@ -4187,7 +4202,7 @@ draw_the_screen_0da7:
 	movem.w	d3/d4,-(sp)                    	| [$0db6: push    de] save DE
 	jbsr	convert_hl_into_vram_address_2ff0                            	| [$0db7: call    $2ff0] convert HL into VRAM address
 	movem.w	(sp)+,d3/d4                    	| [$0dba: pop     de] restore DE	
-	move.w	d7,current_screen_address_63ab                 	| [$0dbb: ld      (current_screen_address_63ab),hl] store the VRAM address into this location for later use.  starting point of whatever we are drawing
+	MOVE_TO_VAR	d7,current_screen_address_63ab                 	| [$0dbb: ld      (current_screen_address_63ab),hl] store the VRAM address into this location for later use.  starting point of whatever we are drawing
 	move.b	d1,d0                           	| [$0dbe: ld      a,b] A := B = original data item
 	and.b	#0x07,d0                         	| [$0dbf: and     $07] mask bits, now between 0 and 7
 	move.b	d0,unknown_63b4                 	| [$0dc1: ld      (unknown_63b4),a] store into ???
@@ -4215,7 +4230,7 @@ l_0dd3:
 	movem.w	d3/d4,-(sp)                    	| [$0de3: push    de] save DE
 	jbsr	convert_hl_into_vram_address_2ff0                            	| [$0de4: call    $2ff0] convert HL into VRAM address
 	movem.w	(sp)+,d3/d4                    	| [$0de7: pop     de] restore DE
-	move.w	d7,unknown_63ad                 	| [$0de8: ld      (unknown_63ad),hl] store into ???
+	MOVE_TO_VAR	d7,unknown_63ad                 	| [$0de8: ld      (unknown_63ad),hl] store into ???
 	move.b	original_data_item_63b3,d0      	| [$0deb: ld      a,(original_data_item_63b3)] load A with first data item
 	cmp.b	#0x02,d0                         	| [$0dee: cp      $02] < 2 ? are we drawing a ladder or a broken ladder?
 	jpl	l_0e4f                             	| [$0df0: jp      p,$0e4f] no, skip ahead [why P, instead of NC ?]
@@ -4230,7 +4245,7 @@ l_0dd3:
 	move.b	d0,unknown_63b2                 	| [$0dfd: ld      (unknown_63b2),a] store into ???
 	move.b	original_data_item__63af,d0     	| [$0e00: ld      a,(original_data_item__63af)] load A with ??? computed above
 	add.b	#0xf0,d0                         	| [$0e03: add     a,$f0] add #F0
-	move.w	current_screen_address_63ab,d7             	| [$0e05: ld      hl,(current_screen_address_63ab)] load HL with VRAM address to begin drawing
+	MOVE_TO_REG	current_screen_address_63ab,d7             	| [$0e05: ld      hl,(current_screen_address_63ab)] load HL with VRAM address to begin drawing
 	jbsr	osd_w_videoram                         	| [$0e08: ld      (hl),a] draw element to screen = girder above top of ladder ?
 	addq.b	#1,d7                           	| [$0e09: inc     l] next location
 	sub.b	#0x30,d0                         	| [$0e0a: sub     $30] subtract #30.  now the element to draw is a ladder
@@ -4256,7 +4271,7 @@ l_0e19:
 l_0e2a:
 	move.b	unknown_63b0,d0                 	| [$0e2a: ld      a,(unknown_63b0)] load A with ???
 	add.b	#0xd0,d0                         	| [$0e2d: add     a,$d0] add #D0
-	move.w	unknown_63ad,d7             	| [$0e2f: ld      hl,(unknown_63ad)]
+	MOVE_TO_REG	unknown_63ad,d7             	| [$0e2f: ld      hl,(unknown_63ad)]
 	jbsr	osd_w_videoram                         	| [$0e32: ld      (hl),a]
 	move.b	original_data_item_63b3,d0      	| [$0e33: ld      a,(original_data_item_63b3)] load A with original data item
 	cmp.b	#0x01,d0                         	| [$0e36: cp      $01] == 1 ?  (is this a broken ladder ?)
@@ -4294,7 +4309,7 @@ l_0e4f:
 	move.b	original_data_item__63af,d0     	| [$0e57: ld      a,(original_data_item__63af)] load A with original data item #2, masked to be between 0 and 7
 	add.b	#0xf0,d0                         	| [$0e5a: add     a,$f0] add #F0
 	move.b	d0,unknown_63b5                 	| [$0e5c: ld      (unknown_63b5),a] store into ???
-	move.w	current_screen_address_63ab,d7             	| [$0e5f: ld      hl,(current_screen_address_63ab)] load HL with screen address to being drawing the item
+	MOVE_TO_REG	current_screen_address_63ab,d7             	| [$0e5f: ld      hl,(current_screen_address_63ab)] load HL with screen address to being drawing the item
 
 l_0e62:
 	move.b	unknown_63b5,d0                 	| [$0e62: ld      a,(unknown_63b5)] load A with ???
@@ -4388,7 +4403,7 @@ l_0ee8:
 
 * we are drawing a conveyor
 
-	move.w	current_screen_address_63ab,d7             	| [$0ef0: ld      hl,(current_screen_address_63ab)] load HL with VRAM screen address to begin drawing
+	MOVE_TO_REG	current_screen_address_63ab,d7             	| [$0ef0: ld      hl,(current_screen_address_63ab)] load HL with VRAM screen address to begin drawing
 	move.b	#0xb3,d0                        	| [$0ef3: ld      a,$b3] A := #B3 = code graphic for conveyor
 	jbsr		osd_w_videoram                         	| [$0ef5: ld      (hl),a] draw on screen
 	move.w	#0x20,d1                        	| [$0ef6: ld      bc,$0020] load BC with offset 32
@@ -4434,7 +4449,7 @@ l_0f1b:
 
 l_0f2f:
 	move.b	d0,unknown_63b5                 	| [$0f2f: ld      (unknown_63b5),a] store into ???
-	move.w	current_screen_address_63ab,d7             	| [$0f32: ld      hl,(current_screen_address_63ab)] load HL with ???
+	MOVE_TO_REG	current_screen_address_63ab,d7             	| [$0f32: ld      hl,(current_screen_address_63ab)] load HL with ???
 
 l_0f35:
 	move.b	unknown_63b5,d0                 	| [$0f35: ld      a,(unknown_63b5)] load A with ???
