@@ -57,7 +57,7 @@ OPT_ENABLE_DOUBLE_BUFFERING = 1
 _custom = 0xDFF000
 
 
-NB_PLAYFIELD_PLANES = 5
+NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
 NB_BYTES_PER_ROW = 40
 NB_ROWS = 32
@@ -709,6 +709,14 @@ really_update_sprites:
 *0:
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
+	* first, make sure we have the proper palette
+	move.b	screen_number_6227,d0
+	cmp.b	palette_number(pc),d0
+	beq.b	1f			| already the proper palette
+	* not matching: update palette
+	move.b	d0,palette_number
+	bsr		load_palette_in_copperlist
+1:
 	lea		sprite_buffer(pc),a0
 	move.l	a0,a6
 
@@ -908,6 +916,7 @@ PREV_Y = SPRITE_Y
 update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
+	lea			hardware_sprite_flag_table,a2
 	
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
@@ -918,8 +927,11 @@ update_bobs:
 	move.l	(a4),d1
 	cmp.l	(a3),d1
 	beq.b	11f		| same as sprite to be displayed: no need to erase
-	
 	moveq	#0,d1
+	move.b	(SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
+	tst.b	(a2,d1.w)
+	bne.b	11f		| hardware sprite: no need to restore background either!
+	
 	move.b	(PREV_Y,a4),d1
 	* clear 16x16 area where the sprite was
 	.ifne	SPRITE_Y_CORRECTION
@@ -1765,7 +1777,6 @@ platform_init:
 	
 	bsr		set_bitplanes
 	
-	bsr		load_palette_in_copperlist
 	
 	* set copperlist
 	move.l	#copperlist,cop1lc(a5)
@@ -1818,7 +1829,11 @@ platform_init:
 load_palette_in_copperlist:
 	movem.l	d0-d1/a0-a1,-(a7)
 	lea		palette(pc),a0
-
+	moveq	#0,d0
+	move.b	palette_number(pc),d0
+	subq	#1,d0		| starts at 1
+	lsl.w	#5,d0		| times 32
+	add.w	d0,a0		| skip to the proper palette
 	move.w	#TOTAL_NB_COLORS,d0
 	lea		colors,a1
 	bsr		load_palette
@@ -2589,7 +2604,8 @@ old_stack:
 	.long	0
 return_address:
 	.long	0
-	
+palette_number:
+	.word	0
 	
 _tag:
 		.long	WHDLTAG_CUSTOM1_GET

@@ -6,7 +6,12 @@ MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at 
 - reduce to 4 bitplanes with sprites to save bandwidth
   => compute palettes per level, use current screen global variable
      (attract mode DONKEY KONG title is also a case)
-- 25 Hz refresh
+     ok but missing color replacement for elevator sprite and other level 3
+	 only sprites like bouncer
+- add hardware sprites
+- fix switch screen, should be done at start, and inverted (?)
+- 25 Hz refresh (maybe possible to retain 50Hz with more blitter optims ex 
+  not redrawing on Kong or on Princess if not in intro / screen 1!)
 - fix CLI args
 - pause
 

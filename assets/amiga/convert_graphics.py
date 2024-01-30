@@ -48,7 +48,7 @@ if dump_sprites:
 
 
 NB_POSSIBLE_SPRITES = 128
-NB_BOB_PLANES = 5
+NB_BOB_PLANES = 4
 
 def guess_cluts():
 
@@ -99,7 +99,7 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,levels=
             # merge
             sprite_config[i]["cluts"].extend(cluts)
         else:
-            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror,"levels":levels}
+            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror,"screens":levels}
 
 def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4]):
     add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels)
@@ -114,10 +114,13 @@ add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 add_sprite(7,"blank",2)
 
-add_sprite_block(0x15,0x19,"barrel",11,mirror=True,levels=[1])
-add_sprite(0x49,"oil_barrel",12,levels=[1,2])
+add_sprite_block(0x15,0x18,"barrel",11,mirror=True,levels=[1])
+add_sprite(0x18,"barrel",11,levels=[1],is_sprite=True)    # fixed barrel, special case
+add_sprite(0x49,"oil_barrel",12,levels=[1,2],is_sprite=True)
+add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2],is_sprite=True)  # barrel flame
+
 add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
-add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4])
+add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4],is_sprite=True)
 add_sprite_block(0x20,0x38,"kong",8,mirror=True)
 add_sprite_block(0x23,0x24,"kong",7)
 add_sprite(0x70,"blank",[1,8,10])
@@ -134,7 +137,6 @@ add_sprite(0x72,"square",0xC)
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
-add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
 
 add_sprite(0x4B,"pie",0xE,levels=[2])
 add_sprite(0x44,"elevator",0x23,levels=[3])
@@ -236,13 +238,23 @@ tile_palette = [(r*8,g*8,b*8) for r,g,b in block_dict["palette"]["data"]]
 
 level_palette = dict()
 
+# if palette is taken as-is, we need 32 colors to display the full game, even less than that
+# but using 32 colors has a lot of disadvantages:
+# - this is super slow on real hardware! (Smooth on WinUAE but smooth on MAME too...)
+# - we can't use hardware sprites properly as there could be palette conflicts
+
 # first pass: compute each level palette knowing the sprites that can be used in it
+# and only them. This saves just enough colors to have 4 tile colors (variable)
+# and 12 bob colors so we can use only 4 bitplanes (plus hw sprites as bonus colors
+# but even without hardware sprites we have enough colors which is really
+# a chance!!)
+
 for level in [1,2,3,4]:
     colors = set()
     for k,sprdat in enumerate(block_dict["sprite"]["data"]):
         sprconf = sprite_config.get(k)
         if sprconf:
-            levels = sprconf["levels"]
+            levels = sprconf["screens"]
             is_sprite = sprconf["is_sprite"]
             if not is_sprite and level in levels:
                 clut_range = sprconf["cluts"]
@@ -253,16 +265,29 @@ for level in [1,2,3,4]:
                         for y in range(img.size[1]):
                             colors.add(img.getpixel((x,y)))
     colors.discard((0,0,0))  # remove black!
-    print(level,len(colors))
+    colors = sorted(colors)
+    if len(colors)>12:
+        raise Exception("Too many colors, must be <=12")
+    # pad (some levels have even less colors)
+    colors = colors + [fake_4_color_palette[0]]*(12-len(colors))
+    # start by fake colors (black first, then 3 colors not in palette to be sure
+    # bitplane conversion won't pick them (used for tile dynamic colors only!)
+    level_palette[level] = fake_4_color_palette + colors
+
+# computing palettes for all 4 levels was interesting... just to realize that the palette
+# is almost the same for all levels!! and with some color swap we are able to get all levels
+# on the same colors with same indexes for the colors that are shared, which is another miracle
 
 
+base_palette = level_palette[1].copy()
+base_palette.insert(9,(0xd8,0x90,0x50))
+base_palette.pop()  # remove last (black)
 
-# unique colors, much smaller (18)
-# start by fake colors (black first, then 3 colors not in palette
-# to avoid 4 first tile colors=
-bobs_palette = fake_4_color_palette + sorted(set(tile_palette))[1:]
-bobs_palette += [fake_4_color_palette[0]]*(32-len(bobs_palette))
-
+screen_3_color_9 = (0xF8,0x20,0x50)
+screen_palette = {x:base_palette.copy() for x in [1,2,3,4]}
+screen_1_color_9 = screen_palette[3][9]
+screen_palette[3][9] = screen_3_color_9   # only 2 color changes
+screen_palette[3][5] = (0x90,0x00,0x00)  # only 2 color changes
 
 rval = guess_cluts()
 # dump cluts as RGB4 for sprites
@@ -282,7 +307,9 @@ with open(os.path.join(src_dir,"row_colors.68k"),"w") as f:
 
 
 with open(os.path.join(src_dir,"palette.68k"),"w") as f:
-    bitplanelib.palette_dump(bobs_palette,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
+    for k,v in sorted(screen_palette.items()):
+        f.write(f"* screen {k}\n")
+        bitplanelib.palette_dump(v,f,pformat=bitplanelib.PALETTE_FORMAT_ASMGNU)
 
 
 character_codes = []
@@ -322,6 +349,12 @@ if True:
 
         for cidx in clut_range:
             img = generate_16x16_image(cidx,sprdat)
+            if dump_sprites:
+                scaled = ImageOps.scale(img,2,0)
+                if sprconf:
+                    scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
+                else:
+                    scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
 
             # only consider sprites/cluts which are pre-registered
             if sprconf:
@@ -352,6 +385,7 @@ if True:
                     if "bitmap" not in cs:
                         cs["bitmap"] = dict()
 
+                    bobs_palette = screen_palette[sprconf["screens"][0]]  # take first palette even if several screens
                     csb = cs["bitmap"]
 
                     # prior to dump the image to amiga bitplanes, don't forget to replace brown by blue
@@ -360,6 +394,7 @@ if True:
                     img_to_raw = img
 
                     plane_list = []
+                    #print(f"converting {name}, screen {sprconf['screens'][0]}")
                     for mirrored in range(2):
                         bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
                             palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
@@ -394,26 +429,29 @@ if True:
                     # - elevator: seems to be 0x23
                     csb[cidx & 0xF] = plane_list
 
-            if dump_sprites:
-                scaled = ImageOps.scale(img,2,0)
-                if sprconf:
-                    scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
-                else:
-                    scaled.save(os.path.join(uncategorized_dump_sprites_dir,f"sprites_{k:02x}_{cidx}.png"))
-
+hw_sprite_flag = [0]*256
+for k,v in sprite_config.items():
+    if v["is_sprite"]:
+        hw_sprite_flag[k] = 1
+        hw_sprite_flag[k+128] = 1  # mirror code
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
     f.write("\t.global\tsprite_table\n")
     f.write("\t.global\tbob_table\n")
+    f.write("\t.global\thardware_sprite_flag_table\n")
 
-    f.write("character_table:\n")
+    f.write("\nhardware_sprite_flag_table:")
+    bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
+
+    f.write("\ncharacter_table:\n")
     for i,c in enumerate(character_codes):
         f.write(f"\t.long\tchar_{i}\n")
     for i,c in enumerate(character_codes):
         if c is not None:
             f.write(f"char_{i}:")
             bitplanelib.dump_asm_bytes(c,f,mit_format=True)
+
 
 ##    f.write("sprite_table:\n")
 ##
