@@ -3993,7 +3993,7 @@ l_0cc6:
 
 l_0cd4:
 	lea	game_rom+0x3ae4,a1                      	| [$0cd4: ld      de,$3ae4] Load DE with start of table data for girders
-	move.b	#MUS_25M,d0                        	| [$0cd7: ld      a,$08] A := 8 = music code for girders
+	move.w	#MUS_25M,d0                        	| [$0cd7: ld      a,$08] A := 8 = music code for girders
 	move.b	d0,background_music_value_6089  	| [$0cd9: ld      (background_music_value_6089),a] set music for girders
 	jbsr	osd_sound_start
 	jra	l_0cc6                             	| [$0cdc: jp      $0cc6] jump back
@@ -5080,7 +5080,7 @@ l_128b:
 	move.b	d0,waittimermsb_6009            	| [$12a0: ld      (waittimermsb_6009),a] store into timer for sound delay
 	jbsr	l_30bd                            	| [$12a3: call    $30bd] clear sprites ?
 	                        	| [$12a6: ld      a,$03] load A with duration of sound
-	move.w	#DEAD_SND,d0
+	move.w	#DEAD_TUNE_SND,d0
 	jbsr	osd_sound_start
 	        	| [$12a8: ld      (play_death_sound_6088),a] play death sound
 	rts                                    	| [$12ab: ret] return

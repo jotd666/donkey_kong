@@ -685,60 +685,10 @@ osd_break:
 		
 1002: .asciz    "AKS_ENTERDEBUGGER 1"
 1003:
-        .align	2
-
+        .align	
 	
 
-* < D0: number of 1/60Hz ticks
-* can work with interrupts enabled or disabled
-osd_wait:
-	move.w	d0,delay_timer
-	**jbsr	osd_is_vblank_interrupt_enabled
-	tst.w	d0
-	jne		2f
-	* interrupts are disabled: timer isn't going to change
-	* wait using vertical blank interrupt request (we don't need it!)
-	clr.w	one_out_of_five
-0:
-	move.w	#0x20,_custom+intreq
-	move.w	#0x20,_custom+intreq
-1:
-	move.w	_custom+intreqr,d0
-	btst	#5,d0
-	beq.b	1b
-	addq.w	#1,one_out_of_five
-	cmp.w	#5,one_out_of_five
-	bne.b	5f
-	subq.w	#1,delay_timer	
-	clr.w	one_out_of_five
-5:
-	subq.w	#1,delay_timer
-	beq.b	4f
-	bpl.b	0b
-4:
-	rts
-	
-2:
-	tst.w	delay_timer
-	bne.b	2b
-	rts
 
-* < Z=1 if title is displayed
-is_title_displayed:
-	move.l	a1,-(a7)
-	lea		bg_videoram,A1
-	cmp.b	#0xB5,(0x149,a1)
-	movem.l	(a7)+,a1
-	rts
-	
-* < Z=1 if moonbase is displayed (rightmost tile still present)
-is_moonbase_displayed:
-	move.l	a1,-(a7)
-	lea		bg_videoram,A1
-	cmp.b	#0x8C,(0x373,a1)
-	movem.l	(a7)+,a1
-	rts
-	
 	
 * < A0: pointer on sprite shadow zone
 
@@ -950,18 +900,25 @@ update_hardware_sprites:
 	jne	10b	
 	rts
 
-PREV_X = 0
-PREV_Y = 1
-PREV_IS_BOB = 2
+
+PREV_X = SPRITE_X
+PREV_Y = SPRITE_Y
+
 
 update_bobs:
-	move.l		bob_previous_drawed_positions(pc),a4
+	move.l		bob_previous_drawed_sprites(pc),a4
+	lea			sprite_buffer(pc),a3
+	
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	moveq	#0,d0
 	move.b	(PREV_X,a4),d0
 	beq.b	11f		| x=0: inactive
+	move.l	(a4),d1
+	cmp.l	(a3),d1
+	beq.b	11f		| same as sprite to be displayed: no need to erase
+	
 	moveq	#0,d1
 	move.b	(PREV_Y,a4),d1
 	* clear 16x16 area where the sprite was
@@ -974,11 +931,12 @@ update_bobs:
 	bsr		restore_16x_background
 11:
 	addq	#4,a4
+	addq	#4,a3
 	dbf		d7,1b
 	
 	
 	lea		bob_table,a4
-	move.l	bob_previous_drawed_positions(pc),a6
+	move.l	bob_previous_drawed_sprites(pc),a6
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	moveq	#0,d0
@@ -1568,8 +1526,8 @@ osd_sound_start:
 	* don't play if already playing
 	* (music_tick value is not important for looped tunes
 	* as long as it's not zero)
-	tst.w	music_tick
-	bne.b	1b
+	*tst.w	music_tick
+	*bne.b	1b
 	* play the proper module pattern
 	* load up the countdown if loop
 	move.w	(2,a0,d0.w),d1	| pattern number in .mod file
@@ -1649,8 +1607,8 @@ switch_screen_buffers:
 2:
 	move.l	a1,(a0)
 	move.l	a5,bg_displayed_screen_ptr
-	move.l	a3,bob_previous_displayed_positions
-	move.l	a2,bob_previous_drawed_positions
+	move.l	a3,bob_previous_displayed_sprites
+	move.l	a2,bob_previous_drawed_sprites
 	jbsr		set_bitplanes
 	.endif
 	
@@ -2505,16 +2463,19 @@ handle_keyboard:
 	move.b	d1,player_1_score_address_60b2+1
 	movem.w	(a7)+,d0/d1
 0:
-	cmp.b	#0x53,d0	| F4 key
+	.ifndef	RELEASE
+	* cheat but not very rewarding as it triggers a "hurry up!"
+	cmp.b	#0x58,d0	| F9 key
 	bne.b	0f
-	
+	move.b	#9,onscreen_timer_638c
 	move.w	#0x0FF,_custom+color
+	.endif
 0:
-	cmp.b	#0x54,d0	| F5 key
-	bne.b	0f
-	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
-0:
+*	cmp.b	#0x54,d0	| F5 key
+*	bne.b	0f
+*	st.b	cheat_used
+*	move.w	#0x0FF,_custom+color
+*0:
 
 10:
 	.ifndef	RELEASE
@@ -2755,9 +2716,9 @@ sprite_buffer:
 	
 bob_previous_positions_1:
 	ds.l	NB_TARGET_SPRITES
-bob_previous_drawed_positions:
+bob_previous_drawed_sprites:
 	.long	bob_previous_positions_1
-bob_previous_displayed_positions:
+bob_previous_displayed_sprites:
 	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
 	.long	bob_previous_positions_1
 	.else

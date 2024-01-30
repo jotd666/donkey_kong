@@ -64,7 +64,7 @@
 
 	.equ	BOOM_SND,                     0+0x10
 	.equ	CREDIT_SND,                   1+0x10
-	.equ	DEAD_SND,                     2+0x10
+	.equ	DEAD_TUNE_SND,                     2+0x10
 	.equ	JUMPED_OVER_SND,              3+0x10
 	.equ	KILL_ENEMY_SND,               4+0x10
 	.equ	START_SND,                    5+0x10

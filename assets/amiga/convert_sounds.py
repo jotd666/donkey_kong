@@ -28,7 +28,7 @@ sound_dict = {
 # samples
 "BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
 "CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"DEAD_SND"             :{"index":0x12,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
+"DEAD_TUNE_SND"             :{"index":0x12,"pattern":0xE,"loops":False,"volume":32,"ticks":150},
 "JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "START_SND"             :{"index":0x15,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
@@ -39,16 +39,17 @@ sound_dict = {
 "GORILLA_YELLS_SND"       :{"index":0xF,"channel":3,"sample_rate":lq_sample_rate,"priority":1},  # also matches MUS define
 
 # tunes match the MUS defines in donkey_kong.68k source
-"START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":32,"ticks":200},
+"START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":40,"ticks":250},
 "LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":32,"ticks":150},
+"OUT_OF_TIME_TUNE_SND"              :{"index":3,"pattern":0xC,"loops":True,"volume":32},
 "HAMMER_TUNE_SND"              :{"index":4,"pattern":3,"loops":True,"volume":32},
-"END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":32,"ticks":200},
-"END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":6,"loops":True,"volume":32},
-"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":8,"loops":True,"volume":32},
+"END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":40,"ticks":200},
+"END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":6,"loops":False,"volume":36},
+"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":8,"loops":False,"volume":36},
 "PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":4,"loops":True,"volume":32},
-"GIRDERS_TUNE_SND"                 :{"index":9,"pattern":4,"loops":True,"volume":32},
-"RIVET_TUNE_SND"                    :{"index":9,"pattern":4,"loops":True,"volume":32},
-"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":3,"loops":True,"volume":32},
+"GIRDERS_TUNE_SND"                 :{"index":8,"pattern":10,"loops":True,"volume":32},
+"RIVET_TUNE_SND"                    :{"index":0xb,"pattern":0xB,"loops":True,"volume":32},
+"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":0xD,"loops":False,"volume":32,"ticks":160},
 
 }
 
