@@ -43,6 +43,7 @@ _config
 	IFD		CHIP_ONLY
 	dc.b	"C3:X:break at startup:31;"
 	ENDC
+	dc.b	"C3:X:skip introduction:0;"
 	dc.b    "C5:L:start lives:3,4,5,6;"
 	dc.b	0
 

@@ -117,7 +117,7 @@ add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her un
 add_sprite(7,"blank",2)
 
 add_sprite_block(0x15,0x18,"barrel",11,mirror=True,levels=[1])
-add_sprite(0x18,"stashed_barrel",11,levels=[1],is_sprite=True)    # fixed barrel, special case
+add_sprite(0x18,"stashed_barrel",11,levels=[1])    # should be a sprite
 add_sprite(0x49,"oil_barrel",12,levels=[1,2],is_sprite=True)
 add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2],is_sprite=True)  # barrel flame
 
@@ -291,6 +291,14 @@ screen_1_color_9 = screen_palette[3][9]
 screen_palette[3][9] = screen_3_color_9   # only 2 color changes
 screen_palette[3][5] = (0x90,0x00,0x00)  # only 2 color changes
 
+# dump cluts as RGB4 for sprites
+with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
+    for clut_index in range(4):
+        clut = screen_palette[1][clut_index*4:(clut_index+1)*4]   # simple slice of palette
+        rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
+        bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
+
+
 rval = guess_cluts()
 # dump cluts as RGB4 for sprites
 with open(os.path.join(src_dir,"row_colors.68k"),"w") as f:
@@ -377,7 +385,6 @@ if True:
                         # the amiga engine will manage anyway
                         #
                         spritepal = get_sprite_clut(cidx)
-
                         cs["bitmap"] = bitplanelib.palette_image2sprite(img,None,spritepal,
                                 palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)
                 else:
@@ -462,35 +469,35 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             bitplanelib.dump_asm_bytes(c,f,mit_format=True)
 
 
-##    f.write("sprite_table:\n")
-##
-##    sprite_names = [None]*NB_POSSIBLE_SPRITES
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        sprite = sprites.get(i)
-##        f.write("\t.long\t")
-##        if sprite:
-##            if sprite == True:
-##                f.write("-1")  # not displayed but legal
-##            else:
-##                if sprite["is_sprite"]:
-##                    name = sprite['name']
-##                    sprite_names[i] = name
-##                    f.write(name)
-##                else:
-##                    f.write("0")
-##        else:
-##            f.write("0")
-##        f.write("\n")
-##
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        name = sprite_names[i]
-##        if name:
-##            f.write(f"{name}:\n")
-##            for j in range(8):
-##                f.write("\t.long\t")
-##                f.write(f"{name}_{j}")
-##                f.write("\n")
-##
+    f.write("sprite_table:\n")
+
+    sprite_names = [None]*NB_POSSIBLE_SPRITES
+    for i in range(NB_POSSIBLE_SPRITES):
+        sprite = sprites.get(i)
+        f.write("\t.long\t")
+        if sprite:
+            if sprite == True:
+                f.write("-1")  # not displayed but legal
+            else:
+                if sprite["is_sprite"]:
+                    name = sprite['name']
+                    sprite_names[i] = name
+                    f.write(name)
+                else:
+                    f.write("0")
+        else:
+            f.write("0")
+        f.write("\n")
+
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = sprite_names[i]
+        if name:
+            f.write(f"{name}:\n")
+            for j in range(8):
+                f.write("\t.long\t")
+                f.write(f"{name}_{j}")
+                f.write("\n")
+
     f.write("bob_table:\n")
 
     bob_names = [None]*NB_POSSIBLE_SPRITES
@@ -545,16 +552,16 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 
     f.write("\t.section\t.datachip\n")
     # sprites
-##    for i in range(NB_POSSIBLE_SPRITES):
-##        name = sprite_names[i]
-##        if name:
-##            sprite = sprites.get(i)
-##            for j in range(8):
-##                # clut is valid for this sprite
-##                bitmap = sprite["bitmap"]
-##                sprite_label = f"{name}_{j}"
-##                f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
-##                bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
+    for i in range(NB_POSSIBLE_SPRITES):
+        name = sprite_names[i]
+        if name:
+            sprite = sprites.get(i)
+            for j in range(8):
+                # clut is valid for this sprite
+                bitmap = sprite["bitmap"]
+                sprite_label = f"{name}_{j}"
+                f.write(f"{sprite_label}:\n\t.word\t{sprite['hsize']}")
+                bitplanelib.dump_asm_bytes(bitmap,f,mit_format=True)
 
     f.write("\n* bitplanes\n")
     # dump bitplanes

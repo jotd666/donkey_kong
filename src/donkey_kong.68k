@@ -3546,6 +3546,10 @@ l_0a63:
 
 l_0a76:
 	move.b	intro_screen_counter_6385,d0    	| [$0a76: ld      a,(intro_screen_counter_6385)] varies from 0 to 7 while the intro screen runs, when kong climbs the dual ladders and scary music is played
+	tst.b	skip_introduction_flag
+	beq.b	0f
+	move.b	#7,d0
+0:
 	jbsr	rst_28                            	| [$0a79: rst     $28] jump based on A
 
 	.long	l_0a8a	|    0       | #0A8A

@@ -326,7 +326,8 @@ _user:
 	btst	#31,d1
 	sne		break_at_startup_flag
 	.endif
-	
+	btst	#0,d1
+	sne		skip_introduction_flag
 
 
 	
@@ -718,11 +719,8 @@ really_update_sprites:
 	bsr		load_palette_in_copperlist
 1:
 	lea		sprite_buffer(pc),a0
-	move.l	a0,a6
-
-	*move.l	a6,a0
-	*bsr		update_hardware_sprites
-	move.l	a6,a0
+	bsr		update_hardware_sprites
+	lea		sprite_buffer(pc),a0
 	bsr		update_bobs
 	
 	movem.l	(a7)+,a0-a6/d0-d7
@@ -735,7 +733,7 @@ update_hardware_sprites:
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
 
-	*lea		sprite_table,a4
+	lea		sprite_table,a4
 	lea		host_sprites(pc),a2
 0:
 	clr.b	(SPRITE_X,a2)	| clear X is enough to know it's free
@@ -744,12 +742,16 @@ update_hardware_sprites:
 	dbf		d0,0b
 
 	* check active sprites, we'll disable the sprites that aren't active anymore
+	lea		hardware_sprite_flag_table,a5
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	* code = 0 and clut = 0 => disabled
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	beq.b	2f
+	tst.b	(a5,d2.w)
+	beq.b	2f
+	
 	* check if real/attached sprite
 	* this part is needed when mixing sprites & bobs
 	* or when using "attached" sprites
@@ -757,7 +759,7 @@ update_hardware_sprites:
 	* the Amiga HW attached sprites which I don't use)
 	* here I just save a lot of sprites by displaying
 	* one 16x32 sprite instead of 2 16x16 for some objects
-	* like for instance the jeep or explosions
+	* like barrels next to kong
 	
 	* the fact that there's 0 isn't a problem either
 	* in this mixed sprite/bob port as it is probably
@@ -777,7 +779,6 @@ update_hardware_sprites:
 	
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
-	not.b	d1
 	
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
@@ -822,7 +823,8 @@ update_hardware_sprites:
 	move.b	(SPRITE_Y,a2),d1
 	moveq	#0,d2
 	move.b	(SPRITE_CODE,a2),d2
-		
+	bclr	#7,d2		| TEMP hammer symmetry!
+	
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4
@@ -844,7 +846,6 @@ update_hardware_sprites:
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
-
 
 	move.w	(A5)+,d3
 	cmp.w	#16,d3
@@ -2816,8 +2817,6 @@ blank_sprite:
 	.endr
 	
 	* ATM sprite colors are out of copperlist
-sprite_cols:
-	DECL_COLORS	16,16
 	
 	* main copperlist
 copperlist:
@@ -2828,6 +2827,8 @@ panel_bitplanes:
 	DECL_BITPLANES	0,NB_PLAYFIELD_PLANES
 colors:
 	DECL_COLORS	0,TOTAL_NB_COLORS
+sprite_cols:
+	DECL_COLORS	16,16
 sprites:
     * #0
     .word    sprpt+0,0
