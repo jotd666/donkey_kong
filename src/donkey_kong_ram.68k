@@ -15,6 +15,7 @@
 	.global reg_palette_a
 	.global reg_palette_b
 	.global sprite_ram
+	.global in_intro_flag
 	.global reg_music
 	.global reg_sfx
 	.global	reg_sfx_death
@@ -77,6 +78,8 @@ infinite_lives_flag:
 infinite_time_flag:
 	.byte	0
 highscores_need_saving:
+	.byte	0
+in_intro_flag:
 	.byte	0
 vb_ticks_count:
 	.byte	0

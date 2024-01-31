@@ -3601,6 +3601,7 @@ l_0abf:
 	clr.b	d0                               	| [$0ad7: xor     a] A := 0
 	move.b	d0,clear_kongs_top_right_sprite_690c	| [$0ad8: ld      (clear_kongs_top_right_sprite_690c),a] store into kong's right arm sprite
 
+	st.b	in_intro_flag
 	move.w	#MUS_INTRO,d0
 	jbsr	osd_sound_start
 	
@@ -3979,6 +3980,7 @@ rivets_0cb6:
 * other screens return here
 
 l_0cc6:
+	clr.b	in_intro_flag
 	jbsr	draw_the_screen_0da7                            	| [$0cc6: call    $0da7] draw the screen
 
 	move.b	screen_number_6227,d0           	| [$0cc9: ld      a,(screen_number_6227)] load A with screen number

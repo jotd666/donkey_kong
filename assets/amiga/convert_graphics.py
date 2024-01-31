@@ -91,7 +91,7 @@ def dump_asm_bytes(*args,**kwargs):
 
 sprite_config = dict()
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4]):
+def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4],smart_redraw=False):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
@@ -99,30 +99,32 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,levels=
             # merge
             sprite_config[i]["cluts"].extend(cluts)
         else:
-            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite,"mirror":mirror,"screens":levels}
+            sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,
+                                "is_sprite":is_sprite,"mirror":mirror,"screens":levels,
+                                "smart_redraw":smart_redraw}
 
-def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4]):
-    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels)
+def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,levels=[1,2,3,4],smart_redraw=False):
+    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels,smart_redraw=smart_redraw)
 
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
 add_sprite_block(0x7B,0x80,"score_sprite",7)
-add_sprite_block(0x10,0x14,"princess",9,mirror=True)
+add_sprite_block(0x10,0x14,"princess",9,mirror=True,smart_redraw=True)
 add_sprite_block(0x60,0x64,"shattered",12,levels=[1,2,4])
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 add_sprite(7,"blank",2)
 
 add_sprite_block(0x15,0x18,"barrel",11,mirror=True,levels=[1])
-add_sprite(0x18,"barrel",11,levels=[1],is_sprite=True)    # fixed barrel, special case
+add_sprite(0x18,"stashed_barrel",11,levels=[1],is_sprite=True)    # fixed barrel, special case
 add_sprite(0x49,"oil_barrel",12,levels=[1,2],is_sprite=True)
 add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2],is_sprite=True)  # barrel flame
 
 add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
 add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4],is_sprite=True)
-add_sprite_block(0x20,0x38,"kong",8,mirror=True)
-add_sprite_block(0x23,0x24,"kong",7)
+add_sprite_block(0x20,0x38,"kong",8,mirror=True)  # ,smart_redraw=True
+add_sprite_block(0x23,0x24,"kong",7)   # ,smart_redraw=True
 add_sprite(0x70,"blank",[1,8,10])
 add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4])
 add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
@@ -429,20 +431,27 @@ if True:
                     # - elevator: seems to be 0x23
                     csb[cidx & 0xF] = plane_list
 
+smart_redraw_flag = [0]*256
 hw_sprite_flag = [0]*256
 for k,v in sprite_config.items():
     if v["is_sprite"]:
         hw_sprite_flag[k] = 1
         hw_sprite_flag[k+128] = 1  # mirror code
+    if v["smart_redraw"]:
+        smart_redraw_flag[k] = 1
+        smart_redraw_flag[k+128] = 1  # mirror code
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")
     f.write("\t.global\tsprite_table\n")
     f.write("\t.global\tbob_table\n")
     f.write("\t.global\thardware_sprite_flag_table\n")
+    f.write("\t.global\tsmart_redraw_flag_table\n")
 
     f.write("\nhardware_sprite_flag_table:")
     bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
+    f.write("\nsmart_redraw_flag_table:")
+    bitplanelib.dump_asm_bytes(smart_redraw_flag,f,mit_format=True)
 
     f.write("\ncharacter_table:\n")
     for i,c in enumerate(character_codes):
