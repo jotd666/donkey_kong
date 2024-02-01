@@ -9205,7 +9205,7 @@ l_271e:
 l_2722:
 	jbsr	l_2797                            	| [$2722: call    $2797] move elevators
 	jbsr	check_elevators_27da                            	| [$2725: call    $27da] check for and set elevators that have reset
-	move.b	#0x06,d1                        	| [$2728: ld      b,$06] For B = 1 to 6
+	move.b	#NB_ELEVATORS,d1                        	| [$2728: ld      b,$06] For B = 1 to 6
 	move.w	#0x0010,d3                      	| [$272a: ld      de,$0010] load offset 16
 	lea	elevator_sprites_6958,a0       	| [$272d: ld      hl,elevator_sprites_6958] load starting value for elevator sprites
 	lea	elevator_array_start_6600,a2   	| [$2730: ld      ix,elevator_array_start_6600] memory where elevator values are stored
@@ -9569,7 +9569,7 @@ check_collisions_in_elevators_28e0:
 
 check_collisions_in_rivets_2901:
 	movem.w	(sp)+,d5/d6                        	| [$2901: pop     hl] restore HL
-	move.b	#0x07,d1                        	| [$2902: ld      b,$07] B := 7
+	move.b	#NB_FIREFOXES,d1                        	| [$2902: ld      b,$07] B := 7
 	move.b	d1,d0                           	| [$2904: ld      a,b] A := 7
 	move.b	d0,nb_items_checked_for_collision_63b9   	| [$2905: ld      (nb_items_checked_for_collision_63b9),a] store 7 into counter for use later
 	move.w	#0x0020,d3                      	| [$2908: ld      de,$0020] load DE with offset 32

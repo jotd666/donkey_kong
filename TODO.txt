@@ -1,17 +1,19 @@
 - rip/convert more tunes/sounds:
-MUS_DK_FALLS    = 0x0e     | Music when DK is about to fall in rivet stage
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
 - sparkles missing when kong crashes
-- reduce to 4 bitplanes with sprites to save bandwidth
-  => compute palettes per level, use current screen global variable
+- compute palettes per level, use current screen global variable
      (attract mode DONKEY KONG title is also a case)
      ok but missing color replacement for elevator sprite and other level 3
 	 only sprites like bouncer
-- add hardware sprites
-- fix switch screen, should be done at start, and inverted (?)
-- 25 Hz refresh (maybe possible to retain 50Hz with more blitter optims ex 
-  not redrawing on Kong or on Princess if not in intro / screen 1!)
+
+- problem with sprites (firefoxes) symmetry?? yflip?? test this
+- test elevators & pie factory!
+- fix kong "smart" display, maybe smart display of some kong tiles but not all
+- four barrels redraw (clear flag) when barrel in the high left area or if kong
+  is updated (hardcode this special case)
+- four barrels redraw double buffering = draw twice
+- double buffering: enable again then fix switch screen, should be done at start, and inverted (?)
 - fix CLI args
 - pause
 

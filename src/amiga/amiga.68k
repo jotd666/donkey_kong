@@ -52,7 +52,7 @@ ONE_TICK = 1
 	.endif
 	
 
-OPT_ENABLE_DOUBLE_BUFFERING = 1
+OPT_ENABLE_DOUBLE_BUFFERING = 0
 
 _custom = 0xDFF000
 
@@ -823,8 +823,8 @@ update_hardware_sprites:
 	move.b	(SPRITE_Y,a2),d1
 	moveq	#0,d2
 	move.b	(SPRITE_CODE,a2),d2
-	bclr	#7,d2		| TEMP hammer symmetry!
-	
+	bclr	#7,d2
+	sne		d5
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4
@@ -842,30 +842,36 @@ update_hardware_sprites:
 *	.endif
 *	
 	move.l	d4,a5
+	moveq	#0,d3
+	move.b	(SPRITE_CLUT,a2),d3
+	bclr	#7,d3
+	beq.b	26f
+	addq.w	#8,a5		| y flip
+26:
+	tst.b	d5
+	beq.b	27f
+	addq	#4,a5		| x mirror
+27:
+	move.l	(a5),d4
+	jne		28f
+	* orientation not available for that sprite
+	move.b	(SPRITE_CLUT,a2),d3
+	move.b	(SPRITE_CODE,a2),d2
+	move.w	#0x0F0,0xDFF180
+	bra		30f
+28:
+	move.l	d4,a5
 	move.w	d6,d4
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
-	move.w	(A5)+,d3
-	cmp.w	#16,d3
-	bne.b	221f
 	bsr		store_sprite_pos_16
-	bra.b	223f
-221:
-	cmp.w	#32,d3
-	beq.b	222f
-	blitz		| should not happen, values can be 16 or 32 (sanity check!)
-222:
-	bsr		store_sprite_pos_32
-223:
 
 	move.l	d0,(a5)
 	* set colors
 	lea		sprite_cluts+2,a6
-	moveq	#0,d3
-	move.b	(SPRITE_CLUT,a2),d3
-	lsl.w	#3,d3		| times 8
+	lsl.w	#3,d3		| clut times 8
 
 	add.w	d3,a6
 	* check if CLUT doesn't contain only color zero
@@ -909,13 +915,40 @@ update_hardware_sprites:
 	jne	10b	
 	rts
 
+STASHED_BARREL_CODE = 0x18
 
+blit_four_barrels:
+	movem.l	d0-d7/a0-a3/a5,-(a7)
+	lea		_custom,a5
+	move.w	#0x14,d0
+	move.w	#0x3B,d1
+	lea		four_barrels_bitmap,a0
+	move.l	(NB_PLAYFIELD_PLANES*4,a0),a3
+	move.w	#6,d2
+	move.w	#NB_PLAYFIELD_PLANES,d3
+	move.w	#32,d4
+	moveq	#0,d5
+	move.l	bg_drawed_screen_ptr(pc),a1
+	
+	bsr		blit_planes_any_internal_cookie_cut
+	movem.l	(a7)+,d0-d7/a0-a3/a5
+	rts
+	
+	
 
 update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
 	lea			hardware_sprite_flag_table,a2
 	
+	tst.b	stashed_barrel_drawn
+	beq.b	0f		| already drawn: skip
+	cmp.b	#1,screen_number_6227
+	beq.b	0f		| no need to erase (TODO: maybe in "how high")
+	* erase 4 barrels now TODO
+	clr.b	stashed_barrel_drawn
+	
+0:
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -929,8 +962,10 @@ update_bobs:
 	move.b	(SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
 	tst.b	(a2,d1.w)
 	bne.b	11f		| hardware sprite: no need to restore background either!
-	
-	move.b	(TARGET_SPRITE_Y,a4),d1
+	cmp.b	#STASHED_BARREL_CODE,d1		| stashed barrel: don't erase either!
+	beq.b	11f
+
+	move.b	(TARGET_SPRITE_Y,a4),d1	
 	* clear 16x16 area where the sprite was
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
@@ -944,23 +979,24 @@ update_bobs:
 	addq	#4,a3
 	dbf		d7,1b
 	
+	
 	lea		smart_redraw_flag_table,a5
 	lea		bob_table,a4
 	move.l	bob_previous_drawed_sprites(pc),a6
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	move.l	(a0),d1		| current sprite 4cc (x,y,code,attribs)
-*	tst.b	in_intro_flag
-*	bne.b	111f		| no smart redraw in intro
-*	moveq	#0,d0
-*	move.b	(TARGET_SPRITE_CODE,a0),d0  | sprite code
-*	tst.b	(a5,d0.w)
-*	beq.b	111f
-*	** smart draw: if previous sprite == current then do nothing
-*	cmp.l	(a6),d1
-*	jeq		211f
-*	
-*111:
+	tst.b	in_intro_flag
+	bne.b	111f		| no smart redraw in intro
+	moveq	#0,d0
+	move.b	(TARGET_SPRITE_CODE,a0),d0  | sprite code
+	tst.b	(a5,d0.w)
+	beq.b	111f
+	** smart draw: if previous sprite == current then do nothing
+	cmp.l	(a6),d1
+	jeq		211f
+	
+111:
 	move.l	d1,(a6)			| store current sprite attributes to previous ones
 	moveq	#0,d0
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
@@ -972,6 +1008,20 @@ update_bobs:
 	bclr	#7,d2		| clear & test X mirror mode
 	sne		d6			| d6 nonzero means we'll use mirrored bob data
 
+	cmp.b	#STASHED_BARREL_CODE,d2		| stashed barrel: don't erase either!
+	bne.b	112f
+	
+	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
+	
+	tst.b	stashed_barrel_drawn
+	jne		211f		| already drawn: skip
+	st.b	stashed_barrel_drawn
+	* draw all 4 barrels once and for all, nothing can erase them
+	* except maybe blue barrel, in which case we'll clear the stashed_barrel_drawn
+	* flag (we have to check this blue barrel in sprites to eraseprior loop)
+	bsr		blit_four_barrels
+	jra	211f
+112:
 	moveq	#0,d1
 	moveq	#0,d3
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
@@ -2618,6 +2668,9 @@ return_address:
 	.long	0
 palette_number:
 	.word	0
+stashed_barrel_drawn:
+	.byte	0
+	.byte	0
 	
 _tag:
 		.long	WHDLTAG_CUSTOM1_GET

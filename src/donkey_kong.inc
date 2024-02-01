@@ -25,7 +25,8 @@
 	NB_BARRELS = 10		| DON'T CHANGE!
 	NB_FIRES = 5		| DON'T CHANGE!
 	NB_PIES = 6			| DON'T CHANGE!
-
+	NB_FIREFOXES = 7	| DON'T CHANGE! (looks too much should be 5)
+	NB_ELEVATORS = 6	| DON'T CHANGE!
 	.else
 
 	
@@ -38,6 +39,8 @@
 	NB_BARRELS = 10
 	NB_FIRES = 5
 	NB_PIES = 6
+	NB_FIREFOXES = 7	| DON'T CHANGE!
+	NB_ELEVATORS = 6	| DON'T CHANGE!
 	* don't remove rivets, allows to chase fires more efficiently
 	* all options are zeroed for release
     OPT_LEAVE_RIVETS=0
