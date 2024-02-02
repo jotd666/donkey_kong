@@ -751,6 +751,7 @@ update_hardware_sprites:
 	beq.b	2f
 	tst.b	(a5,d2.w)
 	beq.b	2f
+
 	
 	* check if real/attached sprite
 	* this part is needed when mixing sprites & bobs
@@ -771,6 +772,7 @@ update_hardware_sprites:
 
 	moveq	#0,d3
 	move.w	d2,d4
+	bclr	#7,d4
 	add.w	d4,d4
 	add.w	d4,d4
 	tst.l	(a4,d4.w)	| test pointer
@@ -779,14 +781,15 @@ update_hardware_sprites:
 	
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	beq.b	2f			| Y set to 0: not shown
+	cmp.b	#255,d1
+	beq.b	2f			| Y set to 255: not shown	
+	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
+	beq.b	2f
 	
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
 	
-*	cmp.b	#255,d1
-*	beq.b	2f			| Y set to 255: not shown	
-	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X
 
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
 	and.b	#0xF,d3	| get attributes
@@ -831,27 +834,32 @@ update_hardware_sprites:
 	move.l	(a4,d4.w),d4	| get pointer
 *   filtering of BOBs & attached sprites has been done
 *   above, let's trust the values to be valid
-*	.ifndef	RELEASE
-*	bne.b	25f
-*	* sprite doesn't exist: blitz and bail out
-*	blitz
-*	move.b	d1,d1
-*	move.b	d2,d2
-*	jra		30f
-*25:
-*	.endif
-*	
+	.ifndef	RELEASE
+	bne.b	25f
+	* sprite doesn't exist: blitz and bail out
+	blitz
+	move.b	d1,d1
+	move.b	d2,d2
+	jra		30f
+25:
+	.endif
+	
 	move.l	d4,a5
+	move.w	d6,d4					| add sprite slot
+	add.w	d4,d4
+	add.w	d4,d4
+	move.l	(a5,d4.W),a5			| get buffer for this sprite index
+	* now a5 points to a table of 1-4 pointers of variously oriented sprite pics
+	* for this slot
+	* we'll add 0 to 12 to select the proper orientation depending on the attributes
 	moveq	#0,d3
 	move.b	(SPRITE_CLUT,a2),d3
 	bclr	#7,d3
 	beq.b	26f
-	move.w	#0,0x200
-	addq.w	#8,a5		| y flip
+	addq	#8,a5		| y flip
 26:
 	tst.b	d5
 	beq.b	27f
-	move.w	#0,0x202
 	addq	#4,a5		| x mirror
 27:
 	move.l	(a5),d4
@@ -863,10 +871,6 @@ update_hardware_sprites:
 	bra		30f
 28:
 	move.l	d4,a5
-	move.w	d6,d4
-	add.w	d4,d4
-	add.w	d4,d4
-	move.l	(a5,d4.W),a5			| get buffer for this sprite index
 
 	bsr		store_sprite_pos_16
 
