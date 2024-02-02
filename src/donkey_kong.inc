@@ -37,7 +37,7 @@
 	* permanent cheats/hacks to test game
     * score is BCD format
 	NB_BARRELS = 10
-	NB_FIRES = 5
+	NB_FIRES = 1
 	NB_PIES = 6
 	NB_FIREFOXES = 7	| DON'T CHANGE!
 	NB_ELEVATORS = 6	| DON'T CHANGE!
@@ -50,7 +50,7 @@
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
 	* setting this != 1 shows the same screen again and again
-	OPT_START_SCREEN=1
+	OPT_START_SCREEN=4
 
 	.endif
 	

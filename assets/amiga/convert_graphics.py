@@ -127,8 +127,9 @@ add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
 
 add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
 add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4],is_sprite=False)
-add_sprite_block(0x20,0x38,"kong",8,mirror=True,smart_redraw=1<<4)  # for rivets work as firefoxes = sprites
-add_sprite_block(0x23,0x24,"kong",7)   # ,smart_redraw=True
+add_sprite_block(0x20,0x30,"kong",[7,8],mirror=True)  # for rivets work as firefoxes = sprites
+# upper part doesn't have so many conflicts
+add_sprite_block(0x30,0x38,"kong",[7,8],mirror=True,smart_redraw=1<<4)  # for rivets work as firefoxes = sprites
 add_sprite(0x70,"blank",[1,8,10])
 add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4],is_sprite=True)
 add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
@@ -398,6 +399,8 @@ if True:
                             # we need do re-iterate with opposite Y-flip image (donkey kong)
                             cs["bitmap"].append(bitplanelib.palette_image2sprite(ImageOps.mirror(img),None,spritepal,
                              palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True))
+                        else:
+                            cs["bitmap"].append(None)
                         if cs["flip"]:
                             # we need do re-iterate with opposite Y-flip image (donkey kong)
                             flipped = ImageOps.flip(img)
