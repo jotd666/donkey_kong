@@ -77,6 +77,7 @@ NB_HOST_SPRITES = 8
 
 NB_TARGET_SPRITES = NB_HARDWARE_SPRITES
 
+* for host sprites
 SPRITE_X = 0
 SPRITE_Y = 1
 SPRITE_CODE = 2
@@ -964,13 +965,11 @@ blit_four_barrels:
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
 	
-	
 
 update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
 	lea			hardware_sprite_flag_table,a2
-	
 	clr.b	four_barrels_present
 	
 	cmp.b	#1,screen_number_6227
@@ -991,7 +990,7 @@ update_bobs:
 	cmp.l	(a3),d1
 	beq.b	11f		| same as sprite to be displayed: no need to erase
 	moveq	#0,d1
-	move.b	(SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
+	move.b	(TARGET_SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
 	tst.b	(a2,d1.w)
 	bne.b	11f		| hardware sprite: no need to restore background either!
 	cmp.b	#STASHED_BARREL_CODE,d1		| stashed barrel: don't erase either!

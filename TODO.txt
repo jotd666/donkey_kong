@@ -1,6 +1,9 @@
 - rip/convert more tunes/sounds:
 MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
 
+- double buffering: fix switch screen, should be done at start, and inverted (?)
+- bits of bobs left in double buffering mode on fast objects
+  (probably logic error with previous positions)
 - sparkles missing when kong crashes
 - compute palettes per level, use current screen global variable
      (attract mode DONKEY KONG title is also a case)
@@ -8,17 +11,15 @@ MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at 
 	 only sprites like bouncer
 
 - mario walk seems not correct to the left
-- problem with sprites (firefoxes) symmetry?? yflip?? test this
 - test elevators & pie factory!
 - fix kong "smart" display: looks ok
 - four barrels redraw: almost ok
 - four barrels redraw double buffering = draw twice
-- double buffering: enable again then fix switch screen, should be done at start, and inverted (?)
 - fix CLI args
+- elevator sprite colors are wrong
 - pause
 
 minor:
 
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
-- elevator: colors slightly off (clarify with Mark)
 - dipswitches extra life at 7000 ...
