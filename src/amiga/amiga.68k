@@ -61,7 +61,7 @@ NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 1<<NB_PLAYFIELD_PLANES
 NB_BYTES_PER_ROW = 40
 NB_ROWS = 32
-NB_LINES = NB_ROWS*8  | 256
+NB_LINES = NB_ROWS*8+8  | 262
 Y_MAX = NB_LINES
 
 NB_PLAYFIELD_LINES = NB_LINES
@@ -237,20 +237,16 @@ _user:
 	or.l	#0x10,cheat_flags
 2:
 
-*	move.l	(A0)+,D0	| SKILL/S
-*	beq.b	2f
-*	bsr		bcpl_string_to_int
-*	move.l	d0,dip_switch_difficulty
-*2:
+
 	move.l	(A0)+,D0	| STARTLIVES/S
 	beq.b	2f
 	bsr		bcpl_string_to_int
-	subq.b	#1,d0
+	subq.b	#3,d0
 	bmi.b	2f
 	move.l	d0,dip_switch_start_lives
 	bra.b	3f
 2:
-	move.l	#2,dip_switch_start_lives		| 3 lives default
+	move.l	#0,dip_switch_start_lives		| 3 lives default
 3:
 	move.l	(A0)+,D0	| EXTRA40000/S
 	beq.b	2f
@@ -856,6 +852,10 @@ update_hardware_sprites:
 	* we'll add 0 to 12 to select the proper orientation depending on the attributes
 	moveq	#0,d3
 	move.b	(SPRITE_CLUT,a2),d3
+	cmp.b	#0x44,d2		| elevator (kludge)
+	bne.b	251f
+	move.b	#0x10,d3		| extra clut
+251:
 	bclr	#7,d3
 	beq.b	26f
 	addq	#8,a5		| y flip
@@ -872,6 +872,7 @@ update_hardware_sprites:
 	move.w	#0x0F0,0xDFF180
 	bra		30f
 28:
+
 	move.l	d4,a5
 
 	.ifne	SPRITE_Y_CORRECTION
@@ -886,6 +887,10 @@ update_hardware_sprites:
 	move.l	d0,(a5)
 	* set colors
 	lea		sprite_cluts+2,a6
+	cmp.w	#0x3,d3
+	bne		444f
+	move.B	#0,0x200
+444:
 	lsl.w	#3,d3		| clut times 8
 
 	add.w	d3,a6
@@ -893,15 +898,15 @@ update_hardware_sprites:
 	* (we may as well cache the values in spare registers)
 	move.l	(a6)+,d3
 	move.w	(a6)+,d7
-	bne.b	24f
-	tst.l	d3
-	bne.b	24f
-	* all black sprites would hide donkey_kong sprites & tiles
-	* we want to hide them instead (no need to change palette)
-	* inherited from pengo, probably not required
-	move.l	#blank_sprite,d4
-	bra.b	25f
-24:
+*	bne.b	24f
+*	tst.l	d3
+*	bne.b	24f
+*	* all black sprites would hide donkey_kong sprites & tiles
+*	* we want to hide them instead (no need to change palette)
+*	* inherited from pengo, probably not required
+*	move.l	#blank_sprite,d4
+*	bra.b	25f
+*24:
 	move.l	a5,d4		| sprite pointer
 	* d6 is the sprite index: compute/set proper color
 	move.w	d6,d5
@@ -2683,7 +2688,7 @@ program_args_end:
 read_args_string:
 	.byte	read_args_string_end-read_args_string
 	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
-	.ascii	"CHEATKEYS/S,SKILL/K/N,STARTLIVES/K/N"
+	.ascii	"CHEATKEYS/S,STARTLIVES/K/N"
 read_args_string_end:
 	.align	2
 

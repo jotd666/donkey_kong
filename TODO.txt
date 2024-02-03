@@ -1,14 +1,11 @@
 - MUS_DK_ROAR  missing when gorilla at end of level
-- compute palettes per level, use current screen global variable
-     (attract mode DONKEY KONG title is also a case)
-- fix CLI args
-- dual bob/sprite support (level 3 fires could be sprites)
-- elevator sprite colors are wrong kludge?
-- ladder sprite colors are wrong kludge?
+- level 2 sometimes glitches / frozen on A500 config
+- test CLI args
 - pause
 
 minor:
 
+- dual bob/sprite support (level 3 fires could be sprites)
 - four barrels redraw: ok even if could be better optimized
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
 - dipswitches extra life at 7000 ...

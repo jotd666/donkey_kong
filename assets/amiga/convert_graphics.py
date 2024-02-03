@@ -120,7 +120,7 @@ add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her un
 add_sprite(7,"blank",2)
 
 add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],is_sprite=True)
-add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1])
+add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],is_sprite=True)
 add_sprite(0x18,"stashed_barrel",11,levels=[1])   # should be a special case to blit all 4 barrels, and only in some cases
 add_sprite(0x49,"oil_barrel",12,levels=[1,2])
 add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
@@ -146,10 +146,10 @@ add_sprite(0x72,"square",0xC)
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
 
 add_sprite(0x4B,"pie",0xE,levels=[2],is_sprite=True)
-add_sprite(0x44,"elevator",0x23,levels=[3],is_sprite=True)
+add_sprite(0x44,"elevator",0x3,levels=[3],is_sprite=True)
 add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
-add_sprite(0x46,"moving_ladder",0x13,levels=[2],is_sprite=True)
+add_sprite(0x46,"moving_ladder",0x3,levels=[2],is_sprite=True)
 
 
 block_dict = {}
@@ -207,6 +207,7 @@ def get_sprite_clut(clut_index):
     # needs some reordering
     swap(rval,1,2)
     return rval
+
 
 # creating the sprite configuration in the code is more flexible than with a config file
 
@@ -300,9 +301,16 @@ screen_palette[3][5] = (0x90,0x00,0x00)  # only 2 color changes
 with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:
     for clut_index in range(16):
         clut = get_sprite_clut(clut_index)   # simple slice of palette
+        if clut_index==3:
+            # kludge for moving ladders (clut looks wrong and ladders are green)
+            clut[3] = (255,255,255)
+            clut[1] = (0xe0,0x30,0x90) #,0x0800,0x01ff
         rgb4 = [bitplanelib.to_rgb4_color(x) for x in clut]
         bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
-
+    # add extra clut for elevator, I don't know why this is the only sprite not to
+    # respect the clut logic (with moving ladders). Never mind.
+    rgb4 = [0,0x0800,0x0e39,0x0800]
+    bitplanelib.dump_asm_bytes(rgb4,f,mit_format=True,size=2)
 
 rval = guess_cluts()
 # dump cluts as RGB4 for sprites
@@ -457,9 +465,12 @@ if True:
                     # we allow to mask as only in some special cases there are clut indexes > 16
                     # (but seen as masked in sprite dumps. Never mind, we can make them look correct
                     # just by masking after having used the proper CLUT when creating the bitmap)
+                    # all sprites have a clut under 0x10
+                    # except for those 2 (which conveniently are sprites!)
                     # - moving ladder: seems to be 0x13
                     # - elevator: seems to be 0x23
-                    csb[cidx & 0xF] = plane_list
+
+                    csb[cidx] = plane_list
 
 smart_redraw_flag = [0]*256
 hw_sprite_flag = [0]*256

@@ -43,13 +43,13 @@ sound_dict = {
 "LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":32,"ticks":150},
 "OUT_OF_TIME_TUNE_SND"              :{"index":3,"pattern":0xC,"loops":True,"volume":32},
 "HAMMER_TUNE_SND"              :{"index":4,"pattern":3,"loops":True,"volume":32},
-"END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":40,"ticks":200},
+"END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":40,"ticks":95},
 "END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":6,"loops":False,"volume":36},
 "END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":8,"loops":False,"volume":36},
 "PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":4,"loops":True,"volume":32},
 "GIRDERS_TUNE_SND"                 :{"index":8,"pattern":10,"loops":True,"volume":32},
 "RIVET_TUNE_SND"                    :{"index":0xb,"pattern":0xB,"loops":True,"volume":32},
-"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":0xD,"loops":False,"volume":32,"ticks":160},
+"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":0xD,"loops":False,"volume":32,"ticks":155},
 
 }
 

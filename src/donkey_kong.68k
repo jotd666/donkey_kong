@@ -98,13 +98,13 @@ RAM_END	= 0x7000
 	* big endian is only used to load/store to/from a 16 bit HL-like register
 	* like D5
 	
-	.macro	LOAD_ROM_ADDRESS_BE	var_16bit,reg
+	.macro	LOAD_ROM_ADDRESS_BE	reg_16bit,reg
 	move.w	d7,-(a7)
-	move.w	\var_16bit,d7
+	move.w	\reg_16bit,d7
 	.ifndef		RELEASE
 	cmp.w	#ROM_END,d7
 	bcs.b	110f
-	lea		load_rom_address_be_error(pc),a0
+	lea		load_rom_address_be_error,a0
 	jbsr	osd_break
 110:
 	.endif
@@ -120,7 +120,7 @@ RAM_END	= 0x7000
 	.ifndef		RELEASE
 	cmp.w	#ROM_END,d7
 	bcs.b	110f
-	lea		load_rom_address_le_error(pc),a0
+	lea		load_rom_address_le_error,a0
 	jbsr	osd_break
 110:
 	.endif
@@ -141,14 +141,14 @@ RAM_END	= 0x7000
 	.ifndef		RELEASE
 	bpl.b	111f
 	add.w	#0x6000,d7
-	lea		load_any_address_be_error(pc),a0
+	lea		load_any_address_be_error,a0
 	jbsr	osd_break
 111:
 	* > 0x6000, is that < ram end?
 	cmp.w	#0x900,d7
 	bcs.b	112f
 	add.w	#0x6000,d7
-	lea		load_any_address_be_error(pc),a0
+	lea		load_any_address_be_error,a0
 	jbsr	osd_break
 	.endif
 112:
@@ -162,47 +162,84 @@ RAM_END	= 0x7000
 	move.w	(a7)+,d7
 	.endm
 	
-	.macro	STORE_ROM_ADDRESS_LE	reg,var_16bit
+	.macro	STORE_ROM_ADDRESS_LE_MEM	reg,var_16bit
 	move.w	d7,-(a7)
 	move.l	\reg,d7
 	sub.l	#game_rom,d7
 	.ifndef		RELEASE
 	cmp.w	#ROM_END,d7
 	bcs.b	110f
-	lea		store_rom_address_le_error(pc),a0
+	lea		store_rom_address_le_error,a0
+	jbsr	osd_break
+110:
+	.endif
+	
+	move.b	d7,\var_16bit
+	rol.w	#8,d7		| little endian
+	move.b	d7,\var_16bit+1
+	move.w	(a7)+,d7
+	.endm
+	
+	.macro	STORE_ROM_ADDRESS_LE_REG	reg,reg_16bit
+	move.w	d7,-(a7)
+	move.l	\reg,d7
+	sub.l	#game_rom,d7
+	.ifndef		RELEASE
+	cmp.w	#ROM_END,d7
+	bcs.b	110f
+	lea		store_rom_address_le_error,a0
 	jbsr	osd_break
 110:
 	.endif
 	
 	rol.w	#8,d7		| little endian
-	move.w	d7,\var_16bit
+	move.w	d7,\reg_16bit
 	move.w	(a7)+,d7
 	.endm
 	
-	.macro	STORE_ROM_ADDRESS_BE	reg,var_16bit
+	.macro	STORE_ROM_ADDRESS_BE_MEM	reg,var_16bit
 	move.w	d7,-(a7)
 	move.l	\reg,d7
 	sub.l	#game_rom,d7
 	.ifndef		RELEASE
 	cmp.w	#ROM_END,d7
 	bcs.b	110f
-	lea		store_rom_address_be_error(pc),a0
+	lea		store_rom_address_be_error,a0
 	jbsr	osd_break
 110:
 	.endif
 	
-	move.w	d7,\var_16bit
+	move.b	d7,\var_16bit+1
+	rol.w	#8,d7		| big endian
+	move.b	d7,\var_16bit
+	move.w	(a7)+,d7
+	.endm
+	
+	.macro	STORE_ROM_ADDRESS_BE_REG	reg,reg_16bit
+	move.w	d7,-(a7)
+	move.l	\reg,d7
+	sub.l	#game_rom,d7
+	.ifndef		RELEASE
+	cmp.w	#ROM_END,d7
+	bcs.b	110f
+	lea		store_rom_address_be_error,a0
+	jbsr	osd_break
+110:
+	.endif
+	
+	move.w	d7,\reg_16bit
 	move.w	(a7)+,d7
 	.endm
 	
 	.macro	LOAD_RAM_ADDRESS_LE	var_16bit,reg
 	move.w	d7,-(a7)
-	move.w	\var_16bit,d7
+	move.b	\var_16bit+1,d7
 	rol.w	#8,d7		| little endian
+	move.b	\var_16bit,d7
 	.ifndef		RELEASE
 	cmp.w	#RAM_END,d7
 	bcs.b	110f
-	lea		load_rom_address_le_error(pc),a0
+	lea		load_rom_address_le_error,a0
 	jbsr	osd_break
 110:
 	.endif
@@ -210,7 +247,7 @@ RAM_END	= 0x7000
 	.ifndef		RELEASE
 	bcc.b	111f
 	add.w	#RAM_START,d7
-	lea		load_rom_address_le_error(pc),a0
+	lea		load_rom_address_le_error,a0
 	jbsr	osd_break
 111:
 	.endif
@@ -220,7 +257,7 @@ RAM_END	= 0x7000
 	move.w	(a7)+,d7
 	.endm
 	
-	.macro	STORE_RAM_ADDRESS_LE	reg,var_16bit
+	.macro	STORE_RAM_ADDRESS_LE_MEM	reg,var_16bit
 	move.w	d7,-(a7)
 	move.l	\reg,d7
 	sub.l	#ram_6000,d7
@@ -229,13 +266,33 @@ RAM_END	= 0x7000
 	cmp.w	#RAM_END-RAM_START,d7
 	bcs.b	110f
 1110:
-	lea		store_ram_address_le_error(pc),a0
+	lea		store_ram_address_le_error,a0
+	jbsr	osd_break
+110:
+	.endif
+	add.w	#RAM_START,d7
+	move.b	d7,\var_16bit
+	rol.w	#8,d7		| little endian
+	move.b	d7,\var_16bit+1
+	move.w	(a7)+,d7
+	.endm
+	
+	.macro	STORE_RAM_ADDRESS_LE_REG	reg,reg_16bit
+	move.w	d7,-(a7)
+	move.l	\reg,d7
+	sub.l	#ram_6000,d7
+	.ifndef		RELEASE
+	bmi.b	1110f
+	cmp.w	#RAM_END-RAM_START,d7
+	bcs.b	110f
+1110:
+	lea		store_ram_address_le_error,a0
 	jbsr	osd_break
 110:
 	.endif
 	add.w	#RAM_START,d7
 	rol.w	#8,d7		| little endian
-	move.w	d7,\var_16bit
+	move.w	d7,\reg_16bit
 	move.w	(a7)+,d7
 	.endm
 	
@@ -3579,9 +3636,9 @@ l_0a8a:
 	clr.b	d0                               	| [$0aa5: xor     a] A := 0
 	move.b	d0,kong_misc_counter_62af   	| [$0aa6: ld      (kong_misc_counter_62af),a] store into kong climbing counter
 	lea	game_rom+0x38b4,a0                      	| [$0aa9: ld      hl,$38b4] load HL with start of table data
-	STORE_ROM_ADDRESS_LE	a0,store_63c2                   	| [$0aac: ld      (store_63c2),hl] store
+	STORE_ROM_ADDRESS_LE_MEM	a0,store_63c2                   	| [$0aac: ld      (store_63c2),hl] store
 	lea	game_rom+0x38cb,a0                      	| [$0aaf: ld      hl,$38cb] load HL with start of table data
-	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0ab2: ld      (unknown_63c4),hl] store
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_63c4                 	| [$0ab2: ld      (unknown_63c4),hl] store
 	move.b	#0x40,d0                        	| [$0ab5: ld      a,$40] A := #40
 	move.b	d0,waittimermsb_6009            	| [$0ab7: ld      (waittimermsb_6009),a] set timer to #40
 	lea	intro_screen_counter_6385,a0   	| [$0aba: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
@@ -3637,7 +3694,7 @@ l_0ae8:
 	move.b	d0,waittimermsb_6009            	| [$0afb: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0afe: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b01: inc     (hl)] increase
-	STORE_RAM_ADDRESS_LE		a0,timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
+	STORE_RAM_ADDRESS_LE_MEM		a0,timer_unknown_63c0           	| [$0b02: ld      (timer_unknown_63c0),hl] store HL into ???
 	rts                                    	| [$0b05: ret] return
 
 * arrive from #0A79 when intro screen indicator == 4
@@ -3655,7 +3712,7 @@ l_0b06:
 	jeq	l_0b1e                             	| [$0b11: jp      z,$0b1e] yes, jump ahead
 
 	addq.w	#1,a0                           	| [$0b14: inc     hl] next HL
-	STORE_ROM_ADDRESS_LE	a0,store_63c2                   	| [$0b15: ld      (store_63c2),hl] store
+	STORE_ROM_ADDRESS_LE_MEM	a0,store_63c2                   	| [$0b15: ld      (store_63c2),hl] store
 	move.b	d0,d2                           	| [$0b18: ld      c,a] C := A
 	lea	kong_sprite_array_690b,a0      	| [$0b19: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	jbsr	rst_38                            	| [$0b1c: rst     $38] move kong
@@ -3697,7 +3754,7 @@ l_0b38:
 	move.b	d0,waittimermsb_6009            	| [$0b5d: ld      (waittimermsb_6009),a] set timer to #20
 	lea	intro_screen_counter_6385,a0   	| [$0b60: ld      hl,intro_screen_counter_6385] load HL with intro screen counter
 	addq.b	#1,(a0)                         	| [$0b63: inc     (hl)] increase
-	STORE_RAM_ADDRESS_LE	a0,timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS_LE_MEM	a0,timer_unknown_63c0           	| [$0b64: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$0b67: ret] return
 
 * arrive from #0A79 when intro screen indicator == 6
@@ -3717,7 +3774,7 @@ l_0b68:
 	jeq	l_0b86                             	| [$0b73: jp      z,$0b86] yes, jump ahead
 
 	addq.w	#1,a0                           	| [$0b76: inc     hl] next table entry
-	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0b77: ld      (unknown_63c4),hl] store for next
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_63c4                 	| [$0b77: ld      (unknown_63c4),hl] store for next
 	lea	kong_sprite_array_690b,a0      	| [$0b7a: ld      hl,kong_sprite_array_690b] load HL with start of Kong sprite
 	move.b	d0,d2                           	| [$0b7d: ld      c,a] C := A
 	jbsr	rst_38                            	| [$0b7e: rst     $38] move kong
@@ -3728,7 +3785,7 @@ l_0b68:
 
 l_0b86:
 	lea	game_rom+0x38cb,a0                      	| [$0b86: ld      hl,$38cb] load HL with start of table data
-	STORE_ROM_ADDRESS_LE	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_63c4                 	| [$0b89: ld      (unknown_63c4),hl] store into ???
 	move.b	#0x03,d0                        	| [$0b8c: ld      a,$03] set boom sound duration
 	move.w	#BOOM_SND,d0
 	jbsr	osd_sound_start
@@ -5544,10 +5601,10 @@ l_14c1:
 	jne	l_14c1                             	| [$14c7: djnz    $14c1] Next B
 
 l_14c9:
-	STORE_RAM_ADDRESS_LE	a0,highscore_entry_address_6038 	| [$14c9: ld      (highscore_entry_address_6038),hl]
+	STORE_RAM_ADDRESS_LE_MEM	a0,highscore_entry_address_6038 	| [$14c9: ld      (highscore_entry_address_6038),hl]
 	move.w	#0xfff3,d3                      	| [$14cc: ld      de,$fff3] load DE with offset of -#13
 	add.w	d3,a0                            	| [$14cf: add     hl,de] add offset
-	STORE_RAM_ADDRESS_LE	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
+	STORE_RAM_ADDRESS_LE_MEM	a0,unknown_ram_address_603a                 	| [$14d0: ld      (unknown_ram_address_603a),hl] store result into ???
 	clr.b	d1                               	| [$14d3: ld      b,$00] B := 0
 	move.b	hscursorpos_6035,d0             	| [$14d5: ld      a,(hscursorpos_6035)] load A with high score entry digit selected
 	move.b	d0,d2                           	| [$14d8: ld      c,a] copy to C
@@ -6070,7 +6127,7 @@ l_178e:
 	move.b	(a0),d0                         	| [$179c: ld      a,(hl)] load A with the screen
 
 l_179d:
-	STORE_ROM_ADDRESS_LE	a0,store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
+	STORE_ROM_ADDRESS_LE_MEM	a0,store_622a                   	| [$179d: ld      (store_622a),hl] store screen address lookup for next time
 	move.b	d0,screen_number_6227           	| [$17a0: ld      (screen_number_6227),a] store A into screen number
 	move.w  #0x0500,d3                      	| [$17a3: ld      de,$0500] load task #5, parameter 0 | adds bonus to player's score
 	jbsr	insert_task_309f                            	| [$17a6: call    $309f] insert task
@@ -6129,7 +6186,7 @@ l_17b6:
 	move.b	d0,timer_unknown_6390           	| [$181b: ld      (timer_unknown_6390),a] store into timer ???
 	lea	end_of_level_counter_6388,a0   	| [$181e: ld      hl,end_of_level_counter_6388] load HL with end of level counter
 	addq.b	#1,(a0)                         	| [$1821: inc     (hl)] increase counter
-	STORE_RAM_ADDRESS_LE	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
+	STORE_RAM_ADDRESS_LE_MEM	a0,timer_unknown_63c0           	| [$1822: ld      (timer_unknown_63c0),hl] store into ???
 	rts                                    	| [$1825: ret] return
 
 * called from several places with HL preloaded with a video RAM address
@@ -6351,7 +6408,7 @@ l_193d:
 	move.b	(a0),d0                         	| [$194a: ld      a,(hl)] load A with screen number from table
 
 l_194b:
-	STORE_ROM_ADDRESS_LE	a0,store_622a                   	| [$194b: ld      (store_622a),hl] store
+	STORE_ROM_ADDRESS_LE_MEM	a0,store_622a                   	| [$194b: ld      (store_622a),hl] store
 	move.b	d0,screen_number_6227           	| [$194e: ld      (screen_number_6227),a] store A into screen number
 	lea	level_number_6229,a0      	| [$1951: ld      hl,level_number_6229] load HL with level number address
 	addq.b	#1,(a0)                         	| [$1954: inc     (hl)] increase #6229 by one
@@ -6465,7 +6522,7 @@ l_19ed:
 * bonus item has been picked up
 
 	subq.w	#1,a0                           	| [$19fa: dec     l] decrease L.  HL now has the starting address of the sprite that was picked up
-	STORE_RAM_ADDRESS_LE	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
+	STORE_RAM_ADDRESS_LE_MEM	a0,unknown_for_use_later_6343   	| [$19fb: ld      (unknown_for_use_later_6343),hl] store into this temp memory.  read from at #1E18
 	clr.b	d0                               	| [$19fe: xor     a] A := 0
 	move.b	d0,scoring_indicator_6342       	| [$19ff: ld      (scoring_indicator_6342),a] store into ???.  read from at #1DD6
 	addq.b	#1,d0                           	| [$1a02: inc     a] A := 1
@@ -7569,7 +7626,7 @@ l_1f34:
 	addq.b	#1,d0                           	| [$1f3b: inc     a] A := 1
 	move.b	d0,bonus_indicator_6340         	| [$1f3c: ld      (bonus_indicator_6340),a] store into bonus indicator
 	lea	scoring_sprite_shadow_6a2c,a0   	| [$1f3f: ld      hl,scoring_sprite_shadow_6a2c] load HL with location of item hit
-	STORE_RAM_ADDRESS_LE	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
+	STORE_RAM_ADDRESS_LE_MEM	a0,unknown_for_use_later_6343   	| [$1f42: ld      (unknown_for_use_later_6343),hl] store into #6343 for use later
 	rts                                    	| [$1f45: ret] return
 
 * called from main routine at #19A4
@@ -9438,7 +9495,7 @@ l_2832:
 	* d3 has the offset see 281f						| [$284a: ld      a,e] load A with offset for each item
 	move.b	d3,offset_for_item_in_array_6353                 	| [$284b: ld      (offset_for_item_in_array_6353),a] store into ???
 	* here IX is 64xx (fireballs) or 67xx (barrels)
-	STORE_RAM_ADDRESS_LE	a2,item_array_for_item_hit_6351                 	| [$284e: ld      (item_array_for_item_hit_6351),ix] store IX into ???
+	STORE_RAM_ADDRESS_LE_MEM	a2,item_array_for_item_hit_6351                 	| [$284e: ld      (item_array_for_item_hit_6351),ix] store IX into ???
 	rts                                    	| [$2852: ret] return
 
 * called when mario jumping, checks for items being jumped over
@@ -10424,7 +10481,7 @@ l_2cb3:
 * arrive here when a barrel is being deployed
 
 barrel_being_deployed_2cb8:
-	STORE_RAM_ADDRESS_LE	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
+	STORE_RAM_ADDRESS_LE_MEM	a2,barrel_start_address_62aa    	| [$2cb8: ld      (barrel_start_address_62aa),ix] save this barrel indicator into #62AA.  it is recalled at #2D55
 	move.b	#0x02,(a2)                 	| [$2cbc: ld      (ix+$00),$02] set deployement indicator
 	clr.w	d3                               	| [$2cc0: ld      d,$00] D := 0
 	move.b	#NB_BARRELS,d0                        	| [$2cc2: ld      a,$0a] A := #0A
@@ -10434,7 +10491,7 @@ barrel_being_deployed_2cb8:
 	move.b	d0,d3                           	| [$2cc7: ld      e,a] copy this to E
 	lea	start_of_bouncers_or_barrels_sprites_6980,a0	| [$2cc8: ld      hl,start_of_bouncers_or_barrels_sprites_6980] load HL with starting sprite address for the barrels
 	add.w	d3,a0                            	| [$2ccb: add     hl,de] Now add in offset depending on the barrel number ( will vary from 0 to #28 by 4's)
-	STORE_RAM_ADDRESS_LE	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
+	STORE_RAM_ADDRESS_LE_MEM	a0,sprite_variable_start_62ac   	| [$2ccc: ld      (sprite_variable_start_62ac),hl] store this info in #62AC. will vary from #80 to #A8
 	move.b	#0x01,d0                        	| [$2ccf: ld      a,$01] A := 1
 	move.b	d0,barrel_deployment_indicator_6393	| [$2cd1: ld      (barrel_deployment_indicator_6393),a] set barrel deployment indicator
 	move.w	#0x0501,d3                      	| [$2cd4: ld      de,$0501] load DE with task #5, parameter 1 update onscreen bonus timer and play sound & change to red if below 1000
@@ -10550,7 +10607,7 @@ l_2d70:
 												| [$2d7c: inc     de] DE now has Y position
 	move.b	d0,(a1)                         	| [$2d7d: ld      (de),a] store into sprite Y position
 												| [$2d7e: inc     hl] increase HL .  EG #39CE for crazy barrel
-	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d7f: ld      (unknown_rom_address_62a8),hl] store into 62A8.  EG 62A8 = CE, 62A9 = 39
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_rom_address_62a8                 	| [$2d7f: ld      (unknown_rom_address_62a8),hl] store into 62A8.  EG 62A8 = CE, 62A9 = 39
 	rts                                    	| [$2d82: ret] return
 
 * arrive here because this barrel is crazy from #2D4E
@@ -10561,7 +10618,7 @@ l_2d83:
         * 39CC  BB
         * 39CD  4D
 
-	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d86: ld      (unknown_rom_address_62a8),hl] Load #62A8 and #62A9 with #39 and #CC
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_rom_address_62a8                 	| [$2d86: ld      (unknown_rom_address_62a8),hl] Load #62A8 and #62A9 with #39 and #CC
 	jra	l_2d54                             	| [$2d89: jp      $2d54] jump back
 
 * jump here from #2D5F
@@ -10569,7 +10626,7 @@ l_2d83:
 
 l_2d8c:
 	lea	game_rom+0x39c3,a0                      	| [$2d8c: ld      hl,$39c3] load HL with start of table data address
-	STORE_ROM_ADDRESS_LE	a0,unknown_rom_address_62a8                 	| [$2d8f: ld      (unknown_rom_address_62a8),hl] store into ???
+	STORE_ROM_ADDRESS_LE_MEM	a0,unknown_rom_address_62a8                 	| [$2d8f: ld      (unknown_rom_address_62a8),hl] store into ???
 	move.b	#0x01,(0x01,a2)                 	| [$2d92: ld      (ix+$01),$01] set crazy barrel indicator
 	move.b	crazy_blue_barrel_indicator_6382,d0	| [$2d96: ld      a,(crazy_blue_barrel_indicator_6382)] load A with crazy/blue barrel indicator
 
@@ -10694,7 +10751,7 @@ l_2e29:
 	move.b	d0,(0x05,a2)                    	| [$2e48: ld      (ix+$05),a] store into item's Y position
 
 l_2e4b:
-	STORE_ROM_ADDRESS_BE	a0,d5
+	STORE_ROM_ADDRESS_BE_REG	a0,d5
 	LOAD_D5D6_FROM_D5_16
 	move.b	d6,(0x0e,a2)                    	| [$2e4b: ld      (ix+$0e),l]
 	move.b	d5,(0x0f,a2)                    	| [$2e4e: ld      (ix+$0f),h] store the updated HL for next time
@@ -11390,14 +11447,14 @@ l_31b1:
 	clr.b	d0                               	| [$31b4: xor     a] \ Index of fireball being processed := 0
 	move.b	d0,unknown_63a2                 	| [$31b5: ld      (unknown_63a2),a] /
 	lea	current_fireball_data_address_63e0,a0	| [$31b8: ld      hl,current_fireball_data_address_63e0] \ Address of fireball data array for current fireball being processed := #63E0 = #6400 - #20
-	STORE_RAM_ADDRESS_LE	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
+	STORE_RAM_ADDRESS_LE_MEM	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31bb: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] / This gets incremented by #20 at the start of the following loop
 
 * Loop start
 l_31be:
 	LOAD_RAM_ADDRESS_LE	address_of_fireball_slot_for_this_fireball_63c8,a0	| [$31be: ld      hl,(address_of_fireball_slot_for_this_fireball_63c8)] \  Move on to next fireball by incrementing address of fireball data array for current fireball by #20
 	move.w	#0x20,d1                        	| [$31c1: ld      bc,$0020]| 32
 	add.w	d1,a0                            	| [$31c4: add     hl,bc]|
-	STORE_RAM_ADDRESS_LE	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31c5: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] /
+	STORE_RAM_ADDRESS_LE_MEM	a0,address_of_fireball_slot_for_this_fireball_63c8	| [$31c5: ld      (address_of_fireball_slot_for_this_fireball_63c8),hl] /
 	move.b	(a0),d0                         	| [$31c8: ld      a,(hl)] \  Jump if fireball is not active
 	                               	| [$31c9: and     a]|
 	jeq	l_31d0                             	| [$31ca: jp      z,$31d0] /
@@ -11890,7 +11947,7 @@ l_3445:
 
 	move.b	d0,(0x05,a2)                    	| [$344b: ld      (ix+$05),a] Else store table data into fire's Y-position
 	addq.w	#1,a0                           	| [$344e: inc     hl] \  Advance to next table entry, for the next frame
-	STORE_ROM_ADDRESS_BE	a0,d5
+	STORE_ROM_ADDRESS_BE_REG	a0,d5
 	LOAD_D5D6_FROM_D5_16
 	
 	move.b	d6,(0x1a,a2)                    	| [$344f: ld      (ix+$1a),l]|
