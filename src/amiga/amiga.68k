@@ -630,6 +630,10 @@ _vblank:
 
 	sub.w	d1,delay_timer
 	
+	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
+	bsr		switch_screen_buffers
+	.endif
+	
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
 	* also set SR accordingly
 	st.b	interrupt_mode
@@ -640,9 +644,6 @@ _vblank:
 0:
 	clr.b	interrupt_mode
 	
-	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
-	bsr		switch_screen_buffers
-	.endif
 23:
 	* now we check copper interrupt again
 	move.w	_custom+intreqr,d0
@@ -922,6 +923,15 @@ update_hardware_sprites:
 	jne	10b	
 	rts
 
+* the original display engine used 32 colors and only BOBs. It was nice & simple but...
+* just too slow, even with double buffering. So sprites were introduced, but it was
+* still a waste for some static sprites or not so much redrawn, so optimization system
+* was coded. BUT sometimes there are exceptions where those optimized draws should not
+* be done, which explains a lot of kludges to get proper display without drawing too
+* many BOBs unneccessarily. It kills the "generic" aspect of the BOB engine (the sprite
+* engine is pretty generic, though, I've been using it since Pengo almost without changes, 
+* except now it has symmetry/flip support)
+
 KONG_PICKING_BARREL = 0x2B
 STASHED_BARREL_CODE = 0x18
 DEATH_BARREL_CODE = 0x19
@@ -939,14 +949,6 @@ check_16x16_sprite_in_barrels_vincinity:
 0:
 	rts
 	
-is_16x16_sprite_in_oil_can_vincinity:
-	cmp.b	#FOUR_BARRELS_X+32,d0
-	jcc		0f		| X > rightmost pos: no collision
-	cmp.b	#FOUR_BARRELS_Y+32,d1
-	jcc		0f		| Y > lowest pos: no collision
-	clr.b	four_barrels_drawn
-0:
-	rts
 	
 blit_four_barrels:
 	movem.l	d0-d7/a0-a3/a5,-(a7)
@@ -975,10 +977,17 @@ update_bobs:
 	cmp.b	#1,screen_number_6227
 	beq.b	0f		| no need to erase (TODO: maybe in "how high")
 	tst.b	four_barrels_drawn
-	beq.b	0f		| already drawn: skip
-	* erase 4 barrels now TODO?
-	clr.b	four_barrels_drawn
-	
+	beq.b	0f		| already erased: skip
+	* erase 4 barrels now
+	subq.b	#1,four_barrels_drawn
+	lea		_custom,a5
+	move.l	bg_drawed_screen_ptr(pc),a1
+	move.w	#FOUR_BARRELS_X,d0
+	move.w	#FOUR_BARRELS_Y,d0
+	moveq	#4,d2			| 32 pixels
+	moveq	#NB_PLAYFIELD_PLANES,d3
+	moveq	#4,d4			| 32 pixels
+	bsr		clear_planes_any_blitter_internal
 0:
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
@@ -1140,9 +1149,9 @@ update_bobs:
 	
 	tst.b	four_barrels_present
 	beq.b	300f
-	tst.b	four_barrels_drawn
-	jne		300f		| already drawn: skip
-	st.b	four_barrels_drawn
+	cmp.b	#1+OPT_ENABLE_DOUBLE_BUFFERING,four_barrels_drawn
+	jeq		300f		| already drawn twice: skip
+	addq.b	#1,four_barrels_drawn
 	* draw all 4 barrels once and for all, nothing can erase them
 	* except maybe blue barrel, in which case we'll clear the four_barrels_drawn
 	* flag (we have to check this blue barrel in sprites to eraseprior loop)
