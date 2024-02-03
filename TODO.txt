@@ -1,17 +1,11 @@
-- rip/convert more tunes/sounds:
-MUS_DK_ROAR     = 0x0f     | Zerbert. Zerbert. Zerbert: missing when gorilla at end of level!
-
-
-- sparkles missing when kong crashes: B9 , 1
+- MUS_DK_ROAR  missing when gorilla at end of level
 - compute palettes per level, use current screen global variable
      (attract mode DONKEY KONG title is also a case)
-- dual bob/sprite support (level 3 fires could be sprites)
-- disable smart redraw when back of kong is displayed (check when erasing is OK)
 - four barrels redraw: almost ok
-- four barrels redraw double buffering = draw twice: to test
-- hardcode disable smart redraw for converyor left to oil barrel (pie factory)
 - fix CLI args
-- elevator sprite colors are wrong
+- dual bob/sprite support (level 3 fires could be sprites)
+- elevator sprite colors are wrong kludge?
+- ladder sprite colors are wrong kludge?
 - pause
 
 minor:

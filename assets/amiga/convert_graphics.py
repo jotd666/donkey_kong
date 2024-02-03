@@ -135,7 +135,7 @@ add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4],is_sprite=True
 add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
 add_sprite_block(0x73,0x76,"bonus",0xA,levels=[2,3,4])
 add_sprite_block(0x76,0x78,"heart",9)
-add_sprite(0x39,"sparkle",1,[4])
+add_sprite(0x39,"sparkle",1,[4],mirror=True)
 add_sprite(0x3A,"blank",15)
 add_sprite(0x3F,"blank",0xC)
 add_sprite(0x72,"square",0xC)
@@ -148,8 +148,8 @@ add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
 add_sprite(0x4B,"pie",0xE,levels=[2],is_sprite=True)
 add_sprite(0x44,"elevator",0x23,levels=[3],is_sprite=True)
 add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
-add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2],smart_redraw=True)
-add_sprite(0x46,"moving_ladder",0x13,levels=[2])
+add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
+add_sprite(0x46,"moving_ladder",0x13,levels=[2],is_sprite=True)
 
 
 block_dict = {}

@@ -874,6 +874,13 @@ update_hardware_sprites:
 28:
 	move.l	d4,a5
 
+	.ifne	SPRITE_Y_CORRECTION
+	add.w	#SPRITE_Y_CORRECTION,d1
+	.endif
+	.ifne	SPRITE_X_CORRECTION
+	add.w	#SPRITE_X_CORRECTION,d0
+	.endif	
+
 	bsr		store_sprite_pos_16
 
 	move.l	d0,(a5)
@@ -934,6 +941,7 @@ update_hardware_sprites:
 
 KONG_PICKING_BARREL = 0x2B
 STASHED_BARREL_CODE = 0x18
+KONG_BACK_FOOT_CODE = 0x36
 DEATH_BARREL_CODE = 0x19
 FOUR_BARRELS_X = 0x14
 FOUR_BARRELS_Y = 0x3B
@@ -972,22 +980,24 @@ update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
 	lea			hardware_sprite_flag_table,a2
-	clr.b	four_barrels_present
 	
-	cmp.b	#1,screen_number_6227
-	beq.b	0f		| no need to erase (TODO: maybe in "how high")
-	tst.b	four_barrels_drawn
-	beq.b	0f		| already erased: skip
-	* erase 4 barrels now
-	subq.b	#1,four_barrels_drawn
-	lea		_custom,a5
-	move.l	bg_drawed_screen_ptr(pc),a1
-	move.w	#FOUR_BARRELS_X,d0
-	move.w	#FOUR_BARRELS_Y,d0
-	moveq	#4,d2			| 32 pixels
-	moveq	#NB_PLAYFIELD_PLANES,d3
-	moveq	#4,d4			| 32 pixels
-	bsr		clear_planes_any_blitter_internal
+	clr.b	climbing_kong_present									| speedup kludge
+	clr.b	four_barrels_present									| speedup kludge
+	
+	cmp.b	#1,screen_number_6227                                  | speedup kludge
+	beq.b	0f		| no need to erase (TODO: maybe in "how high") | speedup kludge
+	tst.b	four_barrels_drawn                                     | speedup kludge
+	beq.b	0f		| already erased: skip                         | speedup kludge
+	* erase 4 barrels now                                          | speedup kludge
+	subq.b	#1,four_barrels_drawn                                  | speedup kludge
+	lea		_custom,a5                                             | speedup kludge
+	move.l	bg_drawed_screen_ptr(pc),a1                            | speedup kludge
+	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
+	move.w	#FOUR_BARRELS_Y,d0                                     | speedup kludge
+	moveq	#4,d2			| 32 pixels                            | speedup kludge
+	moveq	#NB_PLAYFIELD_PLANES,d3                                | speedup kludge
+	moveq	#4,d4			| 32 pixels                            | speedup kludge
+	bsr		clear_planes_any_blitter_internal                      | speedup kludge
 0:
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
@@ -1002,9 +1012,12 @@ update_bobs:
 	move.b	(TARGET_SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
 	tst.b	(a2,d1.w)
 	bne.b	11f		| hardware sprite: no need to restore background either!
-	cmp.b	#STASHED_BARREL_CODE,d1		| stashed barrel: don't erase either!
+	cmp.b	#STASHED_BARREL_CODE,d1		| stashed barrel: don't erase either! speedup kludge
 	beq.b	11f
-
+	cmp.b	#KONG_BACK_FOOT_CODE,d1		| kong climbs: disable all smart redraw (princess) speedup kludge
+	beq.b	21f
+	st.b	climbing_kong_present
+21:
 	move.b	(TARGET_SPRITE_Y,a4),d1	
 	* clear 16x16 area where the sprite was
 	.ifne	SPRITE_Y_CORRECTION
@@ -1026,9 +1039,19 @@ update_bobs:
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
 	move.l	(a0),d1		| current sprite 4cc (x,y,code,attribs)
-	tst.b	in_intro_flag
-	bne.b	111f		| no smart redraw in intro
-	moveq	#0,d0
+	tst.b	in_intro_flag                                                       | speedup kludge
+	bne.b	111f		| no smart redraw in intro                              | speedup kludge
+	tst.b	climbing_kong_present                                               | speedup kludge
+	bne.b	111f		| no smart redraw if kong climbs                        | speedup kludge
+																				| speedup kludge
+* can't do this, 4 of 6 wheels at least can be overwritten                      | speedup kludge
+*	moveq	#0,d0                                                               | speedup kludge
+*	move.l	d1,d2                                                               | speedup kludge
+*	and.l	#0x0070FFFF,d2                                                      | speedup kludge
+*	cmp.l	#0x00500084,d2                                                      | speedup kludge
+*	beq.b	111f		| no smart draw for boths conveyor                      | speedup kludge
+*						| in the middle of level 2, flames can overwrite it     | speedup kludge
+						
 	move.b	(TARGET_SPRITE_CODE,a0),d0  | sprite code
 	tst.b	(a5,d0.w)
 	beq.b	111f
@@ -2729,7 +2752,10 @@ four_barrels_drawn:
 	.byte	0
 four_barrels_present:
 	.byte	0
+climbing_kong_present:
+	.byte	0
 	
+	.align	2	
 _tag:
 		.long	WHDLTAG_CUSTOM1_GET
 cheat_flags:
