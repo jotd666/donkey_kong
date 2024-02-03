@@ -946,16 +946,6 @@ DEATH_BARREL_CODE = 0x19
 FOUR_BARRELS_X = 0x14
 FOUR_BARRELS_Y = 0x3B
 
-* the 4 barrels are almost topmost left, no need to test a lot
-
-check_16x16_sprite_in_barrels_vincinity:
-	cmp.b	#FOUR_BARRELS_X+32,d0
-	jcc		0f		| X > rightmost pos: no collision
-	cmp.b	#FOUR_BARRELS_Y+32,d1
-	jcc		0f		| Y > lowest pos: no collision
-	clr.b	four_barrels_drawn
-0:
-	rts
 	
 	
 blit_four_barrels:
@@ -975,30 +965,30 @@ blit_four_barrels:
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
 	
+erase_four_barrels:
+	movem.l	d0-d7/a0-a3/a5,-(a7)
+	lea		_custom,a5                                             | speedup kludge
+	move.l	bg_drawed_screen_ptr(pc),a1                            | speedup kludge
+	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
+	move.w	#FOUR_BARRELS_Y,d1                                     | speedup kludge
+	moveq	#4,d2			| 32 pixels                            | speedup kludge
+	moveq	#NB_PLAYFIELD_PLANES,d3                                | speedup kludge
+	moveq	#32,d4			| 32 pixels                            | speedup kludge
+	bsr		clear_planes_any_blitter_internal                      | speedup kludge
+	movem.l	(a7)+,d0-d7/a0-a3/a5
+	rts
+	
+
 
 update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
 	lea			hardware_sprite_flag_table,a2
+
 	
 	clr.b	climbing_kong_present									| speedup kludge
 	clr.b	four_barrels_present									| speedup kludge
 	
-	cmp.b	#1,screen_number_6227                                  | speedup kludge
-	beq.b	0f		| no need to erase (TODO: maybe in "how high") | speedup kludge
-	tst.b	four_barrels_drawn                                     | speedup kludge
-	beq.b	0f		| already erased: skip                         | speedup kludge
-	* erase 4 barrels now                                          | speedup kludge
-	subq.b	#1,four_barrels_drawn                                  | speedup kludge
-	lea		_custom,a5                                             | speedup kludge
-	move.l	bg_drawed_screen_ptr(pc),a1                            | speedup kludge
-	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
-	move.w	#FOUR_BARRELS_Y,d0                                     | speedup kludge
-	moveq	#4,d2			| 32 pixels                            | speedup kludge
-	moveq	#NB_PLAYFIELD_PLANES,d3                                | speedup kludge
-	moveq	#4,d4			| 32 pixels                            | speedup kludge
-	bsr		clear_planes_any_blitter_internal                      | speedup kludge
-0:
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 1:
@@ -1008,17 +998,30 @@ update_bobs:
 	move.l	(a4),d1
 	cmp.l	(a3),d1
 	beq.b	11f		| same as sprite to be displayed: no need to erase
-	moveq	#0,d1
-	move.b	(TARGET_SPRITE_CODE,a4),d1		| code & flip bits (taken into account in table)
-	tst.b	(a2,d1.w)
+	moveq	#0,d2
+	move.b	(TARGET_SPRITE_CODE,a4),d2		| code & flip bits (taken into account in table)
+	tst.b	(a2,d2.w)
 	bne.b	11f		| hardware sprite: no need to restore background either!
-	cmp.b	#STASHED_BARREL_CODE,d1		| stashed barrel: don't erase either! speedup kludge
-	beq.b	11f
-	cmp.b	#KONG_BACK_FOOT_CODE,d1		| kong climbs: disable all smart redraw (princess) speedup kludge
+
+	moveq	#0,d1
+	move.b	(TARGET_SPRITE_Y,a4),d1	
+
+	
+12:
+	cmp.b	#KONG_BACK_FOOT_CODE,d2		| kong climbs: disable all smart redraw (princess) speedup kludge
 	beq.b	21f
 	st.b	climbing_kong_present
 21:
-	move.b	(TARGET_SPRITE_Y,a4),d1	
+	cmp.b	#STASHED_BARREL_CODE,d2		| stashed barrel: check coords, erase only once
+	bne.b	22f
+	cmp.b	#FOUR_BARRELS_X,d0
+	bne.b	11f
+	cmp.b	#FOUR_BARRELS_Y,d1
+	bne.b	11f
+	* leftmost top barrels of 4 stashed barrels: erase
+	bsr		erase_four_barrels
+	jra		11f
+22:
 	* clear 16x16 area where the sprite was
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
@@ -1044,13 +1047,6 @@ update_bobs:
 	tst.b	climbing_kong_present                                               | speedup kludge
 	bne.b	111f		| no smart redraw if kong climbs                        | speedup kludge
 																				| speedup kludge
-* can't do this, 4 of 6 wheels at least can be overwritten                      | speedup kludge
-*	moveq	#0,d0                                                               | speedup kludge
-*	move.l	d1,d2                                                               | speedup kludge
-*	and.l	#0x0070FFFF,d2                                                      | speedup kludge
-*	cmp.l	#0x00500084,d2                                                      | speedup kludge
-*	beq.b	111f		| no smart draw for boths conveyor                      | speedup kludge
-*						| in the middle of level 2, flames can overwrite it     | speedup kludge
 						
 	move.b	(TARGET_SPRITE_CODE,a0),d0  | sprite code
 	tst.b	(a5,d0.w)
@@ -1073,12 +1069,9 @@ update_bobs:
 	sne		d6			| d6 nonzero means we'll use mirrored bob data
 
 
-	cmp.b	#KONG_PICKING_BARREL,d2
-	bne.b	10f
-	clr.b	four_barrels_drawn
-10:
 
-	cmp.b	#STASHED_BARREL_CODE,d2		| stashed barrel: don't erase either!
+
+	cmp.b	#STASHED_BARREL_CODE,d2		| stashed barrel: don't erase
 	bne.b	112f
 	st.b	four_barrels_present
 	jra		211f
@@ -1086,11 +1079,6 @@ update_bobs:
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	
 112:
-	cmp.b	#DEATH_BARREL_CODE,d2
-	bne.b	113f
-	* if it's a blue barrel (not a sprite) check that it's not within 4 barrels range
-	bsr		check_16x16_sprite_in_barrels_vincinity
-113:
 	moveq	#0,d1
 	moveq	#0,d3
 	move.b	(TARGET_SPRITE_ATTRIBUTES,a0),d3
@@ -1170,11 +1158,10 @@ update_bobs:
 	addq.w	#4,a6		| next previous sprite pos
 	dbf		d7,1b
 	
+	* in the end, blit 4 upper barrels if required
 	tst.b	four_barrels_present
 	beq.b	300f
-	cmp.b	#1+OPT_ENABLE_DOUBLE_BUFFERING,four_barrels_drawn
-	jeq		300f		| already drawn twice: skip
-	addq.b	#1,four_barrels_drawn
+	move.b	#1,four_barrels_drawn
 	* draw all 4 barrels once and for all, nothing can erase them
 	* except maybe blue barrel, in which case we'll clear the four_barrels_drawn
 	* flag (we have to check this blue barrel in sprites to eraseprior loop)
