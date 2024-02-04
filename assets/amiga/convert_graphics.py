@@ -12,6 +12,10 @@ import collections
 # those colors can't be found in palette
 fake_4_color_palette = [(0,0,0),(0xE0,0,0),(0,0xE0,0),(0,0,0xE0)]
 
+ST_NONE = 0
+ST_BOB = 1
+ST_HW_SPRITE = 2
+
 
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/amiga")
@@ -91,8 +95,9 @@ def dump_asm_bytes(*args,**kwargs):
 
 sprite_config = dict()
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,
-flip=False,levels=[1,2,3,4],smart_redraw=0,ignored=False):
+def add_sprite_block(start,end,prefix,cluts,sprite_type=ST_BOB,mirror=False,
+flip=False,levels=[1,2,3,4],smart_redraw=0):
+
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
@@ -101,16 +106,15 @@ flip=False,levels=[1,2,3,4],smart_redraw=0,ignored=False):
             sprite_config[i]["cluts"].extend(cluts)
         else:
             sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,
-                                "is_sprite":is_sprite,
+                                "sprite_type":sprite_type,
                                 "mirror":mirror,
                                 "flip":flip,  # only relevant for HW sprites, else it's handled by blitter
                                 "screens":levels,
-                                "ignored":ignored,
                                 "smart_redraw":smart_redraw}
 
-def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,flip=False,
+def add_sprite(code,prefix,cluts,sprite_type=ST_BOB,mirror=False,flip=False,
                levels=[1,2,3,4],smart_redraw=0,ignored=False):
-    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels,flip=flip,smart_redraw=smart_redraw,ignored=ignored)
+    add_sprite_block(code,code+1,prefix,cluts,sprite_type,mirror,levels=levels,flip=flip,smart_redraw=smart_redraw)
 
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
@@ -121,38 +125,38 @@ add_sprite_block(0x60,0x64,"shattered",12,levels=[1,2,4])
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
 
-add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],is_sprite=True)
-add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],is_sprite=True)
+add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],sprite_type=ST_HW_SPRITE)
+add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],sprite_type=ST_HW_SPRITE)
 add_sprite(0x18,"stashed_barrel",11,levels=[1])   # should be a special case to blit all 4 barrels, and only in some cases
 add_sprite(0x49,"oil_barrel",12,levels=[1,2])
 add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
 
 add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
-add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4],is_sprite=False)
+add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4])
 add_sprite_block(0x20,0x30,"kong",[7,8],mirror=True)  # for rivets work as firefoxes = sprites
 # upper part doesn't have so many conflicts
 add_sprite_block(0x30,0x38,"kong",[7,8],mirror=True,smart_redraw=1<<4)  # for rivets work as firefoxes = sprites
-add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4],is_sprite=True)
+add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4],sprite_type=ST_HW_SPRITE)
 add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
 add_sprite_block(0x73,0x76,"bonus",0xA,levels=[2,3,4])
 add_sprite_block(0x76,0x78,"heart",9)
-add_sprite(0x39,"sparkle",1,[4],mirror=True)
+add_sprite(0x39,"sparkle",1,levels=[4],mirror=True)
 add_sprite(0x72,"square",0xC)
 
-add_sprite(0x3A,"blank",15,ignored=True)
-add_sprite(0x3F,"blank",0xC,ignored=True)
-add_sprite(7,"blank",2,ignored=True)
-add_sprite(0x70,"blank",[1,8,10],ignored=True)
+add_sprite(0x3A,"blank",15,sprite_type=ST_NONE)
+add_sprite(0x3F,"blank",0xC,sprite_type=ST_NONE)
+add_sprite(7,"blank",2,sprite_type=ST_NONE)
+add_sprite(0x70,"blank",[1,8,10],sprite_type=ST_NONE)
 
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
 
-add_sprite(0x4B,"pie",0xE,levels=[2],is_sprite=True)
-add_sprite(0x44,"elevator",0x3,levels=[3],is_sprite=True)
+add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_HW_SPRITE)
+add_sprite(0x44,"elevator",0x3,levels=[3],sprite_type=ST_HW_SPRITE)
 add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
-add_sprite(0x46,"moving_ladder",0x3,levels=[2],is_sprite=True)
+add_sprite(0x46,"moving_ladder",0x3,levels=[2],sprite_type=ST_HW_SPRITE)
 
 
 block_dict = {}
@@ -259,7 +263,7 @@ for level in [1,2,3,4]:
         sprconf = sprite_config.get(k)
         if sprconf:
             levels = sprconf["screens"]
-            is_sprite = sprconf["is_sprite"]
+            is_sprite = sprconf["sprite_type"] & ST_HW_SPRITE
             if not is_sprite and level in levels:
                 clut_range = sprconf["cluts"]
                 name = sprconf["name"]
@@ -360,11 +364,11 @@ if True:
         if sprconf:
             clut_range = sprconf["cluts"]
             name = sprconf["name"]
-            is_sprite = sprconf["is_sprite"]
+            sprite_type = sprconf["sprite_type"]
         else:
             clut_range = [0,1,2,3]
             name = f"unknown_{k:02x}"
-            is_sprite = False
+            sprite_type = ST_NONE
 
         for cidx in clut_range:
             img = generate_16x16_image(cidx,sprdat)
@@ -378,16 +382,16 @@ if True:
             # only consider sprites/cluts which are pre-registered
             if sprconf:
                 if k not in sprites:
-                    sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize,
-                    "mirror":sprconf["mirror"],"flip":sprconf["flip"],'ignored':sprconf["ignored"]}
+                    sprites[k] = {"sprite_type":sprite_type,"name":name,"hsize":hsize,
+                    "mirror":sprconf["mirror"],"flip":sprconf["flip"]}
 
                 cs = sprites[k]
 
-                if is_sprite:
+                if sprconf["sprite_type"] & ST_HW_SPRITE:
                     # hardware sprites only need one bitmap data, copied 8 times to be able
                     # to be assigned several times. Doesn't happen a lot in this game for now
                     # but at least wheels have more than 1 instance
-                    if "bitmap" not in cs:
+                    if "sprmap" not in cs:
                         # create entry only if not already created (multiple cluts)
                         # we must not introduce a all black or missing colors palette in here
                         # (even if the CLUT may be used for this sprite) else base image will miss colors!
@@ -398,21 +402,21 @@ if True:
 
                         spritepal = get_sprite_clut(cidx)
 
-                        cs["bitmap"] = [bitplanelib.palette_image2sprite(img,None,spritepal,
+                        cs["sprmap"] = [bitplanelib.palette_image2sprite(img,None,spritepal,
                                  palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True)]
 
                         if cs["mirror"]:
                             # we need do re-iterate with opposite Y-flip image (donkey kong)
-                            cs["bitmap"].append(bitplanelib.palette_image2sprite(ImageOps.mirror(img),None,spritepal,
+                            cs["sprmap"].append(bitplanelib.palette_image2sprite(ImageOps.mirror(img),None,spritepal,
                              palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True))
                         else:
-                            cs["bitmap"].append(None)
+                            cs["sprmap"].append(None)
                         if cs["flip"]:
                             # we need do re-iterate with opposite Y-flip image (donkey kong)
                             flipped = ImageOps.flip(img)
-                            cs["bitmap"].append(bitplanelib.palette_image2sprite(flipped,None,spritepal,
+                            cs["sprmap"].append(bitplanelib.palette_image2sprite(flipped,None,spritepal,
                              palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True))
-                            cs["bitmap"].append(bitplanelib.palette_image2sprite(ImageOps.mirror(flipped),None,spritepal,
+                            cs["sprmap"].append(bitplanelib.palette_image2sprite(ImageOps.mirror(flipped),None,spritepal,
                              palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True))
 
 
@@ -473,10 +477,11 @@ if True:
 smart_redraw_flag = [0]*256
 hw_sprite_flag = [0]*256
 for k,v in sprite_config.items():
-    if v["is_sprite"]:
+    sprite_type = v["sprite_type"]
+    if sprite_type == ST_HW_SPRITE:
         hw_sprite_flag[k] = 1
         hw_sprite_flag[k+128] = 1  # mirror code
-    if v["ignored"]:
+    elif sprite_type == ST_NONE:
         hw_sprite_flag[k] = 255
         hw_sprite_flag[k+128] = 255  # mirror code
     smf = v["smart_redraw"]
@@ -526,7 +531,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             if sprite == True:
                 f.write("-1")  # not displayed but legal
             else:
-                if sprite["is_sprite"]:
+                print(sprite)
+                if sprite["sprite_type"] & ST_HW_SPRITE:
                     name = sprite['name']
                     sprite_names[i] = name
                     f.write(name)
@@ -552,10 +558,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         sprite = sprites.get(i)
         f.write("\t.long\t")
         if sprite:
-            if sprite == True or sprite["is_sprite"]:
-                f.write("-1")  # hardware sprite: ignore
-            elif sprite["ignored"]:
-                f.write("-1")  # ignored bob: ignore
+            if sprite == True or not sprite["sprite_type"] & ST_BOB:
+                f.write("-1")  # hardware sprite or blank: ignore
             else:
                 name = sprite["name"]
                 bob_names[i] = name
@@ -571,6 +575,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             sprite = sprites.get(i)
             f.write(f"{name}:\n")
             csb = sprite["bitmap"]
+
             for j in range(16):
                 b = csb.get(j)
                 f.write("\t.long\t")
@@ -599,6 +604,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
                             f.write(f"plane_{plane_id}")
                         f.write("\n")
 
+    # hardware sprites
     sprite_flip_type = ["normal","mirrored","flipped","flipped_mirrored"]
     for i in range(NB_POSSIBLE_SPRITES):
         name = sprite_names[i]
@@ -606,12 +612,12 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             sprite = sprites.get(i)
             for j in range(8):
                 # clut is valid for this sprite
-                bitmap = sprite["bitmap"]
+                bitmap = sprite["sprmap"]
                 sprite_label = f"{name}_{j}"
                 f.write(f"{sprite_label}:\n")  # all sprites are of height 16 in this game
-                sprite["bitmap"] = bitmap + [None]*(4-len(bitmap))
+                sprite["sprmap"] = bitmap + [None]*(4-len(bitmap))
 
-                for i,bm in zip(sprite_flip_type,sprite["bitmap"]):
+                for i,bm in zip(sprite_flip_type,sprite["sprmap"]):
                     if bm:
                         f.write(f"\t.long\t{sprite_label}_{i}\n")
                     else:
@@ -648,7 +654,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             sprite = sprites.get(i)
             for j in range(8):
                 # clut is valid for this sprite
-                bitmap = sprite["bitmap"]
+                bitmap = sprite["sprmap"]
                 sprite_label = f"{name}_{j}"
                 for i,bm in zip(sprite_flip_type,bitmap):
                     if bm:
