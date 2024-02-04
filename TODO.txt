@@ -1,5 +1,3 @@
-- add pause
-
 minor:
 
 - four barrels not erased when dying at level 1 (sometimes?)

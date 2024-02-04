@@ -22,6 +22,7 @@ keys+CTRL or joystick: controls
 5 or fire: insert coin
 1 or joy up: start 1P game
 2 or joy down: start 2P game
+P: pause/unpause
 Q: quit current game
 ESC: return to DOS
 
