@@ -96,7 +96,7 @@ def dump_asm_bytes(*args,**kwargs):
 sprite_config = dict()
 
 def add_sprite_block(start,end,prefix,cluts,sprite_type=ST_BOB,mirror=False,
-flip=False,levels=[1,2,3,4],smart_redraw=0):
+flip=False,levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0xF):
 
     if isinstance(cluts,int):
         cluts = [cluts]
@@ -110,11 +110,13 @@ flip=False,levels=[1,2,3,4],smart_redraw=0):
                                 "mirror":mirror,
                                 "flip":flip,  # only relevant for HW sprites, else it's handled by blitter
                                 "screens":levels,
+                                "hw_sprite_level_mask":hw_sprite_level_mask,
                                 "smart_redraw":smart_redraw}
 
 def add_sprite(code,prefix,cluts,sprite_type=ST_BOB,mirror=False,flip=False,
-               levels=[1,2,3,4],smart_redraw=0,ignored=False):
-    add_sprite_block(code,code+1,prefix,cluts,sprite_type,mirror,levels=levels,flip=flip,smart_redraw=smart_redraw)
+               levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0xF):
+    add_sprite_block(code,code+1,prefix,cluts,sprite_type,mirror,levels=levels,
+    flip=flip,smart_redraw=smart_redraw,hw_sprite_level_mask=hw_sprite_level_mask)
 
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
@@ -149,8 +151,8 @@ add_sprite(7,"blank",2,sprite_type=ST_NONE)
 add_sprite(0x70,"blank",[1,8,10],sprite_type=ST_NONE)
 
 
-#add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
-add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3])
+add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3],
+                hw_sprite_level_mask=(1<<3)|(1<<2),sprite_type=ST_BOB)
 
 add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_HW_SPRITE)
 add_sprite(0x44,"elevator",0x3,levels=[3],sprite_type=ST_HW_SPRITE)
@@ -223,10 +225,10 @@ bobs_used_colors = collections.Counter()
 sprites_used_colors = collections.Counter()
 hsize = 16
 
-def generate_16x16_image(cidx,sprdat):
+def generate_16x16_image(cidx,sprdat,sprconf):
     img = Image.new('RGB',(16,hsize))
     spritepal = get_sprite_clut(cidx)
-
+    is_sprite = sprconf and sprconf["sprite_type"] & ST_HW_SPRITE
     d = iter(sprdat)
     for j in range(16):
         for i in range(16):
@@ -268,7 +270,7 @@ for level in [1,2,3,4]:
                 clut_range = sprconf["cluts"]
                 name = sprconf["name"]
                 for clut in clut_range:
-                    img = generate_16x16_image(clut,sprdat)
+                    img = generate_16x16_image(clut,sprdat,sprconf)
                     for x in range(img.size[0]):
                         for y in range(img.size[1]):
                             colors.add(img.getpixel((x,y)))
@@ -371,7 +373,7 @@ if True:
             sprite_type = ST_NONE
 
         for cidx in clut_range:
-            img = generate_16x16_image(cidx,sprdat)
+            img = generate_16x16_image(cidx,sprdat,sprconf)
             if dump_sprites:
                 scaled = ImageOps.scale(img,2,0)
                 if sprconf:
@@ -420,7 +422,7 @@ if True:
                              palette_precision_mask=0xFF,sprite_fmode=0,with_control_words=True))
 
 
-                else:
+                if sprconf["sprite_type"] & ST_BOB:
                     # software sprites (bobs) need one copy of bitmaps per palette setup. There are 3 or 4 planes
                     # (4 ATM but will switch to dual playfield)
                     # but not all planes are active as game sprites have max 3 colors (+ transparent)
@@ -436,7 +438,7 @@ if True:
                     img_to_raw = img
 
                     plane_list = []
-                    #print(f"converting {name}, screen {sprconf['screens'][0]}")
+                    print(f"converting {name}, screen {sprconf['screens'][0]}")
                     for mirrored in range(2):
                         bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
                             palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
@@ -478,9 +480,9 @@ smart_redraw_flag = [0]*256
 hw_sprite_flag = [0]*256
 for k,v in sprite_config.items():
     sprite_type = v["sprite_type"]
-    if sprite_type == ST_HW_SPRITE:
-        hw_sprite_flag[k] = 1
-        hw_sprite_flag[k+128] = 1  # mirror code
+    if sprite_type & ST_HW_SPRITE:
+        hw_sprite_flag[k] = v["hw_sprite_level_mask"]
+        hw_sprite_flag[k+128] = v["hw_sprite_level_mask"]  # mirror code
     elif sprite_type == ST_NONE:
         hw_sprite_flag[k] = 255
         hw_sprite_flag[k+128] = 255  # mirror code
@@ -489,7 +491,7 @@ for k,v in sprite_config.items():
     smart_redraw_flag[k+128] = smf  # mirror code
 
 # create special 4 barell image for level 1
-img = generate_16x16_image(11,block_dict["sprite"]["data"][0x18])
+img = generate_16x16_image(11,block_dict["sprite"]["data"][0x18],None)
 four_barrels = Image.new("RGB",(32,32))
 for sx in range(0,20,10):
     for sy in range(0,32,16):
@@ -523,6 +525,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
 
     f.write("sprite_table:\n")
 
+    # hardware sprites
     sprite_names = [None]*NB_POSSIBLE_SPRITES
     for i in range(NB_POSSIBLE_SPRITES):
         sprite = sprites.get(i)
@@ -531,11 +534,10 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             if sprite == True:
                 f.write("-1")  # not displayed but legal
             else:
-                print(sprite)
                 if sprite["sprite_type"] & ST_HW_SPRITE:
                     name = sprite['name']
                     sprite_names[i] = name
-                    f.write(name)
+                    f.write(name+"_spr")
                 else:
                     f.write("0")
         else:
@@ -545,10 +547,10 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     for i in range(NB_POSSIBLE_SPRITES):
         name = sprite_names[i]
         if name:
-            f.write(f"{name}:\n")
+            f.write(f"{name}_spr:\n")
             for j in range(8):
                 f.write("\t.long\t")
-                f.write(f"{name}_{j}")
+                f.write(f"{name}_spr_{j}")
                 f.write("\n")
 
     f.write("bob_table:\n")
@@ -613,7 +615,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             for j in range(8):
                 # clut is valid for this sprite
                 bitmap = sprite["sprmap"]
-                sprite_label = f"{name}_{j}"
+                sprite_label = f"{name}_spr_{j}"
                 f.write(f"{sprite_label}:\n")  # all sprites are of height 16 in this game
                 sprite["sprmap"] = bitmap + [None]*(4-len(bitmap))
 
@@ -655,7 +657,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             for j in range(8):
                 # clut is valid for this sprite
                 bitmap = sprite["sprmap"]
-                sprite_label = f"{name}_{j}"
+                sprite_label = f"{name}_spr_{j}"
                 for i,bm in zip(sprite_flip_type,bitmap):
                     if bm:
                         f.write(f"{sprite_label}_{i}:")
