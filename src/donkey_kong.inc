@@ -50,7 +50,7 @@
 	OPT_START_LEVEL=1
 	* 1: normal, 2, pie factory, 3: elevators, 4: rivets
 	* setting this != 1 shows the same screen again and again
-	OPT_START_SCREEN=1
+	OPT_START_SCREEN=2
 
 	.endif
 	

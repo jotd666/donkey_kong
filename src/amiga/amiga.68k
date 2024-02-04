@@ -248,9 +248,10 @@ _user:
 2:
 	move.l	#0,dip_switch_start_lives		| 3 lives default
 3:
-	move.l	(A0)+,D0	| EXTRA40000/S
+	move.l	(A0)+,D0		| STARTLEVEL/K/N
 	beq.b	2f
-	or.l	#4,misc_options
+	bsr		bcpl_string_to_int
+	move.l	d0,start_level_option
 2:
 	lea		_custom,a5
 	lea		debug_copperlist,a0
@@ -327,7 +328,8 @@ _user:
 	sne		skip_introduction_flag
 
 
-	
+	move.l	start_level_option,d0
+	move.b	d0,start_level
 
 	move.l	cheat_flags,d0
 	btst	#0,d0
@@ -2423,20 +2425,26 @@ osd_read_in_1:
 	moveq	#-1,d0
 	rts
 	
-	* implement bit 6 : reset game
+* zero inputs if several directions are pressed
+correct_inputs:
+	move.l	a0,-(a7)
+	lea		input_table(pc),a0
+	tst.b	(a0,d0.w)
+	bne.b	0f
+	moveq	#0,d0
+0:
+	move.l	(a7)+,a0
+	rts
 	
+input_table:
+	dc.b	0,1,1,0,1,0,0,0
+	dc.b	1,0,0,0,0,0,0,0
+
 osd_read_in_0:
 	moveq	#0,d0
 	movem.l	a0/d1,-(a7)
+	* keyboard directions
 	lea		keyboard_table(pc),a0
-	tst.b	(0x4C,a0)		| "up" key
-	beq.b	0f
-	bset	#2,d0
-0:
-	tst.b	(0x4D,a0)		| "down" key
-	beq.b	0f
-	bset	#3,d0
-0:
 	tst.b	(0x4F,a0)		| "<-" key
 	beq.b	0f
 	bset	#1,d0
@@ -2445,11 +2453,15 @@ osd_read_in_0:
 	beq.b	0f
 	bset	#0,d0
 0:
-	tst.b	(0x63,a0)		| "ctrl" key
+	tst.b	(0x4C,a0)		| "up" key
 	beq.b	0f
-	bset	#4,d0
+	bset	#2,d0
 0:
-	* directions + fire
+	tst.b	(0x4D,a0)		| "down" key
+	beq.b	0f
+	bset	#3,d0
+0:
+	* joystick directions
 	move.l	_joypad_state(pc),d1
 	btst	#JPB_BTN_UP,d1
 	beq.b	0f
@@ -2466,6 +2478,16 @@ osd_read_in_0:
 	btst	#JPB_BTN_RIGHT,d1
 	beq.b	0f
 	bset	#0,d0
+0:
+	* if more than 1 key pressed, then no key is pressed
+	* like in the arcade
+	bsr		correct_inputs
+	
+	* jump
+	
+	tst.b	(0x63,a0)		| "ctrl" key
+	beq.b	0f
+	bset	#4,d0
 0:
 	btst	#JPB_BTN_RED,d1
 	beq.b	0f
@@ -2688,7 +2710,7 @@ program_args_end:
 read_args_string:
 	.byte	read_args_string_end-read_args_string
 	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
-	.ascii	"CHEATKEYS/S,STARTLIVES/K/N"
+	.ascii	"CHEATKEYS/S,STARTLIVES/K/N,STARTLEVEL/K/N"
 read_args_string_end:
 	.align	2
 

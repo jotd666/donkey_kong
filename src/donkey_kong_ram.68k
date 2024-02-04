@@ -1,12 +1,11 @@
 
 	.global	bg_videoram
 
-	.global	start_screen
+	.global	start_level
 	.global invincible_flag
 	.global start_level
 	.global vb_ticks_count
 	.global highscores_need_saving
-	.global invincible_flag
 	.global infinite_lives_flag
 	.global infinite_time_flag
 	.global	sound_timer
@@ -72,7 +71,7 @@ high_score_beaten:
 	.word	0
 invincible_flag:
 	.byte	0
-start_screen:
+start_level:
 	.byte	0
 infinite_lives_flag:
 	.byte	0

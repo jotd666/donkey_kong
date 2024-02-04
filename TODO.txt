@@ -1,7 +1,7 @@
-- MUS_DK_ROAR  missing when gorilla at end of level
 - level 2 sometimes glitches / frozen on A500 config
-- test CLI args
-- pause
+- MUS_DK_ROAR  missing when gorilla at end of level
+- test CLI args: cheatkeys OK
+- add pause
 
 minor:
 

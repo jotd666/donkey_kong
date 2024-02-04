@@ -1730,8 +1730,6 @@ l_01c3:
 	move.b	#0x01,d0                        	| [$01e2: ld      a,$01] A := 1
 	move.b	d0,reg_flipscreen               	| [$01e4: ld      (reg_flipscreen),a] store into flip screen setting
 	move.b	d0,gamemode1_6005               	| [$01e7: ld      (gamemode1_6005),a] store into game mode 1
-	move.b	start_screen,d0
-	addq	#1,d0
 	move.b	d0,screen_number_6227           	| [$01ea: ld      (screen_number_6227),a] initialize screen to 1 (girders)
 	clr.b	d0                               	| [$01ed: xor     a] A := 0
 	move.b	d0,gamemode2_600a               	| [$01ee: ld      (gamemode2_600a),a] store into game mode 2
@@ -3469,9 +3467,14 @@ l_09ab:
 	lea	number_of_lives_remaining_6228,a1	| [$09ae: ld      de,number_of_lives_remaining_6228] load DE with destination data location.  start with remaining lives
 	move.w	#0x08,d1                        	| [$09b1: ld      bc,$0008] byte counter set to 8 8
 	jbsr	ldir                              	| [$09b4: ldir] copy (HL) into (DE) from P1NumLives to P2NumLives into #6228 to #622F
-	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$09b6: ld      hl,(store_622a)] EG #3A65.  start of table data for screens/levels
+	LOAD_ROM_ADDRESS_LE	store_622a,a0               	| [$09b6: ld      hl,(store_622a)] EG #3A65.  start of table data for screens/levels	
 	move.b	(a0),d0                         	| [$09b9: ld      a,(hl)] load screen number from table
 	move.b	d0,screen_number_6227           	| [$09ba: ld      (screen_number_6227),a] store screen number
+	* here we could change start level & screen
+	move.b	start_level,d0
+	addq	#1,d0
+	move.b	d0,level_number_6229	
+	* end cheat
 	move.b	twoplayergame_600f,d0           	| [$09bd: ld      a,(twoplayergame_600f)] load A with number of players
 	                               	| [$09c0: and     a] 1 player game?
 	lea	waittimermsb_6009,a0           	| [$09c1: ld      hl,waittimermsb_6009] load HL with timer address
