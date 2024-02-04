@@ -251,6 +251,7 @@ _user:
 	move.l	(A0)+,D0		| STARTLEVEL/K/N
 	beq.b	2f
 	bsr		bcpl_string_to_int
+	subq	#1,d0
 	move.l	d0,start_level_option
 2:
 	lea		_custom,a5
@@ -602,6 +603,12 @@ _vblank:
 	move.w	d1,music_tick
 	bne.b	13f
 	bsr		osd_sound_stop
+	* kludge (one more doesn't hurt :)): if music was then
+	cmp.w	#5,music_pattern
+	bne.b	13f
+	* play gorilla yell
+	move.w	#GORILLA_YELLS_SND,d0
+	jbsr	osd_sound_start
 13:
 	
 	* ack vbl twice (040/pistorm bug)
@@ -2618,7 +2625,7 @@ handle_keyboard:
 
     bsr	toggle_pause
 0:
-	cmp.b	#0x45,d0	| ESC key
+	cmp.b	#0x10,d0	| "Q" key (US)
 	bne.b	0f
 	* game over, no lives + kill mario
 	clr.b	mario_array_6200

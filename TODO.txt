@@ -1,11 +1,7 @@
-- MUS_DK_ROAR  missing when gorilla at end of level
-- test CLI args: cheatkeys OK
 - add pause
-- four barrels not erased when dying at level 1 (sometimes?)
 
 minor:
 
-- cleanup audio samples
+- four barrels not erased when dying at level 1 (sometimes?)
 - four barrels redraw: ok even if could be better optimized
-- skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
 - dipswitches extra life at 7000 ...
