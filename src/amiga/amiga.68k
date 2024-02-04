@@ -751,6 +751,8 @@ update_hardware_sprites:
 	beq.b	2f
 	tst.b	(a5,d2.w)
 	beq.b	2f
+	* -1 for ignored bobs
+	bmi.b	2f
 
 	
 	* check if real/attached sprite

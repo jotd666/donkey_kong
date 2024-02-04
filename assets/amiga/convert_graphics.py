@@ -91,7 +91,8 @@ def dump_asm_bytes(*args,**kwargs):
 
 sprite_config = dict()
 
-def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,flip=False,levels=[1,2,3,4],smart_redraw=0):
+def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,
+flip=False,levels=[1,2,3,4],smart_redraw=0,ignored=False):
     if isinstance(cluts,int):
         cluts = [cluts]
     for i in range(start,end):
@@ -104,10 +105,12 @@ def add_sprite_block(start,end,prefix,cluts,is_sprite=False,mirror=False,flip=Fa
                                 "mirror":mirror,
                                 "flip":flip,  # only relevant for HW sprites, else it's handled by blitter
                                 "screens":levels,
+                                "ignored":ignored,
                                 "smart_redraw":smart_redraw}
 
-def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,flip=False,levels=[1,2,3,4],smart_redraw=0):
-    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels,flip=flip,smart_redraw=smart_redraw)
+def add_sprite(code,prefix,cluts,is_sprite=False,mirror=False,flip=False,
+               levels=[1,2,3,4],smart_redraw=0,ignored=False):
+    add_sprite_block(code,code+1,prefix,cluts,is_sprite,mirror,levels=levels,flip=flip,smart_redraw=smart_redraw,ignored=ignored)
 
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
@@ -117,7 +120,6 @@ add_sprite_block(0x10,0x14,"princess",9,mirror=True,smart_redraw=0xFF)
 add_sprite_block(0x60,0x64,"shattered",12,levels=[1,2,4])
 add_sprite(0x12,"princess",10)
 add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her under his arm
-add_sprite(7,"blank",2)
 
 add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],is_sprite=True)
 add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],is_sprite=True)
@@ -130,16 +132,17 @@ add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4],is_sprite=F
 add_sprite_block(0x20,0x30,"kong",[7,8],mirror=True)  # for rivets work as firefoxes = sprites
 # upper part doesn't have so many conflicts
 add_sprite_block(0x30,0x38,"kong",[7,8],mirror=True,smart_redraw=1<<4)  # for rivets work as firefoxes = sprites
-add_sprite(0x70,"blank",[1,8,10])
 add_sprite_block(0x4d,0x4f,"firefox",[0,1],mirror=True,levels=[4],is_sprite=True)
 add_sprite_block(0x3b,0x3d,"bouncer",0,levels=[3])
 add_sprite_block(0x73,0x76,"bonus",0xA,levels=[2,3,4])
 add_sprite_block(0x76,0x78,"heart",9)
 add_sprite(0x39,"sparkle",1,[4],mirror=True)
-add_sprite(0x3A,"blank",15)
-add_sprite(0x3F,"blank",0xC)
 add_sprite(0x72,"square",0xC)
 
+add_sprite(0x3A,"blank",15,ignored=True)
+add_sprite(0x3F,"blank",0xC,ignored=True)
+add_sprite(7,"blank",2,ignored=True)
+add_sprite(0x70,"blank",[1,8,10],ignored=True)
 
 
 #add_sprite_block(0x3B,0x3D,"bouncer",[1,2,3]) # clut?
@@ -210,13 +213,6 @@ def get_sprite_clut(clut_index):
 
 
 # creating the sprite configuration in the code is more flexible than with a config file
-
-
-def add_sprite_block(start,end,prefix,cluts,is_sprite):
-    if isinstance(cluts,int):
-        cluts = [cluts]
-    for i in range(start,end+1):
-        sprite_config[i] = {"name":f"{prefix}_{i:02x}","cluts":cluts,"is_sprite":is_sprite}
 
 
 bobs_used_colors = collections.Counter()
@@ -382,7 +378,9 @@ if True:
             # only consider sprites/cluts which are pre-registered
             if sprconf:
                 if k not in sprites:
-                    sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize,"mirror":sprconf["mirror"],"flip":sprconf["flip"]}
+                    sprites[k] = {"is_sprite":is_sprite,"name":name,"hsize":hsize,
+                    "mirror":sprconf["mirror"],"flip":sprconf["flip"],'ignored':sprconf["ignored"]}
+
                 cs = sprites[k]
 
                 if is_sprite:
@@ -478,6 +476,9 @@ for k,v in sprite_config.items():
     if v["is_sprite"]:
         hw_sprite_flag[k] = 1
         hw_sprite_flag[k+128] = 1  # mirror code
+    if v["ignored"]:
+        hw_sprite_flag[k] = 255
+        hw_sprite_flag[k+128] = 255  # mirror code
     smf = v["smart_redraw"]
     smart_redraw_flag[k] = smf
     smart_redraw_flag[k+128] = smf  # mirror code
@@ -553,6 +554,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
         if sprite:
             if sprite == True or sprite["is_sprite"]:
                 f.write("-1")  # hardware sprite: ignore
+            elif sprite["ignored"]:
+                f.write("-1")  # ignored bob: ignore
             else:
                 name = sprite["name"]
                 bob_names[i] = name
