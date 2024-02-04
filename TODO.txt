@@ -1,12 +1,12 @@
 - level 2 sometimes glitches / frozen on A500 config (flames!)
 - MUS_DK_ROAR  missing when gorilla at end of level
 - test CLI args: cheatkeys OK
-- remove extra girders
 - add pause
+- dual bob/sprite support (level 3 fires could be sprites)
 
 minor:
 
-- dual bob/sprite support (level 3 fires could be sprites)
+- cleanup audio samples
 - four barrels redraw: ok even if could be better optimized
 - skip blank tiles like 0x70: no! it's to remove the 2 girders on top!
 - dipswitches extra life at 7000 ...

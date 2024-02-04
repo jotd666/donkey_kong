@@ -2135,7 +2135,6 @@ osd_update_palette_bank:
 update_bg_tile:
 	and.w	#0xFF,d0	| mask up to 255
 
-
 	move.w	d7,d3
 	and.w	#0x1F,d3	| this is Y (tile)
 	addq	#1,d3
@@ -2144,6 +2143,18 @@ update_bg_tile:
 	not.w	d7
 	add.w	#0x21,d7
 
+	cmp.b	#0xF0,d0
+	jne		0f
+	cmp.b	#4,d3
+	jne		0f
+	* remove extra girders at X = (4,11), (4,13) replace by blank
+	* (original game used to put black sprites there, which is not that good
+	* to save blitter bandwidth). I suppose that game reads video memory
+	* to check if those girders are there when Kong climbs the ladder so we
+	* can't just remove them in the code
+	*
+	move.b	#0x10,d0		| draw blank instead of girders
+0:
 
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
