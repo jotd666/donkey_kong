@@ -732,7 +732,7 @@ sprite_toggle:
 update_hardware_sprites:
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
-
+	
 	lea		sprite_table,a4
 	lea		host_sprites(pc),a2
 0:
@@ -749,7 +749,8 @@ update_hardware_sprites:
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	beq.b	2f
-	tst.b	(a5,d2.w)
+	move.b	screen_number_6227,d5
+	btst.b	d5,(a5,d2.w)		| is that a sprite for this screen?
 	beq.b	2f
 	* -1 for ignored bobs
 	bmi.b	2f
@@ -993,13 +994,13 @@ update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
 	lea			hardware_sprite_flag_table,a2
-
 	
 	clr.b	climbing_kong_present									| speedup kludge
 	clr.b	four_barrels_present									| speedup kludge
 	
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
+	move.b		screen_number_6227,d6		| we need the screen number to display sprites or bobs!
 1:
 	moveq	#0,d0
 	move.b	(TARGET_SPRITE_X,a4),d0
@@ -1009,7 +1010,7 @@ update_bobs:
 	beq.b	11f		| same as sprite to be displayed: no need to erase
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a4),d2		| code & flip bits (taken into account in table)
-	tst.b	(a2,d2.w)
+	btst.b	d6,(a2,d2.w)					| is this sprite a HW sprite for this given screen?
 	bne.b	11f		| hardware sprite: no need to restore background either!
 
 	moveq	#0,d1
@@ -1095,6 +1096,10 @@ update_bobs:
 	sne		d5
 	and.b	#0xF,d3	| get attributes
 
+	move.b		screen_number_6227,d4
+	btst	d4,(a2,d2.w)
+	bne.b	211f			| hardware sprite for this level: skip
+	
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4

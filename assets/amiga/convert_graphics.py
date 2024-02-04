@@ -121,7 +121,9 @@ def add_sprite(code,prefix,cluts,sprite_type=ST_BOB,mirror=False,flip=False,
 add_sprite_block(0,7,"mario",2,mirror=True)
 add_sprite_block(8,0x10,"mario",2,mirror=True)
 add_sprite_block(0x78,0x7B,"mario_dies",2,mirror=True)
-add_sprite_block(0x7B,0x80,"score_sprite",7)
+
+# score sprite can be a HW sprite in level 4 as firefoxes are max 5, leaves 2 slots for scores, enough!
+add_sprite_block(0x7B,0x80,"score_sprite",7,sprite_type=ST_BOB|ST_HW_SPRITE,hw_sprite_level_mask=(1<<4))
 add_sprite_block(0x10,0x14,"princess",9,mirror=True,smart_redraw=0xFF)
 add_sprite_block(0x60,0x64,"shattered",12,levels=[1,2,4])
 add_sprite(0x12,"princess",10)
@@ -150,11 +152,11 @@ add_sprite(0x3F,"blank",0xC,sprite_type=ST_NONE)
 add_sprite(7,"blank",2,sprite_type=ST_NONE)
 add_sprite(0x70,"blank",[1,8,10],sprite_type=ST_NONE)
 
-
+# fireballs are HW sprites in levels 2 and 3, but not in 1
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3],
-                hw_sprite_level_mask=(1<<3)|(1<<2),sprite_type=ST_BOB)
+                hw_sprite_level_mask=(1<<3)|(1<<2),sprite_type=ST_BOB|ST_HW_SPRITE)
 
-add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_HW_SPRITE)
+add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_BOB)
 add_sprite(0x44,"elevator",0x3,levels=[3],sprite_type=ST_HW_SPRITE)
 add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
@@ -265,7 +267,7 @@ for level in [1,2,3,4]:
         sprconf = sprite_config.get(k)
         if sprconf:
             levels = sprconf["screens"]
-            is_sprite = sprconf["sprite_type"] & ST_HW_SPRITE
+            is_sprite = sprconf["sprite_type"] == ST_HW_SPRITE  # pure hardware sprite!
             if not is_sprite and level in levels:
                 clut_range = sprconf["cluts"]
                 name = sprconf["name"]
@@ -438,7 +440,7 @@ if True:
                     img_to_raw = img
 
                     plane_list = []
-                    print(f"converting {name}, screen {sprconf['screens'][0]}")
+                    #print(f"converting {name}, screen {sprconf['screens'][0]}")
                     for mirrored in range(2):
                         bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
                             palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
