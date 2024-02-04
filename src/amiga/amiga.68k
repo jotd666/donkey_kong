@@ -574,8 +574,12 @@ _vblank:
 	btst	#5,d0
 	beq.b		1f
 
+	* emergency system to skip a frame if needed!
+	tst.b	skip_screen_update
+	bne.b	0f
 	jbsr	really_update_sprites
-
+0:
+	clr.b	skip_screen_update
 	move.l	_joypad_state(pc),d1
 	moveq	#1,d0
 	jsr	_read_joystick
@@ -650,7 +654,10 @@ _vblank:
 	* copper interrupt has been called, which means that
 	* rendering was so slow that we couldn't cope within a frame
 	* skip a tick and ack again, we lose one update frame
-	addq.b	#ONE_TICK,vb_ticks_count
+	st.b	skip_screen_update
+	.ifndef	RELEASE
+	move.w	#0xF00,0xDFF180
+	.endif
 	move.w	#0x10,_custom+intreq
 3:
     movem.l (a7)+,d0-d7/a0-a6
@@ -2785,6 +2792,8 @@ four_barrels_drawn:
 four_barrels_present:
 	.byte	0
 climbing_kong_present:
+	.byte	0
+skip_screen_update:
 	.byte	0
 	
 	.align	2	

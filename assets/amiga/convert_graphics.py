@@ -96,7 +96,7 @@ def dump_asm_bytes(*args,**kwargs):
 sprite_config = dict()
 
 def add_sprite_block(start,end,prefix,cluts,sprite_type=ST_BOB,mirror=False,
-flip=False,levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0xF):
+flip=False,levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0x7F):
 
     if isinstance(cluts,int):
         cluts = [cluts]
@@ -114,7 +114,7 @@ flip=False,levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0xF):
                                 "smart_redraw":smart_redraw}
 
 def add_sprite(code,prefix,cluts,sprite_type=ST_BOB,mirror=False,flip=False,
-               levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0xF):
+               levels=[1,2,3,4],smart_redraw=0,hw_sprite_level_mask=0x7F):
     add_sprite_block(code,code+1,prefix,cluts,sprite_type,mirror,levels=levels,
     flip=flip,smart_redraw=smart_redraw,hw_sprite_level_mask=hw_sprite_level_mask)
 
@@ -133,7 +133,6 @@ add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],sprite_type=ST_HW_S
 add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],sprite_type=ST_HW_SPRITE)
 add_sprite(0x18,"stashed_barrel",11,levels=[1])   # should be a special case to blit all 4 barrels, and only in some cases
 add_sprite(0x49,"oil_barrel",12,levels=[1,2])
-add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2])  # barrel flame
 
 add_sprite_block(0x19,0x1C,"death_barrel",12,mirror=True,levels=[1])
 add_sprite_block(0x1E,0x20,"hammer",[1,7],mirror=True,levels=[1,2,4])
@@ -155,6 +154,13 @@ add_sprite(0x70,"blank",[1,8,10],sprite_type=ST_NONE)
 # fireballs are HW sprites in levels 2 and 3, but not in 1
 add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3],
                 hw_sprite_level_mask=(1<<3)|(1<<2),sprite_type=ST_BOB|ST_HW_SPRITE)
+
+# it's too tempting to put barrel flame as a sprite, as there can only be 5 fireballs in level 2
+# the only problem is when player picks the hammer, there are palette conflicts, but it saves so
+# many blits that it's worth it, since problem only arises in very high levels that most people
+# won't see anyway.
+add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2],
+hw_sprite_level_mask=(1<<2),sprite_type=ST_BOB|ST_HW_SPRITE)  # barrel flame
 
 add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_BOB)
 add_sprite(0x44,"elevator",0x3,levels=[3],sprite_type=ST_HW_SPRITE)
