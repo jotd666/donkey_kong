@@ -23,13 +23,14 @@ vhq_sample_rate = 22050
 hq_sample_rate = 16000
 lq_sample_rate = 11025
 
+music_volume = 26
 
 EMPTY_SND = "EMPTY_SND"
 sound_dict = {
 # samples
 "BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
 "CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"DEAD_TUNE_SND"             :{"index":0x12,"pattern":0xE,"loops":False,"volume":32,"ticks":150},
+"DEAD_TUNE_SND"             :{"index":0x12,"pattern":0xE,"loops":False,"volume":music_volume+10,"ticks":150},
 "JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
 "START_SND"             :{"index":0x15,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
@@ -42,15 +43,15 @@ sound_dict = {
 # tunes match the MUS defines in donkey_kong.68k source
 "START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":40,"ticks":250},
 "LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":32,"ticks":150},
-"OUT_OF_TIME_TUNE_SND"              :{"index":3,"pattern":0xC,"loops":True,"volume":32},
-"HAMMER_TUNE_SND"              :{"index":4,"pattern":3,"loops":True,"volume":32},
+"OUT_OF_TIME_TUNE_SND"              :{"index":3,"pattern":0xC,"loops":True,"volume":music_volume},
+"HAMMER_TUNE_SND"              :{"index":4,"pattern":3,"loops":True,"volume":music_volume},
 "END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":40,"ticks":95},
-"END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":6,"loops":False,"volume":36},
-"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":8,"loops":False,"volume":36},
-"PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":4,"loops":True,"volume":32},
-"GIRDERS_TUNE_SND"                 :{"index":8,"pattern":10,"loops":True,"volume":32},
-"RIVET_TUNE_SND"                    :{"index":0xb,"pattern":0xB,"loops":True,"volume":32},
-"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":0xD,"loops":False,"volume":32,"ticks":155},
+"END_LEVEL_1_TUNE_SND"              :{"index":0xC,"pattern":6,"loops":False,"volume":music_volume+10},
+"END_LEVEL_2_TUNE_SND"              :{"index":0x5,"pattern":8,"loops":False,"volume":music_volume+10},
+"PIE_FACTORY_TUNE_SND"              :{"index":9,"pattern":4,"loops":True,"volume":music_volume},
+"GIRDERS_TUNE_SND"                 :{"index":8,"pattern":10,"loops":True,"volume":music_volume},
+"RIVET_TUNE_SND"                    :{"index":0xb,"pattern":0xB,"loops":True,"volume":music_volume},
+"DK_FALLS_TUNE_SND"              :{"index":0XE,"pattern":0xD,"loops":False,"volume":music_volume+10,"ticks":155},
 
 }
 
@@ -146,12 +147,12 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             maxsigned = max(signed_data)
             minsigned = min(signed_data)
 
-            amp_ratio = max(maxsigned,abs(minsigned))/64
+            amp_ratio = max(maxsigned,abs(minsigned))/127
 
             wav = os.path.splitext(wav_name)[0]
             volume = int(64*amp_ratio)
             # for this game I'm sticking all sounds to the max
-            volume = 64
+
             sound_table[sound_index] = "    SOUND_ENTRY {},{},{},{},{},{}\n".format(wav,len(signed_data)//2,channel,used_sampling_rate,volume,used_priority)
             sound_table_set[sound_index] = f"\t.word\t1,{int(details.get('loops',0))}\n\t.long\t{wav}_sound"
 
@@ -160,7 +161,11 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             else:
                 maxed_contents = signed_data
 
+            print("{}: ratio: {}, min: {}/128, max: {}/127".format(wav_name,amp_ratio,
+                                                    min(maxed_contents),max(maxed_contents)))
+
             signed_contents = bytes([x if x >= 0 else 256+x for x in maxed_contents])
+
             # pre-pad with 0W, used by ptplayer for idling
             if signed_contents[0] != b'\x00' and signed_contents[1] != b'\x00':
                 # add zeroes

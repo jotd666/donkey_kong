@@ -1,5 +1,11 @@
+- level 1 (not enough sprites 8+ barrels) => implement a BOB fallback in the engine
+
 minor:
 
 - four barrels not erased when dying at level 1 (sometimes?)
 - four barrels redraw: ok even if could be better optimized
 - dipswitches extra life at 7000 ...
+
+
+
+- check sounds on other games!
