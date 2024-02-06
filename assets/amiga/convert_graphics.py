@@ -131,6 +131,7 @@ add_sprite(0x14,"princess",10,mirror=True)  # used when donkey kong takes her un
 
 add_sprite(0x15,"barrel",11,mirror=True,flip=True,levels=[1],sprite_type=ST_HW_SPRITE)
 add_sprite_block(0x16,0x18,"barrel",11,mirror=True,levels=[1],sprite_type=ST_HW_SPRITE)
+
 add_sprite(0x18,"stashed_barrel",11,levels=[1])   # should be a special case to blit all 4 barrels, and only in some cases
 add_sprite(0x49,"oil_barrel",12,levels=[1,2])
 
@@ -168,6 +169,11 @@ add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
 add_sprite(0x46,"moving_ladder",0x3,levels=[2],sprite_type=ST_HW_SPRITE)
 
+# there are 10 barrels max so much more than allowed 8 HW sprites. Define backup BOBs
+# with fake sprite codes (original code + 0x50, which is not used) and pre-process
+# sprite list when copying it in the code
+add_sprite(0x65,"barrel",11,mirror=True,flip=True,levels=[1],sprite_type=ST_BOB)
+add_sprite_block(0x66,0x68,"barrel",11,mirror=True,levels=[1],sprite_type=ST_BOB)
 
 block_dict = {}
 
@@ -199,6 +205,12 @@ with open(os.path.join(this_dir,"..","dkong_gfx.c")) as f:
     if block:
         txt = "".join(block).strip().strip(";")
         block_dict[block_name] = {"size":size,"data":ast.literal_eval(txt)}
+
+# add the fake sprites to be able to switch from sprites to BOBs for barrels
+bd = block_dict["sprite"]["data"]
+
+for i in range(0x15,0x18):
+    bd[i+0x50] = bd[i]
 
 # block_dict structure is as follows:
 # dict_keys(['palette', 'clut', 'tile', 'sprite'])

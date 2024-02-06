@@ -1,11 +1,15 @@
-- level 1 (not enough sprites 8+ barrels) => implement a BOB fallback in the engine
+- problem when too many sprites (barrels) even if bobs should be displayed
+  after 8 sprites. Today this is eluded: if there's a problem then
+  last sprite won't be displayed. Hoping it's not noticeable or better:
+  reproduce it and fix it!
 
 minor:
 
-- four barrels not erased when dying at level 1 (sometimes?)
+- four barrels not erased when dying at level 1 (sometimes? out of time?)
 - four barrels redraw: ok even if could be better optimized
 - dipswitches extra life at 7000 ...
-
+- up the display 8 pixels
+- center display
 
 
 - check sounds on other games!

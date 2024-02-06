@@ -709,19 +709,51 @@ osd_break:
 
 
 osd_update_sprites:
-	* maybe should disable interrupts here
 	lea		sprite_buffer(pc),a1
 	move.w	#NB_TARGET_SPRITES-1,d7
+	cmp.b	#1,screen_number_6227
+	beq.b	1f
 0:
 	move.l	(a0)+,(a1)+
 	dbf		d7,0b
 	rts
+1:
+	moveq	#0,d2		| nb barrels
+2:
+	* special case for screen 1: there can be 10 barrels
+	* which is too much for our 8 sprites
+	* count how many barrels there are and if it's too much,
+	* change the last ones by BOB codes (+$50, fake defined)
+	move.l	(a0)+,d0
+	move.l	d0,d1
+	tst.b	d1
+	jeq		3f		| Y=0: skip
+	rol.l	#8,d1	| get X in byte position (the one which is zeroed by the game when hidden)
+	tst.b	d1
+	jeq		3f		| X=0 => skip
+	rol.l	#8,d1	| now sprite code is in byte position
+	bclr	#7,d1
+	cmp.b	#0x15,d1
+	bcs.b	3f
+	cmp.b	#0x18,d1
+	bcc.b	3f
+	* 0x15 <= code < 0x18: brown barrel
+	addq	#1,d2
+	cmp.b	#NB_HOST_SPRITES+1,d2
+	bcs.b	3f		| okay, not too many barrels
+	* 9 or more barrels : change the others to BOB type
+	* by adding 0x50 (as we faked 3 spare sprite codes
+	* when converting graphics)
+	swap	d0
+	add.b	#0x50,d0
+	swap	d0
+3:
+	move.l	d0,(a1)+
+	dbf		d7,2b
+	rts
 	
 really_update_sprites:
-*	eor		#1,sprite_toggle
-*	bne.b	0f
-*	rts
-*0:
+
 	*lea		test_sprites,a0
 	movem.l	a0-a6/d0-d7,-(a7)
 	* first, make sure we have the proper palette
@@ -732,9 +764,7 @@ really_update_sprites:
 	move.b	d0,palette_number
 	bsr		load_palette_in_copperlist
 1:
-	lea		sprite_buffer(pc),a0
 	bsr		update_hardware_sprites
-	lea		sprite_buffer(pc),a0
 	bsr		update_bobs
 	
 	movem.l	(a7)+,a0-a6/d0-d7
@@ -744,6 +774,7 @@ sprite_toggle:
 	dc.w	0
 	
 update_hardware_sprites:
+	lea		sprite_buffer(pc),a0
 	* clear host sprites
 	moveq	#NB_HOST_SPRITES-1,d0
 	
@@ -851,15 +882,17 @@ update_hardware_sprites:
 	move.l	(a4,d4.w),d4	| get pointer
 *   filtering of BOBs & attached sprites has been done
 *   above, let's trust the values to be valid
-	.ifndef	RELEASE
 	bne.b	25f
+	.ifdef	RELEASE
+	jra		30f
+	.else
 	* sprite doesn't exist: blitz and bail out
 	blitz
 	move.b	d1,d1
 	move.b	d2,d2
+	.endif
 	jra		30f
 25:
-	.endif
 	
 	move.l	d4,a5
 	move.w	d6,d4					| add sprite slot
@@ -989,16 +1022,18 @@ blit_four_barrels:
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
 	
+* not called very often, only when we quit screen 1
+* but sometimes there are background tiles so simple erase
+* doesn't cut it! (title after demo)
+* it's not time critical as it's not called often, and not in-game
 erase_four_barrels:
 	movem.l	d0-d7/a0-a3/a5,-(a7)
-	lea		_custom,a5                                             | speedup kludge
-	move.l	bg_drawed_screen_ptr(pc),a1                            | speedup kludge
 	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
 	move.w	#FOUR_BARRELS_Y,d1                                     | speedup kludge
-	moveq	#4,d2			| 32 pixels                            | speedup kludge
-	moveq	#NB_PLAYFIELD_PLANES,d3                                | speedup kludge
-	moveq	#32,d4			| 32 pixels                            | speedup kludge
-	bsr		clear_planes_any_blitter_internal                      | speedup kludge
+	bsr		restore_16x_background									| speedup kludge
+	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
+	move.w	#FOUR_BARRELS_Y+16,d1                                     | speedup kludge
+	bsr		restore_16x_background
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
 	
@@ -1007,6 +1042,7 @@ erase_four_barrels:
 update_bobs:
 	move.l		bob_previous_drawed_sprites(pc),a4
 	lea			sprite_buffer(pc),a3
+	move.l	a3,a0
 	lea			hardware_sprite_flag_table,a2
 	
 	clr.b	climbing_kong_present									| speedup kludge
@@ -1514,7 +1550,7 @@ process_1_plane:
 * < D0: sprite X
 * < D1: sprite Y
 * < D2: sprite code & flags
-* < D3: sprite color (clut index)
+* < D3: sprite color (clut index, no flip information)
 * > D6: allocated sprite index
 alloc_sprite:
 	* first pass: find a free sprite next to a sprite with
@@ -1541,7 +1577,7 @@ alloc_sprite:
 	move.b	d0,(a2)+		| X
 	move.b	d1,(a2)+		| Y
 	move.b	d2,(a2)+		| code
-	move.b	d3,(a2)+		| clut
+	move.b	d3,(a2)+		| clut (no flip information)
 	rts						| done
 1:
 	* even: check if next entry is free
@@ -1589,16 +1625,8 @@ alloc_sprite:
 	bne.b	11b
 	
 	* third pass: last chance/emergency: there ARE free slots
-	* (since only 6 sprites on the target) but maybe too many
-	* different cluts so we can't find a suitable slot. In that
-	* case, pick the first free slot, we'll handle the color changes
-	* with a dynamic copperlist, let's hope that it works out
-	* (only happens in demo screens)
-	*
-	* the strategy globally works because during game, all 4 enemies
-	* share the same palette. donkey_kong uses another one, and ice block
-	* another one too. Blinking stunned enemies can be a problem
-	* because of the extra blue color
+	* but maybe too many different cluts so we can't find a suitable slot.
+	* In that case, pick the first free slot
 	*
 	lea		host_sprites(pc),a2
 	moveq	#0,d6
@@ -1614,11 +1642,14 @@ alloc_sprite:
 	cmp.w	#NB_HOST_SPRITES,d6
 	bne.b	21b
 	* just cannot happen
-	* if we reach that point there's a big problem
-	blitz
-	illegal
-	illegal
-	illegal
+	* if we reach that point there's a big problem, break if dev mode
+	* hopefully if we save buffer in A1 we can reproduce the issue at will!
+	.ifndef	RELEASE
+	lea			sprite_buffer(pc),a1
+	lea			sprite_allocation_error,a0
+	jbsr	osd_break
+	.endif
+	* in release mode, just discard this sprite, maybe we'll get away with it!
 	rts
 	
 	.ifndef		RELEASE
@@ -2457,20 +2488,7 @@ osd_read_in_1:
 	moveq	#-1,d0
 	rts
 	
-* zero inputs if several directions are pressed
-correct_inputs:
-	move.l	a0,-(a7)
-	lea		input_table(pc),a0
-	tst.b	(a0,d0.w)
-	bne.b	0f
-	moveq	#0,d0
-0:
-	move.l	(a7)+,a0
-	rts
-	
-input_table:
-	dc.b	0,1,1,0,1,0,0,0
-	dc.b	1,0,0,0,0,0,0,0
+
 
 osd_read_in_0:
 	moveq	#0,d0
@@ -2511,9 +2529,6 @@ osd_read_in_0:
 	beq.b	0f
 	bset	#0,d0
 0:
-	* if more than 1 key pressed, then no key is pressed
-	* like in the arcade
-	bsr		correct_inputs
 	
 	* jump
 	

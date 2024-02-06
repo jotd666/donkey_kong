@@ -1824,8 +1824,19 @@ l_0259_2:
 	jbsr	ldir                              	| [$0263: ldir] copy high score table into RAM
 	
 	* now is a good time to try to load saved highscores if they exist
-	lea	high_score_ram_6100,a0         	| [$025d: ld      de,high_score_ram_6100] dest = #6100 = high score RAM
+	lea	high_score_ram_6100,a0
 	jbsr	osd_read_high_scores
+	* copy high score to the highest score displayed on top
+	lea	high_score_60ba+1,a1     
+	lea	high_score_ram_6100+7,a0 	| highest score int the table
+	moveq	#2,d0
+0:
+	move.b	(a0)+,d1
+	lsl.b	#4,d1
+	move.b	(a0)+,d2
+	or.b	d2,d1
+	move.b	d1,-(a1)
+	dbf		d0,0b
 	rts                                    	| [$0265: ret] return
 
 * come here from game power-on
@@ -8553,10 +8564,19 @@ update_barrel_variables_239c:
 	move.b	d0,d5                           	| [$23bb: ld      h,a] store into H
 	move.b	(0x14,a2),d0                    	| [$23bc: ld      a,(ix+$14)] load +14 = mirror of modified Y position?.  used for jump counter when mario jumps
 	CLEAR_XC_FLAGS                               	| [$23bf: and     a] clear flags
-	roxl.b	#1,d0                           	| [$23c0: rla] rotate left (mult by 2)
-	addq.b	#1,d0                           	| [$23c1: inc     a] add 1
 	clr.b	d1                               	| [$23c2: ld      b,$00] B := 0
-	roxl.b	#1,d1                           	| [$23c4: rl      b]
+	roxl.b	#1,d0                           	| [$23c0: rla] rotate left (mult by 2)
+	bcc.b	0f
+	addq.b	#1,d0                           	| [$23c1: inc     a] add 1
+	bset	#0,d1		| simulate [rl  b] at 23c4 when carry/X is set 
+	                    | (addq changes/clears X value whereas inc does not
+						| I don't know if it changes something visible
+						| but it should be more faithful to the original code
+	bra.b	1f
+0:
+	addq.b	#1,d0                           	| [$23c1: inc     a] just add 1
+1:
+												| [$23c4: rl      b]
 	asl.b	#1,d0                            	| [$23c6: sla     a]
 	roxl.b	#1,d1                           	| [$23c8: rl      b]
 	asl.b	#1,d0                            	| [$23ca: sla     a]

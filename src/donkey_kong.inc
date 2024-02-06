@@ -22,7 +22,7 @@
 	OPT_START_LEVEL=1              | LEAVE AT 1!!!
 	OPT_START_SCREEN=1              | LEAVE AT 1!!!
 
-	NB_BARRELS = 8		| DON'T CHANGE! TEMP 8 should be 10
+	NB_BARRELS = 10		| DON'T CHANGE!
 	NB_FIRES = 5		| DON'T CHANGE!
 	NB_PIES = 6			| DON'T CHANGE!
 	NB_FIREFOXES = 7	| DON'T CHANGE! (looks too much should be 5)
@@ -36,7 +36,7 @@
    
 	* permanent cheats/hacks to test game
     * score is BCD format
-	NB_BARRELS = 8
+	NB_BARRELS = 10
 	NB_FIRES = 5
 	NB_PIES = 6
 	NB_FIREFOXES = 7	| DON'T CHANGE!
