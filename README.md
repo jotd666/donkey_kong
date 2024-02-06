@@ -18,17 +18,17 @@ Features:
 
 Instructions:
 
-keys+CTRL or joystick: controls
-5 or fire: insert coin
-1 or joy up: start 1P game
-2 or joy down: start 2P game
-P: pause/unpause
-Q: quit current game
-ESC: return to DOS
+keys+<kbd>CTRL</kbd> or joystick: controls\
+<kbd>5</kbd> or fire: insert coin\
+<kbd>1</kbd> or joy up: start 1P game\
+<kbd>2</kbd> or joy down: start 2P game\
+<kbd>P</kbd>: pause/unpause\
+<kbd>Q</kbd>: quit current game\
+<kbd>ESC</kbd>: return to DOS
 
 Cheat keys:
 
-F1: skip level
-F2: get hammer
-F3: add 1000 points
+<kbd>F1</kbd>: skip level\
+<kbd>F2</kbd>: get hammer\
+<kbd>F3</kbd>: add 1000 points
 
