@@ -254,6 +254,16 @@ _user:
 	subq	#1,d0
 	move.l	d0,start_level_option
 2:
+	move.l	(A0)+,D0	| SKIPINTRO/S/S
+	beq.b	2f
+	* cheat isn't used as long as no cheat key is used
+	bset	#0,misc_options+3
+2:
+	move.l	(A0)+,D0	| CRAZYKONGLEVELS/S
+	beq.b	2f
+	* cheat isn't used as long as no cheat key is used
+	bset	#1,misc_options+3
+2:
 	lea		_custom,a5
 	lea		debug_copperlist,a0
 	move.l	a0,cop1lc(a5)
@@ -327,6 +337,8 @@ _user:
 	.endif
 	btst	#0,d1
 	sne		skip_introduction_flag
+	btst	#1,d1
+	sne		crazy_kong_levels_order_flag
 
 
 	move.l	start_level_option,d0
@@ -501,6 +513,11 @@ osd_set_vblank_return_address:
 	
 get_hiscore_name:
     lea normal_hiscorename,a0
+	tst.b	crazy_kong_levels_order_flag
+	beq.b	0f
+	* not the same levels => not the same highscore table
+	lea	alt_hiscorename,a0
+0:
 	rts
 	
 load_highscores:
@@ -2683,9 +2700,9 @@ handle_keyboard:
 0:
 	.ifndef	RELEASE
 	* cheat but not very rewarding as it triggers a "hurry up!"
-	cmp.b	#0x58,d0	| F9 key
+	cmp.b	#0x57,d0	| F8 key
 	bne.b	0f
-	move.b	#9,onscreen_timer_638c
+	move.b	#2,onscreen_timer_638c
 	move.w	#0x0FF,_custom+color
 	.endif
 0:
@@ -2757,7 +2774,7 @@ program_args_end:
 read_args_string:
 	.byte	read_args_string_end-read_args_string
 	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
-	.ascii	"CHEATKEYS/S,STARTLIVES/K/N,STARTLEVEL/K/N"
+	.ascii	"CHEATKEYS/S,STARTLIVES/K/N,STARTLEVEL/K/N,SKIPINTRO/S,CRAZYKONGLEVELS/S"
 read_args_string_end:
 	.align	2
 
@@ -2930,6 +2947,8 @@ graphicsname:
 	.byte	0
 normal_hiscorename:
 	.asciz	"donkey_kong.high"
+alt_hiscorename:
+	.asciz	"crazy_kong.high"
 floppy_file:
 	.ascii	"floppy"
 	.byte	0

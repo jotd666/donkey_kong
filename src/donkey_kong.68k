@@ -1257,7 +1257,7 @@ donkey_kong_reset:
 	tst.b	break_at_startup_flag
 	beq.b	0f
 	* put anything here that you need to track addresses
-	
+	lea		number_of_goofys_to_draw_622e,a0
 	jbsr	osd_break
 	.endif
 0:
@@ -3365,7 +3365,7 @@ l_0919:
 	move.b	startinglives_6020,d0           	| [$0922: ld      a,(startinglives_6020)] load initial number of lives
 	move.b	d0,(a1)+                         	| [$0925: ld      (de),a] store into number of lives player 2
 											| [$0926: inc     e] DE := Unk6049
-	lea	l_095e,a0                      	| [$0927: ld      hl,$095e] load HL with source data table start
+	bsr		get_level_pointer_table
 	move.w	#0x07,d1                        	| [$092a: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$092d: ldir] copy #095E into Unk6049 for 7 bytes
 	move.w  #0x0101,d3                      	| [$092f: ld      de,$0101] load task #1, parameter 1.  clears player 1 and 2 scores and displays them.
@@ -3381,7 +3381,7 @@ l_0938:
 	move.b	startinglives_6020,d0           	| [$0941: ld      a,(startinglives_6020)] number of initial lives set with dip switches (3, 4, 5, or 6)
 	move.b	d0,(a1)+                         	| [$0944: ld      (de),a] store into number of lives
 	                           	| [$0945: inc     e] DE := Unk6041
-	lea	l_095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
+	bsr		get_level_pointer_table
 	move.w	#0x07,d1                        	| [$0949: ld      bc,$0007] counter = 7 7
 	jbsr	ldir                              	| [$094c: ldir] copy #095E into Unk6041 for 7 bytes
 	move.w  #0x0100,d3                      	| [$094e: ld      de,$0100] load task #1, parameter 0.  clears player 1 score and displays it
@@ -3392,23 +3392,36 @@ l_0938:
 	move.b	d0,gamemode1_6005               	| [$095a: ld      (gamemode1_6005),a] store into game mode1
 	rts                                    	| [$095d: ret] return
 
+get_level_pointer_table:
+	lea	level_pointer_table_095e,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
+	tst.b	crazy_kong_levels_order_flag
+	beq.b	0f
+	lea	level_pointer_table_crazy_kong,a0                      	| [$0946: ld      hl,$095e] load HL with start of table data
+0:
+	rts
+	
 * table data use in code above - gets copied to Unk6041 to Unk6041+7
 
 * OPT_START_LEVEL is 1, but can be set to 2 to test second screen
 * as elevators, or 3 to test second screen as "pie factory"
-l_095e:
+level_pointer_table_095e:
 	.ifeq	OPT_START_LEVEL-1
 	.byte	0x01,0x65
 	.else
 		.ifeq	OPT_START_LEVEL-2
-		.byte	0x02,0x67              | #3A65 is start of table data for screens/levels	
+		.byte	0x02,0x67              | #3A67 is start of table data for screens/levels	
 	    .else
-		    .byte	0x03,0x6A              | #3A65 is start of table data for screens/levels	
+		    .byte	0x03,0x6A              | #3A6A is start of table data for screens/levels	
 		.endif
 	.endif
 	
 	.byte	0x3A,0x01,0x00,0x00,0x00              | #3A65 is start of table data for screens/levels
 	
+level_pointer_table_crazy_kong:
+	.byte	OPT_START_LEVEL,0x50,0x30
+	* 1 is 25m
+	.byte	0x01,0x00,0x00,0x00
+
 	.align	2
 * called from #08CB
 
@@ -12681,18 +12694,19 @@ l_3A5F:
 * code 1 = girders, 4 = rivets, 2 = pies, 3 = elevators
 * used from #1947 and from #1799 and from #09BA
 
-l_3A65:
-	.byte	0x01,0x04                    | level 1
-l_3A67:
-	.byte	0x01,0x03,0x04                 | level 2
-l_3A6A:
-	.byte	0x01,0x02,0x03,0x04              | level 3
-l_3A6E:
-	.byte	0x01,0x02,0x01,0x03,0x04           | level 4
-l_3A73:
-	.byte	0x01,0x02,0x01,0x03,0x01,0x04        | level 5 +
-l_3A79:
-	.byte	0x7F                       | end code
+*level_table_1_3A65:
+*	.byte	0x01,0x04                    | level 1
+*level_table_2_3A67:
+*	.byte	0x01,0x03,0x04                 | level 2
+*level_table_3_3A6A:
+*	.byte	0x01,0x02,0x03,0x04              | level 3
+*level_table_4_3A6E:
+*	.byte	0x01,0x02,0x01,0x03,0x04           | level 4
+*level_table_5_3A73:
+*	.byte	0x01,0x02,0x01,0x03,0x01,0x04        | level 5 +
+*l_3A79:
+*	.byte	0x7F                       | end code
+
 
 * table data referenced in #3267
 

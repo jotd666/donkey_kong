@@ -16,6 +16,7 @@
 	.global sprite_ram
 	.global in_intro_flag
 	.global skip_introduction_flag
+	.global crazy_kong_levels_order_flag
 	.global reg_music
 	.global reg_sfx
 	.global	reg_sfx_death
@@ -91,6 +92,8 @@ current_ticks_count:
 break_at_startup_flag:
 	.byte	0
 	.endif
+crazy_kong_levels_order_flag:
+	.byte	0
 	.align	2
 regscopy:
 	ds.b	64
