@@ -2,8 +2,6 @@
   after 8 sprites. Today this is eluded: if there's a problem then
   last sprite won't be displayed. Hoping it's not noticeable or better:
   reproduce it and fix it!
-- four barrels not erased when dying at level 1 (sometimes? out of time: add key to timeout)
-- F8 timeout "cheat" doesn't work
 
 minor:
 

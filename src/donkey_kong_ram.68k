@@ -20,6 +20,8 @@
 	.global reg_music
 	.global reg_sfx
 	.global	reg_sfx_death
+	.global	erase_four_barrels_flag
+	.global	four_barrels_present
 	
 	.ifdef	__amiga__
 	
@@ -53,6 +55,11 @@ reg_sprite:
 reg_sfx:
 	ds.b	8
 reg_sfx_death:
+	ds.b	1
+	* only for amiga: tell game to erase the 4 barrels
+erase_four_barrels_flag:
+	ds.b	1
+four_barrels_present:
 	ds.b	1
 	.align	2
 *VARIABLES_START:

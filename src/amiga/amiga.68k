@@ -15,6 +15,10 @@ AFB_68010 = 0
 AFB_68020 = 1
 NO68020 = 1
 
+
+PREVIOUS_SPRITE_SIZE = 6
+CURRENT_SPRITE_SIZE = 4
+
 SPRITE_Y_CORRECTION = 0
 SPRITE_X_CORRECTION = 1
 
@@ -35,7 +39,7 @@ TARGET_SPRITE_X = 0   | this is Y in the original code, set 0 to hide sprite
 TARGET_SPRITE_ATTRIBUTES = 2
 TARGET_SPRITE_CODE = 1
 TARGET_SPRITE_Y = 3
-
+ACTIVE_BITPLANE_MASK = 4   | for optimized bitplane erase
 
 
 	.ifdef	RELEASE
@@ -1047,9 +1051,11 @@ erase_four_barrels:
 	movem.l	d0-d7/a0-a3/a5,-(a7)
 	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
 	move.w	#FOUR_BARRELS_Y,d1                                     | speedup kludge
+	st		d2
 	bsr		restore_16x_background									| speedup kludge
 	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
 	move.w	#FOUR_BARRELS_Y+16,d1                                     | speedup kludge
+	st		d2
 	bsr		restore_16x_background
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
@@ -1068,6 +1074,15 @@ update_bobs:
 	* clear previous positions
 	moveq	#NB_TARGET_SPRITES-1,d7
 	move.b		screen_number_6227,d6		| we need the screen number to display sprites or bobs!
+	tst.b	erase_four_barrels_flag
+	beq.b	1f
+	* kuldge of the kludges!!!
+	* if erase_four_barrels_flag, clear all backgrounds even sprites
+	* this avoids that oil barrel flame is not erased because it becomes
+	* a sprite from level 1 to level 2!!
+	* this is slower but just briefly, and the game is not running at this point
+	* ("how high can you get" screen set it)
+	clr		d6
 1:
 	moveq	#0,d0
 	move.b	(TARGET_SPRITE_X,a4),d0
@@ -1105,11 +1120,12 @@ update_bobs:
 	.endif
 	.ifne	SPRITE_X_CORRECTION
 	add.w	#SPRITE_X_CORRECTION,d0
-	.endif	
+	.endif
+	move.b	(ACTIVE_BITPLANE_MASK,a4),d2
 	bsr		restore_16x_background
 11:
-	addq	#4,a4
-	addq	#4,a3
+	addq	#PREVIOUS_SPRITE_SIZE,a4
+	addq	#CURRENT_SPRITE_SIZE,a3
 	dbf		d7,1b
 	
 	
@@ -1165,13 +1181,13 @@ update_bobs:
 
 	move.b		screen_number_6227,d4
 	btst	d4,(a2,d2.w)
-	bne.b	211f			| hardware sprite for this level: skip
+	jne	211f			| hardware sprite for this level: skip
 	
 	move.w	d2,d4
 	add.w	d4,d4
 	add.w	d4,d4
 	move.l	(a4,d4.w),d4	| test pointer
-	bmi.b	211f			| hardware sprite: skip
+	jmi		211f			| hardware sprite: skip
 	bne.b	11f
 	* not known/registered: we should log that!
 	move.w	#0xF00,0xDFF180
@@ -1224,19 +1240,36 @@ update_bobs:
 	add.w	#SPRITE_X_CORRECTION,d0
 	.endif
 
-	move.l	a5,-(a7)
+	movem.l	d7/a5,-(a7)
 
+	* check if bitplanes are zeroed
+	* note: only checks 4 bitplanes
+	* must be adapted if 5 bitplanes or more!
+	.ifne	NB_PLAYFIELD_PLANES-4
+	.error	"must adapt for nb bitplanes != 4"
+	.endif
+	st		d7		| default: all bitplanes are to be erased/restored
+					| 2 first bitplanes needs restoring no matter what (tiles)
+	tst		(8,a0)
+	bne.b	503f
+	bclr	#0,d7
+502:
+	tst		(12,a0)
+	bne.b	503f
+	bclr	#1,d7
+503:
+	move.b	d7,(ACTIVE_BITPLANE_MASK,a6)		| store bitplane redraw mask
 	tst.b	d5
 	bne.b	14f
 
 	bsr		blit_planes_cookie_cut_16x
 21:
-	move.l	(a7)+,a5
+	movem.l	(a7)+,d7/a5
 22:
 	move.l	(a7)+,a0
 211:
-	addq.w	#4,a0
-	addq.w	#4,a6		| next previous sprite pos
+	addq	#CURRENT_SPRITE_SIZE,a0
+	addq	#PREVIOUS_SPRITE_SIZE,a6		| next previous sprite pos
 	dbf		d7,1b
 	
 	* in the end, blit 4 upper barrels if required
@@ -1247,7 +1280,13 @@ update_bobs:
 	* except maybe blue barrel, in which case we'll clear the four_barrels_drawn
 	* flag (we have to check this blue barrel in sprites to eraseprior loop)
 	bsr		blit_four_barrels
-300:	
+300:
+	tst.b	erase_four_barrels_flag
+	beq.b	301f
+	subq.b	#1,erase_four_barrels_flag
+	bsr		erase_four_barrels
+301:
+	rts
 	rts
 	* rarer case: blit upside down (kong falling)
 14:
@@ -1259,11 +1298,14 @@ update_bobs:
 * args:
 * < D0: X (rounded to smaller 8-multiple)
 * < D1: Y
+* < D2: bitplane restore mask. If all zeroes restore nothing
+*       if all ones restore all bitplanes
 
 * trashes: D0-D1
 
 restore_16x_background:
-	movem.l	d2-d6/a0-a5,-(a7)
+	movem.l	d2-d7/a0-a5,-(a7)
+	move.b	d2,d7					| plane restore bits in d7
 	lea		bg_background_data,a0		| copy of tiles
 	lea		_custom,a5
 	move.l	bg_drawed_screen_ptr(pc),a1
@@ -1298,31 +1340,38 @@ restore_16x_background:
 
     move.w  d1,bltamod(a5)	|A modulo
     move.w  d1,bltdmod(a5)	|D modulo
-							
+
+						
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-	
+
 	lea	(BG_SCREEN_PLANE_SIZE,a0),a0
 	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
+
 	WAIT_BLIT
 	* second bitplane
 	move.l a0,bltapt(a5)	|source graphic top left corner
 	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
-
+201:
 	.rept	NB_PLAYFIELD_PLANES-2
 	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
     move.l  #0x01000000,d3    | minterm useD & rect clear (0xA) 
+	* optimize erase for remaining bitplanes
+	lsr.b	#1,d7
+	jcc		202f
+	
 	WAIT_BLIT
 	* now simply erase the 3 other planes
 	move.l d3,bltcon0(a5)	
 	move.l a1,bltdpt(a5)	|destination top left corner
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+202:
 	.endr
 	
 	
-	movem.l	(a7)+,d2-d6/a0-a5
+	movem.l	(a7)+,d2-d7/a0-a5
 	rts
 
 
@@ -1516,8 +1565,7 @@ blit_planes_any_internal_cookie_cut:
 
 	clr.w bltamod(a5)		|A modulo=bytes to skip between lines
 	clr.w bltbmod(a5)		|B modulo=bytes to skip between lines
-	move.l d5,bltcon0(a5)	| sets con0 and con1: full cookie cut 2 sources & 1 mask
-	move.l	d5,d7			| save bltcon
+	move.l	d5,d7			| save cookie cut bltcon
 	move.w	(a7)+,d5
 	
     move.w  d0,bltcmod(a5)	|C modulo
@@ -2250,6 +2298,8 @@ update_bg_tile:
 	add.w	d7,a3
 	.endif
 
+	WAIT_BLIT
+
 	* optimization when a well-known
 	* empty character is passed (standard charset)
 	cmp.b	#0x10,d0
@@ -2702,7 +2752,10 @@ handle_keyboard:
 	* cheat but not very rewarding as it triggers a "hurry up!"
 	cmp.b	#0x57,d0	| F8 key
 	bne.b	0f
-	move.b	#2,onscreen_timer_638c
+	move.b	#2,onscreen_timer_638c			| this doesn't really timeout only sets alert music
+	move.b	#2,initial_clock_value_62b0	   | those values kill the player if too low
+	move.b	#2,initial_clock_value_62b0+1
+	move.b	#2,initial_clock_value_62b0+2
 	move.w	#0x0FF,_custom+color
 	.endif
 0:
@@ -2828,8 +2881,7 @@ palette_number:
 	.word	0
 four_barrels_drawn:
 	.byte	0
-four_barrels_present:
-	.byte	0
+
 climbing_kong_present:
 	.byte	0
 skip_screen_update:
@@ -2959,10 +3011,10 @@ _end_of_ng_code:
 	.align 2
 
 sprite_buffer:
-	ds.l	NB_TARGET_SPRITES
+	ds.b	NB_TARGET_SPRITES*CURRENT_SPRITE_SIZE
 	
 bob_previous_positions_1:
-	ds.l	NB_TARGET_SPRITES
+	ds.b	NB_TARGET_SPRITES*PREVIOUS_SPRITE_SIZE
 bob_previous_drawed_sprites:
 	.long	bob_previous_positions_1
 bob_previous_displayed_sprites:
@@ -2971,7 +3023,7 @@ bob_previous_displayed_sprites:
 	.else
 	.long	bob_previous_positions_2	
 bob_previous_positions_2:
-	ds.l	NB_TARGET_SPRITES	
+	ds.b	NB_TARGET_SPRITES*PREVIOUS_SPRITE_SIZE	
 	.endif
 	
 palette:

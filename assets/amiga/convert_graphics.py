@@ -298,8 +298,13 @@ for level in [1,2,3,4]:
     colors = sorted(colors)
     if len(colors)>12:
         raise Exception("Too many colors, must be <=12")
+
+
+
     # pad (some levels have even less colors)
     colors = colors + [fake_4_color_palette[0]]*(12-len(colors))
+
+
     # start by fake colors (black first, then 3 colors not in palette to be sure
     # bitplane conversion won't pick them (used for tile dynamic colors only!)
     level_palette[level] = fake_4_color_palette + colors
@@ -318,6 +323,21 @@ screen_palette = {x:base_palette.copy() for x in [1,2,3,4]}
 screen_1_color_9 = screen_palette[3][9]
 screen_palette[3][9] = screen_3_color_9   # only 2 color changes
 screen_palette[3][5] = (0x90,0x00,0x00)  # only 2 color changes
+
+#
+# unfortunately this corrupts palette. I have no time for that shit!
+#
+##for colors in screen_palette.values():
+##    # reorganize color order so objects with clut 1 (fireballs)
+##    # so fireballs have more empty bitplanes and are faster to draw
+##    # at stage 1 (girders). On other stages they're sprites so it doesn't matter
+##    # but mario sprite also benefits from this reordering
+##    # (check bitplane list in graphics.68k for instance mario_00_2)
+##
+##    for i,col in zip((4,8,12),get_sprite_clut(1)[1:]):
+##        j = colors.index(col)
+##        if i!=j:
+##            swap(colors,i,j)
 
 # dump cluts as RGB4 for sprites
 with open(os.path.join(src_dir,"palette_cluts.68k"),"w") as f:

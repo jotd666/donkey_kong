@@ -60,7 +60,7 @@
 	.global	copy_of_player_score_61c7
 	.global	mario_array_6200
 	.global	put_back_6202
-	.global	jump_if_bit_7_of_mario_x_position_is_set_6203
+	.global	mario_x_position_6203
 	.global	unknown_6204
 	.global	mario_y_position_6205
 	.global	unknown_6206
@@ -388,7 +388,7 @@ mario_array_6200:
 	ds.b	2
 put_back_6202:
 	ds.b	1
-jump_if_bit_7_of_mario_x_position_is_set_6203:
+mario_x_position_6203:
 	ds.b	1
 unknown_6204:
 	ds.b	1

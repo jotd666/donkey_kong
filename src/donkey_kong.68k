@@ -1411,10 +1411,10 @@ update_kong_sprites_004e:
 
 random_0057:
 	move.b	rngtimer1_6018,d0               	| [$0057: ld      a,(rngtimer1_6018)] load A with timer
-	lea	framecounter_601a,a0           	| [$005a: ld      hl,framecounter_601a] load HL with other timer address
-	add.b	(a0),d0                          	| [$005d: add     a,(hl)] add
-	lea	rngtimer2_6019,a0              	| [$005e: ld      hl,rngtimer2_6019] load HL with yet another timer address
-	add.b	(a0),d0                          	| [$0061: add     a,(hl)] add
+									| [$005a: ld      hl,framecounter_601a] load HL with other timer address
+	add.b	framecounter_601a,d0                          	| [$005d: add     a,(hl)] add
+										| [$005e: ld      hl,rngtimer2_6019] load HL with yet another timer address
+	add.b	rngtimer2_6019,d0                          	| [$0061: add     a,(hl)] add
 	move.b	d0,rngtimer1_6018               	| [$0062: ld      (rngtimer1_6018),a] store
 	rts                                    	| [$0065: ret] return
 
@@ -2382,7 +2382,7 @@ l_04be:
 	btst.b	#6,d2                           	| [$04cc: bit     6,c] check timer bit 6.  zero?
 	jeq	l_0509                             	| [$04ce: jp      z,$0509] yes, skip ahead
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$04d1: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
+	move.b	mario_x_position_6203,d0	| [$04d1: ld      a,(mario_x_position_6203)] load A with mario X position
 	cmp.b	#0x80,d0                         	| [$04d4: cp      $80] is mario on left side of screen ?
 	jcc	l_04f1                             	| [$04d6: jp      nc,$04f1] yes, skip ahead
 
@@ -2414,7 +2414,7 @@ l_04f9:
 * jump from #04CE
 
 l_0509:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$0509: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
+	move.b	mario_x_position_6203,d0	| [$0509: ld      a,(mario_x_position_6203)] load A with mario X position
 	cmp.b	#0x80,d0                         	| [$050c: cp      $80] is mario on left side of screen?
 	jcc	l_04f9                             	| [$050e: jp      nc,$04f9] yes, jump back
 
@@ -3884,6 +3884,13 @@ store_d2_in_video_ram:
 * draws goofy kongs and 25m, 50m, etc.
 * plays music
 height_pre_level_screen_0bda:
+
+	* amiga specific, graphical kludge
+	.ifdef	__amiga__
+	move.b	#2,erase_four_barrels_flag
+	clr.b	four_barrels_present
+	.endif
+	
 	jbsr	clear_all_sounds_011c                            	| [$0bda: call    $011c] clear all sounds
 	jbsr	rst_18                            	| [$0bdd: rst     $18] count down timer and only continue here if zero, else RET
 
@@ -6374,7 +6381,7 @@ l_18c6:
 	move.b	d0,mario_sprite_value_694d      	| [$18f5: ld      (mario_sprite_value_694d),a] store into mario sprite value
 	move.b	#0x9f,d0                        	| [$18f8: ld      a,$9f] A := #9F
 	move.b	d0,mario_sprite_x_position_694c 	| [$18fa: ld      (mario_sprite_x_position_694c),a] set mario sprite X value at #9F
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$18fd: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
+	move.b	mario_x_position_6203,d0	| [$18fd: ld      a,(mario_x_position_6203)] load A with mario X position
 	cmp.b	#0x80,d0                         	| [$1900: cp      $80] < 80 ?
 	jcc	l_190f                             	| [$1902: jp      nc,$190f] yes, skip next 4 steps
 
@@ -6412,7 +6419,7 @@ l_1920:
 	move.b	#0x76,-(a0)                      	| [$192c: ld      (hl),$76] set heart sprite
                            	| [$192e: dec     hl] decrement HL
 	move.b	#0x8f,-(a0)                      	| [$192f: ld      (hl),$8f] set heart sprite X position
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1931: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
+	move.b	mario_x_position_6203,d0	| [$1931: ld      a,(mario_x_position_6203)] load A with mario X position
 	cmp.b	#0x80,d0                         	| [$1934: cp      $80] is mario on the left side of the screen?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$1936: ret     nc] yes, return [...]
@@ -6518,7 +6525,7 @@ l_19d2:
 * checks for bonus items being picked up
 
 check_bonus_items_pick_19da:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$19da: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
+	move.b	mario_x_position_6203,d0	| [$19da: ld      a,(mario_x_position_6203)] load A with Mario's X position
 	move.b	#0x03,d1                        	| [$19dd: ld      b,$03] for B = 1 to 3
 	lea	start_of_bonus_items_6a0c,a0   	| [$19df: ld      hl,start_of_bonus_items_6a0c] load HL with X position of first bonus
 
@@ -6607,7 +6614,7 @@ check_running_over_rivets_1a33:
 	move.b	#0x08,d0                        	| [$1a33: ld      a,$08] A := 8 = 1000 binary = code for rivets
 	jbsr	only_continues_if_given_level_0030                            	| [$1a35: rst     $30] continue here only on rivets, else RET
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1a36: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1a36: ld      a,(mario_x_position_6203)] load A with mario's X position
 	cmp.b	#0x4b,d0                         	| [$1a39: cp      $4b] == #4B = the column the left rivets are on ?
 	jeq	l_1a4b                             	| [$1a3b: jp      z,$1a4b] yes, skip ahead and set the indicator
 
@@ -6652,7 +6659,7 @@ l_1a69:
 
 	bset.b	#1,d1                           	| [$1a70: set     1,b] else set this bit
 l_1a72:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1a72: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1a72: ld      a,(mario_x_position_6203)] load A with mario's X position
 	rol.b	#1,d0                            	| [$1a75: rlca] rotate left
 	jcc	l_1a7b                             	| [$1a76: jp      nc,$1a7b] no carry, skip next step
 
@@ -6772,7 +6779,7 @@ l_1afe:
 	move.b	mario_y_position_6205,d0	| [$1b03: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x08,d0                         	| [$1b06: add     a,$08] Add 8
 	move.b	d0,d3                           	| [$1b08: ld      d,a] copy into D
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1b09: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
+	move.b	mario_x_position_6203,d0	| [$1b09: ld      a,(mario_x_position_6203)] load A with Mario's X position
 	or.b	#0x03,d0                          	| [$1b0c: or      $03] turn on left 2 bits (0 and 1)
 	bclr.b	#2,d0                           	| [$1b0e: res     2,a] turn off bit 2
 	move.w	#0x15,d1                        	| [$1b10: ld      bc,$0015] load BC with #15 = number of ladders to check 21
@@ -6916,7 +6923,7 @@ l_1b8a:
 
 l_1bb2:
 	lea	mario_array_6200,a2            	| [$1bb2: ld      ix,mario_array_6200] load IX with start of array for mario
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1bb6: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1bb6: ld      a,(mario_x_position_6203)] load A with mario's X position
 	move.b	d0,(0x0b,a2)                    	| [$1bb9: ld      (ix+$0b),a] store into +B
 	move.b	mario_y_position_6205,d0	| [$1bbc: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	move.b	d0,(0x0c,a2)                    	| [$1bbf: ld      (ix+$0c),a] store into +C = #620C = jump height
@@ -7107,7 +7114,7 @@ l_1cc2:
 	jra	update_mario_sprite_1da6                             	| [$1ccf: jp      $1da6] jump ahead to update mario sprite and RET
 
 l_1cd2:
-	lea	jump_if_bit_7_of_mario_x_position_is_set_6203,a0	| [$1cd2: ld      hl,jump_if_bit_7_of_mario_x_position_is_set_6203] load HL with mario X position address
+	lea	mario_x_position_6203,a0	| [$1cd2: ld      hl,mario_x_position_6203] load HL with mario X position address
 	move.b	(a0),d0                         	| [$1cd5: ld      a,(hl)] load A with mario X position
 	add.b	d1,d0                            	| [$1cd6: add     a,b] add movement (either 1 or #FF)
 	move.b	d0,(a0)                         	| [$1cd7: ld      (hl),a] store new result
@@ -7279,7 +7286,7 @@ play_bonus_sound_1d95:
 
 update_mario_sprite_1da6:
 	lea	mario_sprite_x_position_694c,a0	| [$1da6: ld      hl,mario_sprite_x_position_694c] load HL with mario sprite X position
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1da9: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1da9: ld      a,(mario_x_position_6203)] load A with mario's X position
 	move.b	d0,(a0)+                         	| [$1dac: ld      (hl),a] store into hardware sprite mario X position
 	move.b	mario_movement_indicator_sprite_value_6207,d0	| [$1dad: ld      a,(mario_movement_indicator_sprite_value_6207)] load A with movement indicator
 	                           	| [$1db0: inc     l] HL := #694D = hardware mario sprite
@@ -7393,7 +7400,7 @@ l_1e28:
 	move.b	mario_y_position_6205,d0	| [$1e2b: ld      a,(mario_y_position_6205)] load A with Mario's Y position
 	add.b	#0x14,d0                         	| [$1e2e: add     a,$14] add #14
 	move.b	d0,d2                           	| [$1e30: ld      c,a] store into C
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1e31: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1e31: ld      a,(mario_x_position_6203)] load A with mario's X position
 
 	                                    	| [$1e34: nop]
 	                                    	| [$1e35: nop] [ what used to be here?  was it LD B,#7B to set sprite for 100 pts? ]
@@ -7449,7 +7456,7 @@ l_1e57:
 	rts                                    	| [$1e68: ret     nc] no, return [...]
 0:
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$1e69: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] else load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$1e69: ld      a,(mario_x_position_6203)] else load A with mario's X position
 	roxl.b	#1,d0                           	| [$1e6c: rla] on left or right side of screen?
 	SET_X_FROM_C
 l_1e6d:
@@ -8030,7 +8037,7 @@ l_216d:
 	move.b	d1,d0                           	| [$2172: ld      a,b] yes, load A with B which has the value of the ladder from the check ??
 	subq.b	#0x05,d0                        	| [$2173: sub     $05] subtract 5
 	move.b	d0,(0x17,a2)                    	| [$2175: ld      (ix+$17),a] store into +17 to indicate which ladder we might be going down ???
-	move.b	the_oil_can_is_on_fire_6348,d0  	| [$2178: ld      a,(the_oil_can_is_on_fire_6348)] get status of the oil can fire
+	tst.b	the_oil_can_is_on_fire_6348		  	| [$2178: ld      a,(the_oil_can_is_on_fire_6348)] get status of the oil can fire
 	                               	| [$217b: and     a] is the fire lit ?
 	jeq	l_21b2                             	| [$217c: jp      z,$21b2] no, always take ladders before oil is lit
 
@@ -8040,13 +8047,16 @@ l_216d:
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$2185: ret     c] yes, return without taking ladder [...]
 0:
-
 	move.b	difficulty_level_6380,d0                 	| [$2186: ld      a,(difficulty_level_6380)] else load A with difficulty from 1 to 5.  usually the level but increases during play
-	ror.b	#1,d0                           	| [$2189: rra] roll right (div 2) .  now can be 0, 1, or 2
+	* using rra works on z80 but using ror or roxl just sends bit 0 into bit 7
+	* and d0 is now > 0x80, which tripped the comparison all the time
+	* => lsr is the way, else barrels always come down on mario when on ladder
+	* thanks for stx2199@eab for noticing it!
+	lsr.b	#1,d0                           	| [$2189: rra] roll right (div 2) .  now can be 0, 1, or 2
 	addq.b	#1,d0                           	| [$218a: inc     a] increment.  result is now 1, 2, or 3 based on skill level
 	move.b	d0,d1                           	| [$218b: ld      b,a] store into B
-	move.b	rngtimer1_6018,d0               	| [$218c: ld      a,(rngtimer1_6018)] load A with random timer ?
-	move.b	d0,d2                           	| [$218f: ld      c,a] store into C for later use ?
+	move.b	rngtimer1_6018,d0               	| [$218c: ld      a,(rngtimer1_6018)] load A with random timer
+	move.b	d0,d2                           	| [$218f: ld      c,a] store into C for later use
 	and.b	#0x03,d0                         	| [$2190: and     $03] mask bits.   result now random number between 0 and 3
 	cmp.b	d1,d0                            	| [$2192: cp      b] compare with value computed above based on skill
 	bcs.b	0f                               	| [...]
@@ -8058,7 +8068,7 @@ l_216d:
 * InputState - copy of RawInput, except when jump is pressed, bit 7 is set momentarily
 * RawInput - right sets bit 0, left sets bit 1, up sets bit 2, down sets bit 3, jump sets bit 4
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2197: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's x position
+	move.b	mario_x_position_6203,d0	| [$2197: ld      a,(mario_x_position_6203)] load A with mario's x position
 	cmp.b	d4,d0                            	| [$219a: cp      e] compare with barrel's x position
 	jeq	l_21b2                             	| [$219b: jp      z,$21b2] if equal, then go down ladder
 
@@ -8213,7 +8223,7 @@ l_2243:
 	                               	| [$224e: and     a] is mario jumping ?
 	jne	l_2257                             	| [$224f: jp      nz,$2257] yes, jump ahead and return to higher sub
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2252: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] else load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2252: ld      a,(mario_x_position_6203)] else load A with mario's X position
 	cmp.b	(a0),d0                          	| [$2255: cp      (hl)] is mario on the ladder? (or exactly lined up on it)
 	bne.b	0f                               	| [...]
 	rts                                    	| [$2256: ret     z] yes, return [...]
@@ -8392,7 +8402,7 @@ l_22f9:
 l_2303:
 	move.b	rngtimer1_6018,d0               	| [$2303: ld      a,(rngtimer1_6018)] load A with random timer value
 	move.b	d0,(0x11,a2)                    	| [$2306: ld      (ix+$11),a] store into +11
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2309: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2309: ld      a,(mario_x_position_6203)] load A with mario's X position
 	cmp.b	(0x03,a2),d0                     	| [$230c: cp      (ix+$03)] compare barrel's X position
 	jcc	l_2316                             	| [$2311: jp      nc,$2316] if greater then skip ahead
  
@@ -8408,7 +8418,7 @@ l_2316_2:
 * check for use with crazy barrels when difficulty is 5
 
 l_231a:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$231a: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$231a: ld      a,(mario_x_position_6203)] load A with mario's X position
 	sub.b	(0x03,a2),d0                     	| [$231d: sub     (ix+$03)] subtract the barrel's X position
 	st.b	d2                                	| [$2320: ld      c,$ff] load C with #FF
 	jcs	l_2326                             	| [$2322: jp      c,$2326] if barrel is to left of mario, then jump ahead
@@ -8675,7 +8685,7 @@ l_2407:
 l_241f:
 	move.b	#0x01,d3
 	move.b	#0x00,d4                      	| [$241f: ld      de,$0100] D = 1, E:= 0
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2422: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with Mario's X position
+	move.b	mario_x_position_6203,d0	| [$2422: ld      a,(mario_x_position_6203)] load A with Mario's X position
 	cmp.b	#0x16,d0                         	| [$2425: cp      $16] is this greater than #16 ?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$2427: ret     c] yes, return [...]
@@ -8701,7 +8711,7 @@ l_241f:
 	rts                                    	| [$2438: ret     nc] Yes, return [...]
 0:
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2439: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] else load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2439: ld      a,(mario_x_position_6203)] else load A with mario's X position
 	cmp.b	#0x6c,d0                         	| [$243c: cp      $6c] is this > #6C ?
 	bcs.b	0f                               	| [...]
 	rts                                    	| [$243e: ret     nc] Yes, return [...]
@@ -9335,7 +9345,7 @@ handle_mario_on_elevator_2745:
 
 * arrive here when mario riding on either elevator
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$274f: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position. eg 37 for first, 75 for second
+	move.b	mario_x_position_6203,d0	| [$274f: ld      a,(mario_x_position_6203)] load A with mario's X position. eg 37 for first, 75 for second
 	cmp.b	#0x2c,d0                         	| [$2752: cp      $2c] position < left edge of first elevator ?
 	jcs	l_2766                             	| [$2754: jp      c,$2766] yes, jump ahead
 
@@ -9869,7 +9879,7 @@ l_29ee:
 	cmp.b	d3,d0                            	| [$29f3: cp      d] compare to elevator height - 4. is mario hitting his head on the bottom of the elevator ?
 	jcc	l_2a1b                             	| [$29f4: jp      nc,$2a1b] if so, mario is dead.  set dead and return.
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$29fb: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$29fb: ld      a,(mario_x_position_6203)] load A with mario's X position
 	tst.b	mario_jump_direction_6210    	| [$29f7: ld      a,(mario_jump_direction_6210)] load A with mario's jump direction.
 	                               	| [$29fa: and     a] == 0 ?  Is mario jumping to the right ?
 	jeq	l_2a08                             	| [$29fe: jp      z,$2a08] if jumping to the right then skip ahead
@@ -9886,7 +9896,7 @@ l_2a08:
 * used when riding an elevator
 
 l_2a0e:
-	move.b	d0,jump_if_bit_7_of_mario_x_position_is_set_6203	| [$2a0e: ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a] set mario's X position
+	move.b	d0,mario_x_position_6203	| [$2a0e: ld      (mario_x_position_6203),a] set mario's X position
 	move.b	d0,mario_sprite_x_position_694c 	| [$2a11: ld      (mario_sprite_x_position_694c),a] set mario's sprite X position
 	move.b	#0x01,d0                        	| [$2a14: ld      a,$01] A := 1
 	clr.b	d1                               	| [$2a16: ld      b,$00] B := 0
@@ -10042,7 +10052,7 @@ check_for_mario_falling_2a85:
 	rts                                    	| [$2a94: ret     z] yes, return [...]
 0:
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2a95: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2a95: ld      a,(mario_x_position_6203)] load A with mario's X position
 	subq.b	#0x03,d0                        	| [$2a98: sub     $03] subtract 3
 	move.b	d0,d5                           	| [$2a9a: ld      h,a] store into H
 	move.b	mario_y_position_6205,d0	| [$2a9b: ld      a,(mario_y_position_6205)] load A with Mario's Y position
@@ -10090,7 +10100,7 @@ l_2acd:
 * called from #25FE
 
 l_2ad3:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2ad3: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2ad3: ld      a,(mario_x_position_6203)] load A with mario's X position
 	move.b	d0,d1                           	| [$2ad6: ld      b,a] copy to B
 	move.b	mario_y_position_6205,d0	| [$2ad7: ld      a,(mario_y_position_6205)] load A with mario's Y position
 	cmp.b	#0x50,d0                         	| [$2ada: cp      $50] is mario on upper level ?
@@ -10120,10 +10130,10 @@ l_2af6:
 	move.b	upper_left_pie_tray_vector_63a4,d0	| [$2aff: ld      a,(upper_left_pie_tray_vector_63a4)] else load A with upper left pie tray vector
 l_2b02:
 	add.b	d1,d0                            	| [$2b02: add     a,b] add vector to mario's X position
-	move.b	d0,jump_if_bit_7_of_mario_x_position_is_set_6203	| [$2b03: ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a] set mario's X position
+	move.b	d0,mario_x_position_6203	| [$2b03: ld      (mario_x_position_6203),a] set mario's X position
 	move.b	d0,mario_sprite_x_position_694c 	| [$2b06: ld      (mario_sprite_x_position_694c),a] set mario's sprite X position
 	jbsr	l_241f                            	| [$2b09: call    $241f] loads DE with something depending on mario's position
-	lea	jump_if_bit_7_of_mario_x_position_is_set_6203,a0	| [$2b0c: ld      hl,jump_if_bit_7_of_mario_x_position_is_set_6203] load HL with mario's X position
+	lea	mario_x_position_6203,a0	| [$2b0c: ld      hl,mario_x_position_6203] load HL with mario's X position
 	subq.b	#1,d4                           	| [$2b0f: dec     e] E == 1 ?
 	jeq	l_2b18                             	| [$2b10: jp      z,$2b18] yes, skip ahead
 
@@ -10159,7 +10169,7 @@ l_2b29:
 
 * jump on girders
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2b30: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's x position
+	move.b	mario_x_position_6203,d0	| [$2b30: ld      a,(mario_x_position_6203)] load A with mario's x position
 	move.b	d0,d5                           	| [$2b33: ld      h,a] copy to H
 	move.b	mario_y_position_6205,d0	| [$2b34: ld      a,(mario_y_position_6205)] load A with mario's y position
 	addq.b	#0x07,d0                        	| [$2b37: add     a,$07] add 7 to y position
@@ -10186,7 +10196,7 @@ l_2b51:
 * arrive from #2B2D when jumping, not on girders, via call from #2B20
 
 l_2b53:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2b53: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario X position
+	move.b	mario_x_position_6203,d0	| [$2b53: ld      a,(mario_x_position_6203)] load A with mario X position
 	subq.b	#0x03,d0                        	| [$2b56: sub     $03] subtract 3
 	move.b	d0,d5                           	| [$2b58: ld      h,a] store into H
 	move.b	mario_y_position_6205,d0	| [$2b59: ld      a,(mario_y_position_6205)] load A with mario's Y position
@@ -10215,7 +10225,7 @@ l_2b74:
 	rts                                    	| [$2b79: ret] return
 
 l_2b7a:
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2b7e: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2b7e: ld      a,(mario_x_position_6203)] load A with mario's X position
 	tst.b	mario_jump_direction_6210    	| [$2b7a: ld      a,(mario_jump_direction_6210)] load A with mario's jump direction
 	                               	| [$2b7d: and     a] jumping to the right ?
 	jeq	l_2b8b                             	| [$2b81: jp      z,$2b8b] if jumping right then skip next 3 steps
@@ -10230,7 +10240,7 @@ l_2b8b:
 	addq.b	#0x04,d0                        	| [$2b8f: add     a,$04] add 4
 
 l_2b91:
-	move.b	d0,jump_if_bit_7_of_mario_x_position_is_set_6203	| [$2b91: ld      (jump_if_bit_7_of_mario_x_position_is_set_6203),a] set mario's X position
+	move.b	d0,mario_x_position_6203	| [$2b91: ld      (mario_x_position_6203),a] set mario's X position
 	move.b	d0,mario_sprite_x_position_694c 	| [$2b94: ld      (mario_sprite_x_position_694c),a] set mario's sprite X position
 	move.b	#0x01,d0                        	| [$2b97: ld      a,$01] A := 1
 	move.l	(sp)+,a0                        	| [$2b99: pop     hl] move stack pointer to return to higher sub
@@ -10952,7 +10962,7 @@ l_2f43:
 	clr.b	hammer_length_6395           	| [$2f5b: ld      (hammer_length_6395),a] clear hammer length
 	clr.b	hammer_active_6217                 	| [$2f5e: ld      (hammer_active_6217),a] store into hammer indicator
 	clr.b	(0x01,a2)                    	| [$2f61: ld      (ix+$01),a] clear hammer active indicator
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2f64: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2f64: ld      a,(mario_x_position_6203)] load A with mario's X position
 	neg.b	d0                               	| [$2f67: neg] take negative
 	move.b	d0,(0x0e,a2)                    	| [$2f69: ld      (ix+$0e),a] store into +E
 	move.b	mario_movement_indicator_sprite_value_6207,d0	| [$2f6c: ld      a,(mario_movement_indicator_sprite_value_6207)] load A with mario movement indicator/sprite value
@@ -10966,7 +10976,7 @@ l_2f43:
 
 l_2f7c:
 	exg	a1,a0                              	| [$2f7c: ex      de,hl] DE <> HL
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$2f7d: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] load A with mario's X position
+	move.b	mario_x_position_6203,d0	| [$2f7d: ld      a,(mario_x_position_6203)] load A with mario's X position
 	add.b	(0x0e,a2),d0                     	| [$2f80: add     a,(ix+$0e)] add hammer offset
 	move.b	d0,(a0)                         	| [$2f83: ld      (hl),a] store into Hammer X position
 	move.b	d0,(0x03,a2)                    	| [$2f84: ld      (ix+$03),a] store into hammer X position
@@ -12020,7 +12030,7 @@ l_3478:
 	jne	l_349a                             	| [$3484: jp      nz,$349a] /
 
 	lea	game_rom+0x3aac,a0                      	| [$3487: ld      hl,$3aac] load HL with start of table data
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$348a: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] \  Jump if Mario is on left side of the screen, in this case we spawn the fireball on the left
+	move.b	mario_x_position_6203,d0	| [$348a: ld      a,(mario_x_position_6203)] \  Jump if Mario is on left side of the screen, in this case we spawn the fireball on the left
 	btst.b	#7,d0                           	| [$348d: bit     7,a]|
 	jeq	l_34a8                             	| [$348f: jp      z,$34a8] /
 
@@ -12059,7 +12069,7 @@ l_34b9:
 	rts                                    	| [$34be: ret     z] / [...]
 0:
 
-	move.b	jump_if_bit_7_of_mario_x_position_is_set_6203,d0	| [$34bf: ld      a,(jump_if_bit_7_of_mario_x_position_is_set_6203)] \  Jump if bit 7 of Mario's X-position is set (i.e., Mario is on the right half of the screen)
+	move.b	mario_x_position_6203,d0	| [$34bf: ld      a,(mario_x_position_6203)] \  Jump if bit 7 of Mario's X-position is set (i.e., Mario is on the right half of the screen)
 	btst.b	#7,d0                           	| [$34c2: bit     7,a]|
 	jne	l_34ed                             	| [$34c4: jp      nz,$34ed] /
 

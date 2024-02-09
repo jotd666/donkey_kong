@@ -35,15 +35,14 @@
     OPT_DISABLE_SPRITES=0
    
 	* permanent cheats/hacks to test game
-    * score is BCD format
 	NB_BARRELS = 10
 	NB_FIRES = 5
 	NB_PIES = 6
 	NB_FIREFOXES = 7	| DON'T CHANGE!
 	NB_ELEVATORS = 6	| DON'T CHANGE!
 	* don't remove rivets, allows to chase fires more efficiently
-	* all options are zeroed for release
     OPT_LEAVE_RIVETS=0
+    * score is BCD format
     OPT_START_SCORE=0
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
