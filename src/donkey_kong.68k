@@ -8041,8 +8041,12 @@ l_216d:
 	                               	| [$217b: and     a] is the fire lit ?
 	jeq	l_21b2                             	| [$217c: jp      z,$21b2] no, always take ladders before oil is lit
 
-	move.b	mario_y_position_6205,d0	| [$217f: ld      a,(mario_y_position_6205)] else load A with mario's Y position + 5
+	move.b	mario_y_position_6205,d0	| [$217f: ld      a,(mario_y_position_6205)]	else load A with mario's Y position + 5
 	subq.b	#0x04,d0                        	| [$2182: sub     $04] subtract 4
+	tst.b	nice_barrels_flag
+	beq.b	0f
+	sub.b	#0x10-0x4,d0			| easier: barrel can't fall on Mario if mario on top of ladder (Japan mod)
+0:
 	cmp.b	d3,d0                            	| [$2184: cp      d] is the barrel already below mario  ?
 	bcc.b	0f                               	| [...]
 	rts                                    	| [$2185: ret     c] yes, return without taking ladder [...]

@@ -268,6 +268,11 @@ _user:
 	* cheat isn't used as long as no cheat key is used
 	bset	#1,misc_options+3
 2:
+	move.l	(A0)+,D0	| NICEBARRELS/S
+	beq.b	2f
+	* cheat isn't used as long as no cheat key is used
+	bset	#2,misc_options+3
+2:
 	lea		_custom,a5
 	lea		debug_copperlist,a0
 	move.l	a0,cop1lc(a5)
@@ -343,6 +348,8 @@ _user:
 	sne		skip_introduction_flag
 	btst	#1,d1
 	sne		crazy_kong_levels_order_flag
+	btst	#2,d1
+	sne		nice_barrels_flag
 
 
 	move.l	start_level_option,d0
@@ -516,14 +523,29 @@ osd_set_vblank_return_address:
 	rts
 	
 get_hiscore_name:
-    lea normal_hiscorename,a0
+	moveq	#0,d0
 	tst.b	crazy_kong_levels_order_flag
 	beq.b	0f
-	* not the same levels => not the same highscore table
-	lea	alt_hiscorename,a0
+	bset	#0,d0
 0:
+	tst.b	nice_barrels_flag
+	beq.b	0f
+	bset	#1,d0
+0:
+	add.w	d0,d0
+	add.w	d0,d0
+	* not the same levels/options => not the same highscore table
+	lea		scorename_table(pc),a0
+	move.l	(a0,d0.w),a0
+
 	rts
-	
+
+scorename_table:
+	.long	normal_hiscorename
+	.long	alt_hiscorename
+	.long	normal_nb_hiscorename
+	.long	alt_nb_hiscorename
+
 load_highscores:
 	bsr.b		get_hiscore_name
     move.l  _resload(pc),d0
@@ -551,7 +573,7 @@ save_highscores:
     tst.b   highscore_needs_saving
     beq.b   1f
     move.l  _dosbase(pc),a6
-	bsr.b		get_hiscore_name
+	jbsr		get_hiscore_name
     move.l  a0,d1
     move.l  #1006,d2
     jsr     (_LVOOpen,a6)
@@ -2827,7 +2849,8 @@ program_args_end:
 read_args_string:
 	.byte	read_args_string_end-read_args_string
 	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,"
-	.ascii	"CHEATKEYS/S,STARTLIVES/K/N,STARTLEVEL/K/N,SKIPINTRO/S,CRAZYKONGLEVELS/S"
+	.ascii	"CHEATKEYS/S,STARTLIVES/K/N,STARTLEVEL/K/N,SKIPINTRO/S,"
+	.ascii	"CRAZYKONGLEVELS/S,NICEBARRELS/S"
 read_args_string_end:
 	.align	2
 
@@ -2992,18 +3015,19 @@ dynamic_color_mode:
 cheat_used:
 	.byte	0
 dosname:
-	.ascii	"dos.library"
-	.byte	0
+	.asciz	"dos.library"
 graphicsname:
-	.ascii	"graphics.library"
-	.byte	0
+	.asciz	"graphics.library"
 normal_hiscorename:
 	.asciz	"donkey_kong.high"
 alt_hiscorename:
 	.asciz	"crazy_kong.high"
+normal_nb_hiscorename:
+	.asciz	"donkey_kong_nb.high"
+alt_nb_hiscorename:
+	.asciz	"crazy_kong_nb.high"
 floppy_file:
-	.ascii	"floppy"
-	.byte	0
+	.asciz	"floppy"
 temp_filename_buffer:
 	ds.b	255
 _end_of_ng_code:

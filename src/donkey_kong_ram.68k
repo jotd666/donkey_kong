@@ -22,6 +22,7 @@
 	.global	reg_sfx_death
 	.global	erase_four_barrels_flag
 	.global	four_barrels_present
+	.global nice_barrels_flag
 	
 	.ifdef	__amiga__
 	
@@ -100,6 +101,8 @@ break_at_startup_flag:
 	.byte	0
 	.endif
 crazy_kong_levels_order_flag:
+	.byte	0
+nice_barrels_flag:
 	.byte	0
 	.align	2
 regscopy:

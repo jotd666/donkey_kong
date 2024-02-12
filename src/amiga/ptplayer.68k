@@ -12,6 +12,9 @@
 * work with most assemblers. Tested are: Devpac, vasm, PhxAss,
 * Barfly-Asm, SNMA, AsmOne, AsmPro.
 *
+* jotd: modified with the help of mot2mit.py to be able to assemble it
+* using gnu assembler! Now it only assembles with that :)
+*
 * The small data model can be enabled by defining the symbol SDATA. In
 * this case all functions expect a4 to be initialised with the small
 * data base register. Interrupt functions restore a4 from _LinkerDB.
@@ -329,6 +332,7 @@ _mt_install_cia:
 	* Ack. pending interrupts, TimerA and TimerB interrupt enable
 	tst.b	CIAICR(a0)
 	move.w	#0x2000,INTREQ(a6)
+	move.w	#0x2000,INTREQ(a6)
 	move.b	#0x83,CIAICR(a0)
 
 	* enable level 6 interrupts
@@ -401,6 +405,7 @@ mt_TimerAInt:
 	.endif
 
 	* clear EXTER interrupt flag
+	move.w	#0x2000,INTREQ(a6)
 	move.w	#0x2000,INTREQ(a6)
 
 	* do music when enabled

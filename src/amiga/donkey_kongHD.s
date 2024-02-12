@@ -45,6 +45,7 @@ _config
 	ENDC
 	dc.b	"C3:X:skip introduction:0;"
 	dc.b	"C3:X:Crazy Kong level order:1;"
+	dc.b	"C3:X:Japan barrel nice behaviour:2;"
 	dc.b    "C4:L:start level:1,2,3,4,5,6,7,8,9,10,11,"
 	dc.b	"12,13,14,15,16,17,18,19,20,21,22;"
 	dc.b    "C5:L:start lives:3,4,5,6;"

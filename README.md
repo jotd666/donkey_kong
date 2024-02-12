@@ -15,6 +15,9 @@ Features:
 - 100% identical game, 50fps on A500/68000 1MB
 - high score save
 - kill screen fix (level 22, good luck for reaching that!)
+- option to change level orders from original to alternate/crazy kong
+- "nice barrel" option (found in one japan version): barrels don't fall on
+  Mario when Mario is at the top of the ladder.
 
 Instructions:
 
