@@ -44,8 +44,8 @@ clean:
 $(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py $(ASSETS)/../dkong_gfx.c
 	cmd /c $(ASSETS)\convert_graphics.py
 
-#$(ASSETS)/../sounds/$(PROGNAME)_conv.mod
-$(AMIGASRC)/sounds.68k: $(ASSETS)/convert_sounds.py 
+
+$(AMIGASRC)/sounds.68k: $(ASSETS)/convert_sounds.py $(ASSETS)/../sounds/$(PROGNAME)_conv.mod
 	cmd /c $(ASSETS)\convert_sounds.py
 	
 $(MAIN): $(OBJS)
