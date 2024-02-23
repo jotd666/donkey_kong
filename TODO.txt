@@ -2,9 +2,6 @@
   after 8 sprites. Today this is eluded: if there's a problem then
   last sprite won't be displayed. Hoping it's not noticeable or better:
   reproduce it and fix it!
-- On the Japanese version, a Barrel cannot drop down a ladder while Jumpman is on it (upper third).
-  The change form SUBQ.B #4,D0 to SUB.B #$10,D0 make this possible. You can compare the MAME ROMS to check it: add cheat flag
-- add CLI option for japan levels / japan ladder setup
 
 minor:
 

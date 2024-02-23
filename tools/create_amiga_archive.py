@@ -1,9 +1,12 @@
 import subprocess,os,glob,shutil
+gamename = "donkey_kong"
 
 progdir = os.path.abspath(os.path.join(os.path.dirname(__file__),os.pardir))
+packed_exe = os.path.join(progdir,f"{gamename}.rnc")
+if os.path.exists(packed_exe):
+    os.remove(packed_exe)
 
 
-gamename = "donkey_kong"
 # JOTD path for cranker, adapt to wh :)
 os.environ["PATH"] += os.pathsep+r"K:\progs\cli"
 
@@ -24,8 +27,8 @@ for file in ["readme.md",gamename,f"{gamename}.slave"]:
     shutil.copy(os.path.join(progdir,file),outdir)
 
 shutil.copy(os.path.join(progdir,"assets","amiga","DonkeyKong500.info"),outdir)
-shutil.copy(os.path.join(progdir,"assets","amiga","boxart.jpg"),outdir)
+shutil.copy(os.path.join(progdir,"assets","amiga","boxart.png"),outdir)
 
 # pack the file for floppy
 subprocess.check_output(["cranker_windows.exe","-f",os.path.join(progdir,gamename),
-"-o",os.path.join(progdir,f"{gamename}.rnc")])
+"-o",packed_exe])

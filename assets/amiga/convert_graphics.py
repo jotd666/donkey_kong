@@ -163,17 +163,20 @@ add_sprite_block(0x3D,0x3F,"fireball",[0,1],mirror=True,levels=[1,2,3],
 add_sprite_block(0x40,0x44,"flame",[1],levels=[1,2],
 hw_sprite_level_mask=(1<<2),sprite_type=ST_BOB|ST_HW_SPRITE)  # barrel flame
 
-add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_BOB)
+add_sprite(0x4B,"pie",0xE,levels=[2],sprite_type=ST_HW_SPRITE)
 add_sprite(0x44,"elevator",0x3,levels=[3],sprite_type=ST_HW_SPRITE)
 add_sprite(0x45,"elevator_conveyor",0xF,levels=[3],smart_redraw=True)
 add_sprite_block(0x50,0x53,"conveyor_wheel",0,mirror=True,levels=[2])
-add_sprite(0x46,"moving_ladder",0x3,levels=[2],sprite_type=ST_HW_SPRITE)
+# for some reason moving ladder has wrong clut in the game (3: green)
+# it should be 1, with clut 3 ladder is green...
+add_sprite(0x46,"moving_ladder",0x1,levels=[2],sprite_type=ST_BOB)
 
 # there are 10 barrels max so much more than allowed 8 HW sprites. Define backup BOBs
 # with fake sprite codes (original code + 0x50, which is not used) and pre-process
 # sprite list when copying it in the code
 add_sprite(0x65,"barrel",11,mirror=True,flip=True,levels=[1],sprite_type=ST_BOB)
 add_sprite_block(0x66,0x68,"barrel",11,mirror=True,levels=[1],sprite_type=ST_BOB)
+add_sprite(0x5b,"pie",0xE,levels=[2],sprite_type=ST_BOB)
 
 block_dict = {}
 
@@ -209,8 +212,11 @@ with open(os.path.join(this_dir,"..","dkong_gfx.c")) as f:
 # add the fake sprites to be able to switch from sprites to BOBs for barrels
 bd = block_dict["sprite"]["data"]
 
+# duplicate barrel entries
 for i in range(0x15,0x18):
     bd[i+0x50] = bd[i]
+# duplicate pie entries
+bd[0x5b] = bd[0x4b]
 
 # block_dict structure is as follows:
 # dict_keys(['palette', 'clut', 'tile', 'sprite'])
@@ -540,6 +546,7 @@ for sx in range(0,20,10):
                 p = img.getpixel((x,y))
                 if p != (0,0,0):
                     four_barrels.putpixel((x+sx,y+sy),p)
+
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\tcharacter_table\n")

@@ -756,6 +756,8 @@ osd_update_sprites:
 	move.w	#NB_TARGET_SPRITES-1,d7
 	cmp.b	#1,screen_number_6227
 	beq.b	1f
+	cmp.b	#2,screen_number_6227
+	beq.b	10f
 0:
 	move.l	(a0)+,(a1)+
 	dbf		d7,0b
@@ -789,6 +791,44 @@ osd_update_sprites:
 	* when converting graphics)
 	swap	d0
 	add.b	#0x50,d0
+	swap	d0
+3:
+	move.l	d0,(a1)+
+	dbf		d7,2b
+	rts
+	
+10:
+	moveq	#0,d2		| nb pies
+2:
+	* special case for screen 2: we want to use a maximum of sprites
+	* we already have 5 max flames so we can use 2 sprites of same clut
+	* to draw something else, like pies (moving ladders where sprites were
+	* previously used as they were 2 would be above Mario when he climbs, plus
+	* when not moving we can benefit from no erase optimization: less blits)
+	*  
+	* count how many pies there are and if it's too much,
+	* change the last ones by BOB codes (+$10, fake defined)
+	move.l	(a0)+,d0
+	move.l	d0,d1
+	tst.b	d1
+	jeq		3f		| Y=0: skip
+	rol.l	#8,d1	| get X in byte position (the one which is zeroed by the game when hidden)
+	tst.b	d1
+	jeq		3f		| X=0 => skip
+	rol.l	#8,d1	| now sprite code is in byte position
+	bclr	#7,d1
+	
+	cmp.b	#0x4B,d1		| code of pie
+	bne.b	3f
+
+	* pie
+	addq	#1,d2
+	cmp.b	#3,d2   | max 2 pies as sprites, 5 flames max
+	bcs.b	3f		| okay, not too many pies
+	* 2 or more barrels : change the others to BOB type
+	* by adding 0x10 (we faked that sprite code)
+	swap	d0
+	add.b	#0x10,d0
 	swap	d0
 3:
 	move.l	d0,(a1)+
@@ -2683,9 +2723,9 @@ osd_write_high_scores:
 	move.l	_resload(pc),d0
 	beq.b	0f
 	move.l	d0,a2
-	move.l	#SCORE_FILE_SIZE,d0
 	move.l	a0,a1
 	bsr		get_hiscore_name
+	move.l	#SCORE_FILE_SIZE,d0
 	jsr		resload_SaveFile(a2)
 	bra.b	1f
 0:
