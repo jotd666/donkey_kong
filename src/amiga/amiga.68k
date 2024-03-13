@@ -329,8 +329,20 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
-	moveq	#0,d0
+	* align bitplanes
+	lea		bg_screen_buffer_1,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_1
+	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_displayed_screen_ptr
 	
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	lea		bg_screen_buffer_2,a0
+	bsr		align_8
+	move.l	a0,bg_screen_data_2
+	move.l	a0,bg_displayed_screen_ptr
+	.endif
+	moveq	#0,d0
 	move.b	dip_switch_start_lives+3(pc),d0
 	
 *   bit 3 : \bonus at
@@ -374,6 +386,13 @@ _user:
 	jra		demo_game
 
 
+* so memory is 8-aligned (not trusting .align directives)
+align_8:
+	add.w	#0x10,a0
+	move.l	a0,d0
+	and.b	#0xF8,d0
+	move.l	d0,a0
+	rts
 * < D0: bcpl string (with leading size byte)
 * < A1: dest C string
 bcpl_arg_string_copy:
@@ -1827,7 +1846,7 @@ osd_sound_start:
 	beq.b	3f
 	* looped sound
 	jsr		_mt_loopfx
-	beq.b	1f
+	bra.b	1f
 3:
 	jsr		_mt_playfx
 1:
@@ -1923,8 +1942,8 @@ switch_screen_buffers:
 	lea		bg_drawed_screen_ptr(pc),a0
 	lea		bob_previous_positions_1(pc),a2
 	lea		bob_previous_positions_2(pc),a3
-	lea		bg_screen_data_1,a1
-	lea		bg_screen_data_2,a5
+	move.l	bg_screen_data_1,a1
+	move.l	bg_screen_data_2,a5
 	* also switch previous state memory
 	cmp.l	(a0),a1
 	bne.b	2f
@@ -2071,10 +2090,25 @@ platform_init:
 	* AGA-compatible ECS default values
     move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
     move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
+	move.l	chiprevbits,d0
+	and.l	#SETCHIPREV_AA,d0
+	beq.b	0f
+	* AGA, enable fast bitplane fetch
+	st		aa_amiga
+    move.w #3,fmode(a5)
+    move.w #0x0030,ddfstrt(a5)
+    move.w #0x00C8,ddfstop(a5)
+	move.w	#-8,d0
+	bra.b	1f
+0:
+	* OCS/ECS
+    move.w #0x0038,ddfstrt(a5)
+    move.w #0x00D0,ddfstop(a5)
     move.w #0,fmode(a5)			
+	move.w	#0,d0
+1:
     move.w #0,bplcon1(a5)
 
-	move.w	#0,d0
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 
@@ -2345,8 +2379,8 @@ update_bg_tile:
 	.ifeq	OPT_ENABLE_DOUBLE_BUFFERING
 	move.l	bg_drawed_screen_ptr(pc),a1
 	.else
-	lea		bg_screen_data_1,a1
-	lea		bg_screen_data_2,a3
+	move.l		bg_screen_data_1(pc),a1
+	move.l		bg_screen_data_2(pc),a3
 	.endif
 	lea		bg_background_data,a2
 	* D3 = Y
@@ -2953,6 +2987,9 @@ skip_screen_update:
 	
 	.align	2	
 _tag:
+		.long	WHDLTAG_CHIPREVBITS_GET
+chiprevbits:
+		.long	0
 		.long	WHDLTAG_CUSTOM1_GET
 cheat_flags:
 		.long	0
@@ -2971,6 +3008,9 @@ dip_switches:
 		.byte	0x0
 		.byte	0
 
+aa_amiga:
+	.byte	0
+	.align	2
 system_vbr:
 	.long	0
 	
@@ -3026,13 +3066,17 @@ delay_timer:
 	.word	0
 one_out_of_five:
 	.word	0
+bg_screen_data_1:
+	.long	0
+bg_screen_data_2:
+	.long	0
 bg_drawed_screen_ptr:
-	.long	bg_screen_data_1
+	.long	0
 bg_displayed_screen_ptr:
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	.long	bg_screen_data_2
+	.long	0
 	.else
-	.long	bg_screen_data_1
+	.long	0
 	.endif
 
 
@@ -3231,13 +3275,15 @@ bottom_color_line_copper:
 bg_background_data:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
-bg_screen_data_1:
-	ds.b	BG_SCREEN_SIZE
-	ds.b	NB_BYTES_PER_ROW*12*3
+bg_screen_buffer_1:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	8
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
-bg_screen_data_2:
-	ds.b	BG_SCREEN_SIZE
-	ds.b	NB_BYTES_PER_ROW*12*3
+bg_screen_buffer_2:
+	.skip	BG_SCREEN_SIZE
+	.skip	NB_BYTES_PER_ROW*12*3
+	.skip	8
 	.endif
 	.align	8
 

@@ -2025,7 +2025,7 @@ l_0315:
 	jbsr	osd_w_videoram                         	| [$032e: ld      (hl),a] clear the text "U" from "1UP"
 	add.w	d3,d7                            	| [$032f: add     hl,de] next column
 	jbsr	osd_w_videoram                         	| [$0330: ld      (hl),a] clear the text "P" from "1UP"
-	move.b	twoplayergame_600f,d0           	| [$0331: ld      a,(twoplayergame_600f)] load A with # of players in game
+	tst.b	twoplayergame_600f           	| [$0331: ld      a,(twoplayergame_600f)] load A with # of players in game
 	                               	| [$0334: and     a] is this a 1 player game?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$0335: ret     z] yes, return [...]
@@ -4112,7 +4112,7 @@ draw_conveyors_screen_0cdf:
 * elevators from #0CB3
 
 l_0cf2:
-	jbsr	l_0d27                            	| [$0cf2: call    $0d27] draw elevator cables
+	jbsr	draw_elevators_cables_0d27                            	| [$0cf2: call    $0d27] draw elevator cables
 	move.b	#MUS_75M,d0                        	| [$0cf5: ld      a,$0a] A := #A
 	move.b	d0,background_music_value_6089  	| [$0cf7: ld      (background_music_value_6089),a] set music for elevators
 	* no music in elevators
@@ -4163,7 +4163,7 @@ l_0d17:
 * called from #0CF2 for elevators only
 * draws the elevator cables
 
-l_0d27:
+draw_elevators_cables_0d27:
 	move.w	#0x770d,d7                      	| [$0d27: ld      hl,$770d] load HL with screen RAM location
 	jbsr	l_0d30                            	| [$0d2a: call    $0d30] draw the left side elevator cable
 
@@ -9291,7 +9291,8 @@ handle_elevators_26fa:
 	subq.b	#1,d7                           	| [$2708: dec     a] decrement and check for zero
 	jne	l_271a                             	| [$270c: jp      nz,$271a] if level <> 1 then jump ahead
 
-* slow elevators for level 1, japanese rom only?
+* slow elevators for level 1, japanese rom only? probably as this level doesn't appear
+* before level 3 in the original version. We take advantage of it in "crazy kong" level sequence
 
 	and.b	#0x03,d0                         	| [$270f: and     $03] mask bits of timer, now between 0 and 3
 	cmp.b	#0x01,d0                         	| [$2711: cp      $01] == 1 ?

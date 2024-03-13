@@ -2,10 +2,15 @@
   after 8 sprites. Today this is eluded: if there's a problem then
   last sprite won't be displayed. Hoping it's not noticeable or better:
   reproduce it and fix it!
+- music playing even in demo mode
+- elevator speed too slow in 2P mode? generally 2P mode params copy seems buggy: losing level info?
+	move.b	framecounter_601a,d0            	| [$2709: ld      a,(framecounter_601a)] load A with this clock counts down from #FF to 00 over and over...
+	move.b	level_number_6229,d7       	| [$2705: ld      a,(level_number_6229)] else load A with level number
+
+- pause with joypad
 
 minor:
 
-- fmode=3 to save bandwidth in AGA
 - four barrels redraw: ok even if could be better optimized
 - dipswitches extra life at 7000 ...
 - up the display 8 pixels
