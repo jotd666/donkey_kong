@@ -273,7 +273,9 @@ _user:
 	* cheat isn't used as long as no cheat key is used
 	bset	#2,misc_options+3
 2:
-    * check if "floppy" file is here
+ 	bsr		load_highscores
+	
+   * check if "floppy" file is here
     
     move.l  _dosbase(pc),a6
     move.l   #floppy_file,d1
@@ -290,6 +292,8 @@ _user:
 
 
 	lea		_custom,a5
+	lea		debug_copperlist,a0
+	move.l	a0,cop1lc(a5)
 
 
 	move.l	4.W,A6
@@ -306,7 +310,6 @@ _user:
 	jsr	_LVOWaitTOF(a6)
 	jsr	_LVOWaitTOF(a6)
 
-	bsr		load_highscores
 
 .no_floppy:
 
@@ -375,7 +378,10 @@ _user:
 	sne		infinite_lives_flag
 	btst	#2,d0
 	sne		infinite_time_flag
-	
+	bclr	#4,d0			| cheat keys may be set but not used
+	tst.l	d0
+	sne		cheat_used
+
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
 	clr.b	controller_joypad_1
@@ -3186,6 +3192,7 @@ blank_sound:
 	ds.l	4
 	
 debug_copperlist:
+	dc.w	bplcon0,0x200
 	dc.w	color
 debug_color:
 	dc.w	0

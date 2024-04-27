@@ -1,4 +1,3 @@
-.section .rodata
 .align 8
 .global game_rom
 

@@ -29,7 +29,7 @@
 	.global	highscore_entry_address_6038
 	.global	unknown_ram_address_603a
 	.global	p1numlives_6040
-	.global	p2numlives_6048
+	.global	number_of_lives_remaining_p2_6048
 	.global	numobstaclesjumped_6060
 	.global	walking_sound_buffer_6080
 	.global	sound_buffer_address_for_jumping_6081
@@ -326,7 +326,7 @@ unknown_ram_address_603a:
 	ds.b	6
 p1numlives_6040:
 	ds.b	8
-p2numlives_6048:
+number_of_lives_remaining_p2_6048:
 	ds.b	24
 numobstaclesjumped_6060:
 	ds.b	32

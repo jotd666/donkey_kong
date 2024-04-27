@@ -6,8 +6,25 @@
 - elevator speed too slow in 2P mode? generally 2P mode params copy seems buggy: losing level info?
 	move.b	framecounter_601a,d0            	| [$2709: ld      a,(framecounter_601a)] load A with this clock counts down from #FF to 00 over and over...
 	move.b	level_number_6229,d7       	| [$2705: ld      a,(level_number_6229)] else load A with level number
-
+    copy_player_data_09fe
 - pause with joypad
+
+
+https://eab.abime.net/showpost.php?p=1673799&postcount=185
+Sometimes it starts you with 4 lives, sometimes with 3 lives.
+
+When it starts you with 3 lives you gain extra life at 7k
+After game-over, second game starts with 4 lives, no extra lives at 7k
+
+This does not seem to be consistent
+Using the latest WHDload version of the game.
+
+I can only assume something is passed over from the previous game attempt, so I clipped 3 vids of when it happens, just in case there is any correlation between them.
+
+https://clips.twitch.tv/BumblingCrun...4KNGaToTzyeetj
+https://clips.twitch.tv/YawningBorin...2hfo-d1U0ycxTg
+https://clips.twitch.tv/PowerfulBene...yFAcx2Q5C-miYj
+
 
 minor:
 

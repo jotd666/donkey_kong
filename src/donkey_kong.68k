@@ -2064,14 +2064,14 @@ load_score_location_0347:
 * checks for and handles extra life
 
 l_0350:
-	move.b	extra_life_indicator_622d,d0    	| [$0350: ld      a,(extra_life_indicator_622d)] load A with high score indicator
+	tst.b	extra_life_indicator_622d    	| [$0350: ld      a,(extra_life_indicator_622d)] load A with high score indicator
 	                               	| [$0353: and     a] has this player already been awarded extra life?
 	beq.b	0f                               	| [...]
 	rts                                    	| [$0354: ret     nz] yes, return [...]
 0:
 
 	lea	address_for_player_1_score_60b3,a0	| [$0355: ld      hl,address_for_player_1_score_60b3] load HL with address for player 1 score
-	move.b	playerturna_600d,d0             	| [$0358: ld      a,(playerturna_600d)] load A with 0 when player 1 is up, 1 when player 2 is up
+	tst.b	playerturna_600d             	| [$0358: ld      a,(playerturna_600d)] load A with 0 when player 1 is up, 1 when player 2 is up
 	                               	| [$035b: and     a] player 1 up ?
 	jeq	l_0361                             	| [$035c: jr      z,$0361] yes, skip next step
 
@@ -2945,7 +2945,7 @@ playing_game_06fe:
     .long	l_0986                      | (0)  #0986     | game start = clears screen, clears sounds, sets screen flip if needed
     .long	l_09ab                      | (1)  #09AB     | copy player data, set screen, set next game mode based on number of players
     .long	l_09d6                      | (2)  #09D6     | clears palettes, draws "PLAYER <I>", draws player2 score, draws "2UP" (2 player game only)
-    .long	l_09fe                      | (3)  #09FE     | copy player data into correct area (2 player game only)
+    .long	copy_player_data_09fe       | (3)  #09FE     | copy player data into correct area (2 player game only)
     .long	l_0a1b                      | (4)  #0A1B     | clears palletes, draws "PLAYER <II>", update player2 score, draw "2UP" to screen (2 player game only)
     .long	l_0a37                      | (5)  #0A37     | updates high score, player score, remaining lives, level, 1UP
     .long	l_0a63                      | (6)  #0A63     | clears screen and sprites, check for intro screen to run
@@ -3342,8 +3342,8 @@ l_08F8:
 * player 1 start
 
 l_0906:
-	jbsr	l_0977                            	| [$0906: call    $0977] subtract 1 credit and update screen credit counter
-	lea	p2numlives_6048,a0             	| [$0909: ld      hl,p2numlives_6048] load HL with RAM used for player 2
+	jbsr	subtract_1_credit_0977                            	| [$0906: call    $0977] subtract 1 credit and update screen credit counter
+	lea	number_of_lives_remaining_p2_6048,a0             	| [$0909: ld      hl,number_of_lives_remaining_p2_6048] load HL with RAM used for player 2
 	move.b	#0x08,d1                        	| [$090c: ld      b,$08] for B = 1 to 8
 	clr.b	d0                               	| [$090e: xor     a] A := 0
 
@@ -3359,9 +3359,9 @@ l_090f:
 * 2 players start
 
 l_0919:
-	jbsr	l_0977                            	| [$0919: call    $0977] subtract 1 credit and update screen credit counter
-	jbsr	l_0977                            	| [$091c: call    $0977] subtract 1 credit and update screen credit counter
-	lea	p2numlives_6048,a1             	| [$091f: ld      de,p2numlives_6048] load DE with RAM location used for player 2
+	jbsr	subtract_1_credit_0977                            	| [$0919: call    $0977] subtract 1 credit and update screen credit counter
+	jbsr	subtract_1_credit_0977                            	| [$091c: call    $0977] subtract 1 credit and update screen credit counter
+	lea	number_of_lives_remaining_p2_6048,a1             	| [$091f: ld      de,number_of_lives_remaining_p2_6048] load DE with RAM location used for player 2
 	move.b	startinglives_6020,d0           	| [$0922: ld      a,(startinglives_6020)] load initial number of lives
 	move.b	d0,(a1)+                         	| [$0925: ld      (de),a] store into number of lives player 2
 											| [$0926: inc     e] DE := Unk6049
@@ -3374,8 +3374,8 @@ l_0919:
 
 l_0938:
 	LOAD_D5D6_FROM_D5_16
-	move.b	d6,playerturnb_600e             	| [$0938: ld      (playerturnb_600e),hl] store HL into PlayerTurnB and TwoPlayerGame.  TwoPlayerGame is the number of players in the game
-	move.b	d5,playerturnb_600e+1             	| [$0938: ld      (playerturnb_600e),hl] store HL into PlayerTurnB and TwoPlayerGame.  TwoPlayerGame is the number of players in the game
+	move.b	d6,playerturnb_600e             	| [$0938: ld      (playerturnb_600e),hl] store L into PlayerTurnB 
+	move.b	d5,twoplayergame_600f             	| [$0938: ld      (playerturnb_600e),hl] store H into TwoPlayerGame.  TwoPlayerGame is the number of players in the game
 	jbsr	clear_screen_and_sprites_0874                            	| [$093b: call    $0874] clear the screen and sprites
 	lea	p1numlives_6040,a1             	| [$093e: ld      de,p1numlives_6040] load DE with address for number of lives player 1
 	move.b	startinglives_6020,d0           	| [$0941: ld      a,(startinglives_6020)] number of initial lives set with dip switches (3, 4, 5, or 6)
@@ -3441,7 +3441,7 @@ l_0970:
 
 * subtract 1 credit and update screen credit counter
 
-l_0977:
+subtract_1_credit_0977:
 	CLEAR_XC_FLAGS
 	lea	numcredits_6001,a0             	| [$0977: ld      hl,numcredits_6001] load HL with pointer to number of credits
 	move.b	#0x99,d0                        	| [$097a: ld      a,$99] A := #99
@@ -3548,8 +3548,8 @@ l_09ee:
 
 * arrive from #0701 when GameMode2 == 3
 
-l_09fe:
-	lea	p2numlives_6048,a0             	| [$09fe: ld      hl,p2numlives_6048] source location is ???
+copy_player_data_09fe:
+	lea	number_of_lives_remaining_p2_6048,a0             	| [$09fe: ld      hl,number_of_lives_remaining_p2_6048] source location is ???
 	lea	number_of_lives_remaining_6228,a1	| [$0a01: ld      de,number_of_lives_remaining_6228] destination is player lives remaining plus other player variables
 	move.w	#0x08,d1                        	| [$0a04: ld      bc,$0008] byte counter set to 8 8
 	jbsr	ldir                              	| [$0a07: ldir] copy
@@ -4225,7 +4225,7 @@ l_0d59:
 * jump here from #0CD1 (via #3FA3)
 
 l_0d5f:
-	jbsr	l_0f56                            	| [$0d5f: call    $0f56] clear and initialize RAM values, compute initial timer, draw all initial sprites
+	jbsr	clear_player_data_0f56                            	| [$0d5f: call    $0f56] clear and initialize RAM values, compute initial timer, draw all initial sprites
 	jbsr	l_2441                            	| [$0d62: call    $2441]
 	lea	waittimermsb_6009,a0           	| [$0d65: ld      hl,waittimermsb_6009] load HL with timer addr.
 	move.b	#0x40,(a0)+                      	| [$0d68: ld      (hl),$40] set timer to #40
@@ -4575,7 +4575,7 @@ l_0f51:
 * computes initial timer
 * initializes all sprites
 
-l_0f56:
+clear_player_data_0f56:
 	move.b	#0x27,d1                        	| [$0f56: ld      b,$27] for B = 1 to #27
 	lea	mario_array_6200,a0            	| [$0f58: ld      hl,mario_array_6200] load HL with start of address
 	clr.b	d0                               	| [$0f5b: xor     a] A := #00
@@ -5315,7 +5315,7 @@ l_1344:
 	subq.b	#1,(a0)                         	| [$134e: dec     (hl)] decrease
 0:
 	move.b	(a0),d0                         	| [$134f: ld      a,(hl)] load A with the number of lives remaining
-	lea	p2numlives_6048,a1             	| [$1350: ld      de,p2numlives_6048] load DE with destination address
+	lea	number_of_lives_remaining_p2_6048,a1             	| [$1350: ld      de,number_of_lives_remaining_p2_6048] load DE with destination address
 	move.w	#0x08,d1                        	| [$1353: ld      bc,$0008] set counter to 8 8
 	jbsr	ldir                              	| [$1356: ldir] copy
 	tst.b	d0                               	| [$1358: and     a] any lives left?
@@ -5357,7 +5357,7 @@ l_138a:
 l_138f:
 	jbsr	rst_18                            	| [$138f: rst     $18] count down timer and only continue here if zero, else RET
 	move.b	#0x17,d2                        	| [$1390: ld      c,$17] C := #17
-	move.b	p2numlives_6048,d0              	| [$1392: ld      a,(p2numlives_6048)] load A with number of lives for player 2
+	move.b	number_of_lives_remaining_p2_6048,d0              	| [$1392: ld      a,(number_of_lives_remaining_p2_6048)] load A with number of lives for player 2
 
 l_1395:
 	addq.b	#1,(a0)                         	| [$1395: inc     (hl)] increase timer ??? [EG HL = WaitTimerMSB]
@@ -5391,7 +5391,7 @@ l_13aa:
 	move.b	d0,gamemode2_600a               	| [$13b1: ld      (gamemode2_600a),a] set game mode2 to 0
 	                      	| [$13b4: ld      hl,$0101] HL := #101
 	move.b	#0x1,playerturna_600d             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
-	move.b	#0x1,playerturna_600d+1             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
+	move.b	#0x1,playerturnb_600e             	| [$13b7: ld      (playerturna_600d),hl] store 1 into PlayerTurnA (set player2) and PlayerTurnB (set player2)
 	rts                                    	| [$13ba: ret] return
 
 * arrive from #0701 when GameMode2 == 13
