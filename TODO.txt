@@ -1,3 +1,4 @@
+- sound priorities to check
 - problem when too many sprites (barrels) even if bobs should be displayed
   after 8 sprites. Today this is eluded: if there's a problem then
   last sprite won't be displayed. Hoping it's not noticeable or better:

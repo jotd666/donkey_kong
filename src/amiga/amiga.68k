@@ -1501,19 +1501,14 @@ clear_planes_any_blitter_internal:
     add.w   d1,d1
     move.w  (a2,d1.w),d1
 1:
-    move.l  #0x01000000,d5   | minterm useD & rect clear (0xA) 
-    move    d0,d6
+	moveq	#1,d5
+	ror.l	#8,d5     | AKA move.l  #0x01000000,d5   | minterm useD & rect clear (0xA) 
+    tst    d0
     beq.b   2f
-    MOVEQ #15,D6
-    AND.W D0,D6
     and.w   #0x1F0,d0
     lsr.w   #3,d0
     add.w   d0,d1
-    LSL.W #8,D6
-    LSL.W #4,D6
-
-    swap    d6
-    or.l    d6,d5            | add shift
+	bclr	#0,d1
 2:   
     add.w   d1,a1       | plane position (always even)
 
@@ -1586,7 +1581,6 @@ blit_planes_cookie_cut_16x:
 * < D3: number of planes
 * < D4: height. If negative, source is copied with negative modulo (flip)
 * < D5: y offset for source planes
-* < D7: blit mask (not considered, optim, -1 all through the game)
 * blit mask set
 * returns: start of destination in A1 (computed from old A1+X,Y)
 * trashes: a1
@@ -1610,23 +1604,23 @@ blit_planes_any_internal_cookie_cut:
     move.w  (a4,d1.w*2),d1	| y times 40
 	.endif
 2:
-	move.w	d5,-(a7)
-	moveq	#0,d5
-    move.w  #0x0fca,d5    | B+C-A->D cookie cut   
-	swap	d5
-	moveq	#0,d6		| make sure D6.L is zero!!
+	lea		cookie_cut_blit_table(pc),a4
+	
     move.w  d0,d6
-    beq.b   4f
-    lsr.w   #3,d0
-	bclr	#0,d0
+    lsr.w   #3,d0			| X displacement in bytes
+	*bclr	#0,d0			| no need, it will be even
     and.w   #0xF,d6
-	beq.b	3f				| if 0 shift, optimize a few instructions
-    lsl.l   #8,d6
-    lsl.l   #4,d6
-    or.w    d6,d5            | add shift to mask (bltcon1)
-    swap    d6
-    clr.w   d6
-    or.l    d6,d5            | add shift
+	.ifdef	NO68020
+	add.w	d6,d6
+	add.w	d6,d6
+	move.l	(a4,d6.w),d7
+	lea		cookie_cut_mask_blit_table(pc),a4
+	move.l	(a4,d6.w),d6
+	.else
+	move.l	(a4,d6.w*4),d7
+	lea		cookie_cut_mask_blit_table(pc),a4
+	move.l	(a4,d6.w*4),d6
+	.endif
 3:   
     add.w   d0,d1
 4:
@@ -1646,15 +1640,14 @@ blit_planes_any_internal_cookie_cut:
     add.w   d2,d4       | blit height
     * always the same settings (ATM)
 
+	MOVEQ	#0,d1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
     
     * blitter registers set
 
-	clr.w bltamod(a5)		|A modulo=bytes to skip between lines
-	clr.w bltbmod(a5)		|B modulo=bytes to skip between lines
-	move.l	d5,d7			| save cookie cut bltcon
-	move.w	(a7)+,d5
+	move.w d1,bltamod(a5)		|A modulo=bytes to skip between lines
+	move.w d1,bltbmod(a5)		|B modulo=bytes to skip between lines
 	
     move.w  d0,bltcmod(a5)	|C modulo
     move.w  d0,bltdmod(a5)	|D modulo
@@ -1683,9 +1676,7 @@ process_1_plane:
 	bra.b	61f
 60:
 	* source is 0: just apply mask (less bandwidth lost) and change bltcon
-	move.l	#0x0BCA0000,d1
-	or.l	d6,d1
-	move.l	d1,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
+	move.l	d6,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
  	clr.w	bltbdat(a5)	|B word is zero
 	bra.b	62f
 61:
@@ -1698,6 +1689,20 @@ process_1_plane:
 	move.w  d4,bltsize(a5)	|rectangle size, starts blit
 	
 	rts
+
+	.macro	GEN_MINTERM_TABLE	name,value
+\name\()_table:
+	.set	shift,0
+	.rept	16
+	.long	(shift<<28)+(shift<<12)+\value
+	.set	shift,shift+1
+	.endr
+	.endm
+	
+	GEN_MINTERM_TABLE	cookie_cut_blit,0x0FCA0000
+	GEN_MINTERM_TABLE	cookie_cut_mask_blit,0x0BCA0000
+* 2 words: first shift (as bplcon value), then
+* offset in bytes
 
 	
 * < D0: sprite X
