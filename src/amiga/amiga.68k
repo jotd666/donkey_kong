@@ -2101,7 +2101,8 @@ platform_init:
     move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
 	move.l	chiprevbits,d0
 	and.l	#SETCHIPREV_AA,d0
-	beq.b	0f
+	cmp.l	#SETCHIPREV_AA,d0
+	bne.b	0f
 	* AGA, enable fast bitplane fetch
 	st		aa_amiga
     move.w #3,fmode(a5)
