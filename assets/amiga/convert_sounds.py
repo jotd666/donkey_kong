@@ -29,16 +29,16 @@ EMPTY_SND = "EMPTY_SND"
 sound_dict = {
 # samples
 "BOOM_SND"             :{"index":0x10,"channel":1,"sample_rate":lq_sample_rate,"priority":3},
-"CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
+"CREDIT_SND"             :{"index":0x11,"channel":1,"sample_rate":hq_sample_rate,"priority":10},
 "DEAD_TUNE_SND"             :{"index":0x12,"pattern":0xE,"loops":False,"volume":music_volume+10,"ticks":150},
-"JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":1},
-"START_SND"             :{"index":0x15,"channel":1,"sample_rate":lq_sample_rate,"priority":1},
-"JUMPING_SND"             :{"index":0x16,"channel":2,"sample_rate":vhq_sample_rate,"priority":1},
+"JUMPED_OVER_SND"             :{"index":0x13,"channel":1,"sample_rate":hq_sample_rate,"priority":10},
+"KILL_ENEMY_SND"             :{"index":0x14,"channel":1,"sample_rate":hq_sample_rate,"priority":10},
+"START_SND"             :{"index":0x15,"channel":1,"sample_rate":lq_sample_rate,"priority":10},
+"JUMPING_SND"             :{"index":0x16,"channel":2,"sample_rate":vhq_sample_rate,"priority":5},
 "WALKING_SND"             :{"index":0x17,"channel":2,"sample_rate":hq_sample_rate,"priority":2},
 "BOUNCER_FALLS_SND"             :{"index":0x18,"channel":3,"sample_rate":hq_sample_rate,"priority":1},
 "BOUNCER_BOUNCES_SND"             :{"index":0x19,"channel":0,"sample_rate":hq_sample_rate,"priority":1},  # no music in level 3
-"GORILLA_YELLS_SND"       :{"index":0xF,"channel":3,"sample_rate":hq_sample_rate,"priority":1},  # also matches MUS define
+"GORILLA_YELLS_SND"       :{"index":0xF,"channel":3,"sample_rate":hq_sample_rate,"priority":5},  # also matches MUS define
 
 # tunes match the MUS defines in donkey_kong.68k source
 "START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":40,"ticks":250},
@@ -128,7 +128,8 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             wav_file = os.path.join(sound_dir,wav_name+".wav")
 
             def get_sox_cmd(sr,output):
-                return [sox,"--volume","0.92",wav_file,"--channels","1","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
+                # -D option is very important. Without it there is a lot of noise.
+                return [sox,"--volume","0.92",wav_file,"--channels","1","-D","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
 
 
             used_sampling_rate = details["sample_rate"]
