@@ -265,12 +265,10 @@ _user:
 2:
 	move.l	(A0)+,D0	| CRAZYKONGLEVELS/S
 	beq.b	2f
-	* cheat isn't used as long as no cheat key is used
 	bset	#1,misc_options+3
 2:
 	move.l	(A0)+,D0	| NICEBARRELS/S
 	beq.b	2f
-	* cheat isn't used as long as no cheat key is used
 	bset	#2,misc_options+3
 2:
  	bsr		load_highscores

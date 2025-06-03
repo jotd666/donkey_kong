@@ -19,6 +19,19 @@ Features:
 - "nice barrel" option (found in one japan version): barrels don't fall on
   Mario when Mario is at the top of the ladder.
 
+Command line arguments (DOS bootable version):
+
+- INVINCIBLE/S: invincible
+- INFLIVES/S: infinite lives
+- INFTIME/S: infinite time
+- CHEATKEYS/S: enable cheat keys (see below)
+- STARTLIVES/K/N: set start lives
+- STARTLEVEL/K/N: set start level
+- SKIPINTRO/S: skip Kong climb sequence
+- CRAZYKONGLEVELS/S: "crazy kong" japanese version order
+- NICEBARRELS/S: barrels don't fall on the ladder if Mario
+  is high enough (like Japanese version)
+	
 Instructions:
 
 keys+<kbd>CTRL</kbd> or joystick: controls\
