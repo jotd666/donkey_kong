@@ -487,7 +487,7 @@ if True:
                     #print(f"converting {name}, screen {sprconf['screens'][0]}")
                     for mirrored in range(2):
                         bitplanes = bitplanelib.palette_image2raw(img_to_raw,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
-                            palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
+                            palette_precision_mask=0xFF,generate_mask=True,blit_pad=False)
                         bitplane_size = len(bitplanes)//(NB_BOB_PLANES+1)  # don't forget bob mask!
 
 
@@ -676,7 +676,7 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("four_barrels_bitmap:\n")
     four_sprites_bitplanes = []
     fsdata = bitplanelib.palette_image2raw(four_barrels,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
-        palette_precision_mask=0xFF,generate_mask=True,blit_pad=True)
+        palette_precision_mask=0xFF,generate_mask=True,blit_pad=False)
     plane_size = len(fsdata)//5
 
     for i in range(5):

@@ -1419,7 +1419,8 @@ restore_16x_background:
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
-    
+    move.w  #-1,bltalwm(a5)
+
     * blitter registers set
 
 	move.l d3,bltcon0(a5)	| sets con0 and con1
@@ -1637,7 +1638,7 @@ blit_planes_any_internal_cookie_cut:
     * always the same settings (ATM)
 
 	add.w	d5,a3			| apply to mask too
-	MOVEQ	#0,d1
+	MOVEQ	#-2,d1
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
     
@@ -1645,7 +1646,8 @@ blit_planes_any_internal_cookie_cut:
 
 	move.w d1,bltamod(a5)		|A modulo=bytes to skip between lines
 	move.w d1,bltbmod(a5)		|B modulo=bytes to skip between lines
-	
+	moveq	#0,d1
+	move.w	d1,bltalwm(a5)
     move.w  d0,bltcmod(a5)	|C modulo
     move.w  d0,bltdmod(a5)	|D modulo
 					

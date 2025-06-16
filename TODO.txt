@@ -1,3 +1,4 @@
+- too slow on level 2 (cement factory) on a500
 - sound priorities to check
 - problem when too many sprites (barrels) even if bobs should be displayed
   after 8 sprites. Today this is eluded: if there's a problem then
