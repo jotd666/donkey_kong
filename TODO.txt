@@ -1,3 +1,6 @@
+- if detects signature of one of the 3 kong params code+clut, then set a flag, prevent
+  from displaying any kong sprites in that update and blit the big corresponding kong
+  pic, saves a lot of blitting/masking
 - too slow on level 2 (cement factory) on a500
 - sound priorities to check
 - problem when too many sprites (barrels) even if bobs should be displayed

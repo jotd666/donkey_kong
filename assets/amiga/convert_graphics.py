@@ -16,6 +16,7 @@ ST_NONE = 0
 ST_BOB = 1
 ST_HW_SPRITE = 2
 
+dump_scaling_factor = 3
 
 this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/amiga")
@@ -265,6 +266,20 @@ def generate_16x16_image(cidx,sprdat,sprconf):
             img.putpixel((i,j),color)
     return img
 
+def generate_kong_image(kong_params):
+    kong_1 = Image.new("RGB",(48,32))
+    min_x = min(x[0] for x in kong_params)
+    min_y = min(x[1] for x in kong_params)
+
+    for x,y,code,clut,flip in kong_params:
+        x -= min_x
+        y -= min_y
+        img = generate_16x16_image(clut,block_dict["sprite"]["data"][code],None)
+        if flip:
+            img = ImageOps.mirror(img)
+        masked_paste(kong_1,y,x,img)
+    return kong_1
+
 def switch_values(t,a,b):
     t[a],t[b] = t[b],t[a]
 
@@ -421,7 +436,7 @@ if True:
         for cidx in clut_range:
             img = generate_16x16_image(cidx,sprdat,sprconf)
             if dump_sprites:
-                scaled = ImageOps.scale(img,2,0)
+                scaled = ImageOps.scale(img,dump_scaling_factor,0)
                 if sprconf:
                     scaled.save(os.path.join(dump_sprites_dir,f"{name}_{cidx}.png"))
                 else:
@@ -536,16 +551,60 @@ for k,v in sprite_config.items():
     smart_redraw_flag[k] = smf
     smart_redraw_flag[k+128] = smf  # mirror code
 
-# create special 4 barell image for level 1
+def masked_paste(dest,sx,sy,source):
+    for x in range(0,source.size[0]):
+        for y in range(0,source.size[1]):
+            p = source.getpixel((x,y))
+            if p != (0,0,0):
+                dest.putpixel((x+sx,y+sy),p)
+
+# create special 4 barrel-image for level 1
 img = generate_16x16_image(11,block_dict["sprite"]["data"][0x18],None)
 four_barrels = Image.new("RGB",(32,32))
 for sx in range(0,20,10):
     for sy in range(0,32,16):
-        for x in range(0,16):
-            for y in range(0,16):
-                p = img.getpixel((x,y))
-                if p != (0,0,0):
-                    four_barrels.putpixel((x+sx,y+sy),p)
+        # paste with "masking" (omitting to paste black)
+        masked_paste(four_barrels,sx,sy,img)
+
+
+if dump_sprites:
+    scaled = ImageOps.scale(four_barrels,dump_scaling_factor,0)
+    scaled.save(os.path.join(dump_sprites_dir,f"4_barrels.png"))
+
+# big kong
+kong_1_params = (
+(80, 128, 0x27, 8, 0),   # 0x2708
+(80, 104, 0x27, 8, 1),   # 0xA708
+(80, 116, 0x25, 8, 0),
+(64, 116, 0x23, 7, 0),
+(68, 127, 0x29, 8 ,1),
+(68, 105, 0x29, 8, 0))
+
+kong_2_params = (
+(80, 95, 0x27, 8, 0),   # 0x2708
+(80, 69, 0x26, 8, 0),   # 0x2608
+(80, 83, 0x25, 8, 0),
+(64, 83, 0x24, 7, 0),
+(64, 99, 0x28, 8, 0),
+(68, 72, 0x29, 8, 0)
+)
+
+kong_3_params = (
+(80, 164, 0x26, 8, 1),  # 0xa608
+(80, 138, 0x27, 8, 1),  # 0xa708
+(80, 150, 0x25, 8, 0),
+(64, 150, 0x24, 7, 0),
+(68, 161, 0x29, 8, 1),
+(64, 134, 0x28, 8, 1)
+)
+
+kongs = [generate_kong_image(kp) for kp in (kong_1_params,kong_2_params,kong_3_params)]
+
+
+if dump_sprites:
+    for i,kong in enumerate(kongs,1):
+        scaled = ImageOps.scale(kong,dump_scaling_factor,0)
+        scaled.save(os.path.join(dump_sprites_dir,f"kong_{i}.png"))
 
 
 with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
