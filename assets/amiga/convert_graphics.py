@@ -600,7 +600,8 @@ kong_3_params = (
 
 kongs = [generate_kong_image(kp) for kp in (kong_1_params,kong_2_params,kong_3_params)]
 
-
+raw_kongs = [bitplanelib.palette_image2raw(k,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
+                            palette_precision_mask=0xFF,generate_mask=True,blit_pad=False) for k in kongs]
 if dump_sprites:
     for i,kong in enumerate(kongs,1):
         scaled = ImageOps.scale(kong,dump_scaling_factor,0)
@@ -614,6 +615,8 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     f.write("\t.global\thardware_sprite_flag_table\n")
     f.write("\t.global\tsmart_redraw_flag_table\n")
     f.write("\t.global\tfour_barrels_bitmap\n")
+    for i in range(3):
+        f.write(f"\t.global\tbig_kong_{i+1}\n")
 
     f.write("\nhardware_sprite_flag_table:")
     bitplanelib.dump_asm_bytes(hw_sprite_flag,f,mit_format=True)
@@ -736,9 +739,9 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
     four_sprites_bitplanes = []
     fsdata = bitplanelib.palette_image2raw(four_barrels,None,bobs_palette,forced_nb_planes=NB_BOB_PLANES,
         palette_precision_mask=0xFF,generate_mask=True,blit_pad=False)
-    plane_size = len(fsdata)//5
+    plane_size = len(fsdata)//(NB_BOB_PLANES+1)
 
-    for i in range(5):
+    for i in range((NB_BOB_PLANES+1)):
         fsplane = fsdata[i*plane_size:(i+1)*plane_size]
         if any(fsplane):
             f.write(f"\t.long\tfour_barrels_bitplane_{i}\n")
@@ -747,6 +750,21 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             f.write("\t.long\t0\n")
             four_sprites_bitplanes.append(None)
 
+    # big kongs
+    big_kongs = []
+    for i,raw_kong in enumerate(raw_kongs,1):
+        f.write(f"big_kong_{i}:\n")
+        big_kong_bitplanes = []
+        for j in range((NB_BOB_PLANES+1)):
+            fsplane = fsdata[j*plane_size:(j+1)*plane_size]
+            if any(fsplane):
+                f.write(f"\t.long\tbig_kong_{i}_bitplane_{j}\n")
+                big_kong_bitplanes.append(fsplane)
+            else:
+                f.write("\t.long\t0\n")
+                big_kong_bitplanes.append(None)
+        big_kongs.append(big_kong_bitplanes)
+
     f.write("\n\t.section\t.datachip\n\n")
 
     for i,fsplane in enumerate(four_sprites_bitplanes):
@@ -754,6 +772,13 @@ with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
             f.write(f"four_barrels_bitplane_{i}:")
             bitplanelib.dump_asm_bytes(fsplane,f,mit_format=True)
 
+    for i,fsdata in enumerate(raw_kongs,1):
+        plane_size = len(fsdata)//(NB_BOB_PLANES+1)
+        for j in range(NB_BOB_PLANES+1):
+            fsplane = fsdata[j*plane_size:(j+1)*plane_size]
+            if fsplane:
+                f.write(f"big_kong_{i}_bitplane_{j}:")
+                bitplanelib.dump_asm_bytes(fsplane,f,mit_format=True)
 
     # sprites
     for i in range(NB_POSSIBLE_SPRITES):
