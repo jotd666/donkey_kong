@@ -381,8 +381,6 @@ _user:
 	sne		cheat_used
 
 	jsr	 _detect_controller_types 
-	clr.b	controller_joypad_0
-	clr.b	controller_joypad_1
 
 	* palette 0
 	bsr		osd_update_palette_bank
