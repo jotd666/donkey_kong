@@ -25,6 +25,9 @@
 *   - call PROCESS_BLITS to process the previous blits
 *   - call the routine to perform the "blits" (fake blits now, fills filled_blitter_list instead)
 *   - call COMMIT_BLITLIST to end the list (by setting -2 in it)
+* - on level 3 (blitter) interrupt:
+*   - ack blitter interrupt
+*   - call PROCESS_ONE_BLIT to process next blit
 *
 *   that's it. PROCESS_BLITS started the chain reaction, and there are not blitwaits
 *   anymore in the code

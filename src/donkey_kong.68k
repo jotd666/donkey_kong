@@ -1320,7 +1320,7 @@ rst_20:
 	jeq	l_0018                             	| [$0024: jr      z,$0018] If zero skip up and count down the other timer
 
 l_0026:
-	move.l	(sp)+,a0                        	| [$0026: pop     hl] else move stack pointer up and return to higher subroutine
+	addq.w	#4,sp                        	| [$0026: pop     hl] else move stack pointer up and return to higher subroutine
 	rts                                    	| [$0027: ret] return
 
 rst_28:
@@ -1367,7 +1367,7 @@ l_0048:
 	beq.b	0f                               	| [...]
 	rts                                    	| [$004b: ret    c] return if carry [...]
 0:
-	move.l	(sp)+,a0                        	| [$004c: pop     hl] otherwise HL gets the stack = return to higher subroutine
+	addq.w	#4,sp                        	| [$004c: pop     hl] otherwise HL gets the stack = return to higher subroutine
 	rts                                    	| [$004d: ret] return
 									
 
@@ -1381,7 +1381,7 @@ l_0048:
 * Also #003D is called from several places. used for updating girl's sprite
 *
 rst_38:
-	move.w	#0x0004,d3                      	| [$0038: ld      de,$0004] load offset of 4 to add 4
+	moveq	#0x0004,d3                      	| [$0038: ld      de,$0004] load offset of 4 to add 4
 	move.b	#0x0a,d1                        	| [$003b: ld      b,$0a] for B = 1 to #A (10 decimal)
 
 l_003d:
@@ -1421,16 +1421,16 @@ random_0057:
 donkey_kong_irq:
 * interrupt routine
 
-	move.w	d0,-(sp)                        	| [$0066: push    af]
-	movem.w	d1/d2,-(sp)                    	| [$0067: push    bc]
-	movem.w	d3/d4,-(sp)                    	| [$0068: push    de]
-	move.l	a1,-(sp)                        	| [$0068: push    de]
+	                     	| [$0066: push    af]
+	                    	| [$0067: push    bc]
+	                    	| [$0068: push    de]
+	                        	| [$0068: push    de]
 
-	move.l	a0,-(sp)                        	| [$0069: push    hl]
+	                        	| [$0069: push    hl]
 
-	move.l	a2,-(sp)                        	| [$006a: push    ix]
+	                        	| [$006a: push    ix]
 
-	move.l	a3,-(sp)                        	| [$006c: push    iy] save all registers
+	                        	| [$006c: push    iy] save all registers
 
 	clr.b	d0                               	| [$006e: xor     a] A := 0
 	jbsr	osd_interrupt_control            	| [$006f: ld      (reg_vblank_enable),a] disable interrupts
@@ -1495,17 +1495,17 @@ l_00b5:
 
 * return here from any of the jumps above, based on return address pushed to stack at #00C5
 l_00d2:
-	move.l	(sp)+,a3                        	| [$00d2: pop     iy]
-	move.l	(sp)+,a2                        	| [$00d4: pop     ix]
-	move.l	(sp)+,a0                        	| [$00d6: pop     hl]
-	move.l	(sp)+,a1                        	| [$00d7: pop     de]
-	movem.w	(sp)+,d3/d4                    	| [$00d7: pop     de]
+	                        	| [$00d2: pop     iy]
+	                        	| [$00d4: pop     ix]
+	                        	| [$00d6: pop     hl]
+	                        	| [$00d7: pop     de]
+	                    	| [$00d7: pop     de]
 
-	movem.w	(sp)+,d1/d2                    	| [$00d8: pop     bc] restore all registers except AF
+	                    	| [$00d8: pop     bc] restore all registers except AF
 
 	move.b	#0x01,d0                        	| [$00d9: ld      a,$01] A := 1
 	jbsr	osd_interrupt_control            	| [$00db: ld      (reg_vblank_enable),a] enable interrupts
-	move.w	(sp)+,d0                        	| [$00de: pop     af] restore AF
+	                        	| [$00de: pop     af] restore AF
 	rts                                    	| [$00df: ret] return from interrupt
 
 * called from #00BF
@@ -2659,7 +2659,7 @@ l_05e0:
 	subq.b	#1,d0                           	| [$05e0: dec     a] decrease A
 	move.w	d0,-(sp)                        	| [$05e1: push    af] save AF
 	jbsr	l_05c6                            	| [$05e2: call    $05c6] call this sub again for the lower parameter
-	movem.w	(sp)+,d0                        	| [$05e5: pop     af] restore AF.  A == 0 ?  are we done?
+	move.w	(sp)+,d0                        	| [$05e5: pop     af] restore AF.  A == 0 ?  are we done?
 	bne.b	0f                               	| [...]
 	rts                                    	| [$05e6: ret     z] yes, return [...]
 0:
@@ -3160,12 +3160,12 @@ l_082d:
 
 l_083b:
 	lea	waittimermsb_6009,a0           	| [$083b: ld      hl,waittimermsb_6009] load HL with timer address
-	move.b	#0x02,(a0)                      	| [$083e: ld      (hl),$02] set timer to 2
-	addq.w	#1,a0                           	| [$0840: inc     hl] HL := GameMode2
+	move.b	#0x02,(a0)+                      	| [$083e: ld      (hl),$02] set timer to 2
+	                           	| [$0840: inc     hl] HL := GameMode2
 	addq.b	#1,(a0)                         	| [$0841: inc     (hl)] increase game mode2
 	lea	kong_intro_flash_counter_638a,a0	| [$0842: ld      hl,kong_intro_flash_counter_638a] load HL with kong intro flash counter
-	clr.b	(a0)                             	| [$0845: ld      (hl),$00] clear counter
-	addq.w	#1,a0                           	| [$0847: inc     hl] HL := #638B = ???
+	clr.b	(a0)+                             	| [$0845: ld      (hl),$00] clear counter
+	                           	| [$0847: inc     hl] HL := #638B = ???
 	clr.b	(a0)                             	| [$0848: ld      (hl),$00] clear this memory
 	rts                                    	| [$084a: ret] return
 
@@ -6499,9 +6499,9 @@ l_197a:
 	jbsr	l_1a07                            	| [$19bc: call    $1a07] handle when the bonus timer has run out
 	jbsr	l_2fcb                            	| [$19bf: call    $2fcb] for non-girder levels, checks for bonus timer changes. if the bonus counts down, sets a possible new fire to be released,
                                         * sets a bouncer to be deployed, updates the bonus timer onscreen, and checks for bonus time running out
-	nop                                    	| [$19c2: nop]
-	nop                                    	| [$19c3: nop]
-	nop                                    	| [$19c4: nop] no operations.  [a deleted call ?]
+	                                    	| [$19c2: nop]
+	                                    	| [$19c3: nop]
+	                                    	| [$19c4: nop] no operations.  [a deleted call ?]
 
 	move.b	mario_array_6200,d0             	| [$19c5: ld      a,(mario_array_6200)] load A with 0 if mario is dead, 1 if he is alive
 	                               	| [$19c8: and     a] is mario alive?
@@ -6517,8 +6517,8 @@ l_197a:
 l_19d2:
 	lea	gamemode2_600a,a0              	| [$19d2: ld      hl,gamemode2_600a] load HL with game mode2
 	addq.b	#1,(a0)                         	| [$19d5: inc     (hl)] increase
-	subq.w	#1,a0                           	| [$19d6: dec     hl] HL := WaitTimerMSB (timer used for sound effects)
-	move.b	#0x40,(a0)                      	| [$19d7: ld      (hl),$40] set timer to wait 40 units
+	                           	| [$19d6: dec     hl] HL := WaitTimerMSB (timer used for sound effects)
+	move.b	#0x40,-(a0)                      	| [$19d7: ld      (hl),$40] set timer to wait 40 units
 	rts                                    	| [$19d9: ret] return to #00D2
 
 * called from #19AD as part of the main routine

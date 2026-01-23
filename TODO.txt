@@ -4,8 +4,9 @@
   => works for 1 frame, missing 2 others. Also don't do when kong 
   is "grinning" (intro)
    erase wrong
-   x seems shifted
+   x seems shifted: sub 16 to test
 - optimize tile xy computation like in tetris
+- blitter using blit chain (doesn't work properly in cycle exact, seems to crash)
 - too slow on level 2 (cement factory) on a500
 - sound priorities to check
 - problem when too many sprites (barrels) even if bobs should be displayed

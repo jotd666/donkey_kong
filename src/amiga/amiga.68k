@@ -535,11 +535,6 @@ call_bcpl:
 	movem.l (sp)+,d2-d7/a2-a6
 	rts
 
-* change return address from vblank
-* D0: return address (0: no change)
-osd_set_vblank_return_address:
-	move.l	d0,return_address
-	rts
 	
 get_hiscore_name:
 	moveq	#0,d0
@@ -637,34 +632,7 @@ _vblank:
 	btst	#5,d0
 	beq.b		1f
 
-	* emergency system to skip a frame if needed!
-	tst.b	skip_screen_update
-	jne		0f
-	
-	* wait for blits to complete (via soft flag that last blitter command
-	* sets when reaching the end of the list) and reset list pointers
-	NEW_BLITLIST
-	
-	* show the newly drawn buffer THEN switch the buffers
-	.if		OPT_BLITTER_MODE==1
-	jbsr	set_bitplanes
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
-	jbsr	switch_screen_buffers
-	.endif
-	.endif
-	
-	lea		_custom,a5
-	* start the chain reaction
-	PROCESS_BLITS
 
-	jbsr	really_update_sprites
-	
-	* terminate the blitter command list
-	COMMIT_BLITLIST
-	
-	
-0:
-	clr.b	skip_screen_update
 	move.l	_joypad_state(pc),d1
 	moveq	#1,d0
 	jsr	_read_joystick
@@ -700,11 +668,61 @@ _vblank:
 	move.w	#0x20,(intreq,a5)	
 	jra	3f
 1:
-	* has to be copper
+	.ifndef	RELEASE
+	btst	#6,d0
+	jne		2f
+	BREAKPOINT	"unexpected level 3 interrupt"
+2:
+	.endif
+	* has to be blitter operation completed: handle next blit
+	* ack blitter int twice (040/pistorm bug)
+	move.w	#0x40,(intreq,a5)
+	move.w	#0x40,(intreq,a5)	
+
+	
+	PROCESS_ONE_BLIT
+	
+3:	
+    movem.l (a7)+,d0-d7/a0-a6
+	rte
+	
+
+level1_interrupt:
+    movem.l d0-d7/a0-a6,-(a7)
+	lea		_custom,a5
+	move.w	(intreqr,a5),d0
 	* we're going to ack copper interrupt now
 	* do it twice (040/pistorm bug)
-	move.w	#0x10,(intreq,a5)
-	move.w	#0x10,(intreq,a5)
+	move.w	#0x04,(intreq,a5)
+	move.w	#0x04,(intreq,a5)
+	
+	* emergency system to skip a frame if needed!
+	tst.b	skip_screen_update
+	jne		0f
+	
+	* wait for blits to complete (via soft flag that last blitter command
+	* sets when reaching the end of the list) and reset list pointers
+	NEW_BLITLIST
+	
+	* show the newly drawn buffer THEN switch the buffers
+	.if		OPT_BLITTER_MODE==1
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	jbsr	set_bitplanes
+	jbsr	switch_screen_buffers
+	.endif
+	.endif
+	
+	lea		_custom,a5
+	* start the chain reaction
+	PROCESS_BLITS
+
+	jbsr	really_update_sprites
+	
+	* terminate the blitter command list
+	COMMIT_BLITLIST
+
+0:
+	clr.b	skip_screen_update
 	
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
@@ -740,29 +758,24 @@ _vblank:
 0:
 
 
-	
 	clr.b	interrupt_mode
 	
 23:
 	* now we check copper interrupt again
-	move.w	_custom+intreqr,d0
-	btst	#4,d0
+	lea		_custom,a5
+	move.w	intreqr(a5),d0
+	btst	#2,d0
 	beq.b	3f		| clear: ok
-	* copper interrupt has been called, which means that
+	* level 1 interrupt has been called, which means that
 	* rendering was so slow that we couldn't cope within a frame
 	* skip a tick and ack again, we lose one update frame
 	st.b	skip_screen_update
 	.ifndef	RELEASE
-	move.w	#0xF00,0xDFF180
+	move.w	#0xF00,_custom+color
 	.endif
-	move.w	#0x10,_custom+intreq
+	move.w	#0x4,intreq(a5)
 3:
     movem.l (a7)+,d0-d7/a0-a6
-	tst.l	return_address
-	beq.b	4f
-	move.l	return_address,(2,a7)		| change return address
-	clr.l	return_address				| just for this time
-4:
     rte
 	
 
@@ -1048,10 +1061,12 @@ update_hardware_sprites:
 27:
 	move.l	(a5),d4
 	jne		28f
+	.ifndef	RELEASE
 	* orientation not available for that sprite
 	move.b	(SPRITE_CLUT,a2),d3
 	move.b	(SPRITE_CODE,a2),d2
 	move.w	#0x0F0,0xDFF180
+	.endif
 	bra		30f
 28:
 
@@ -1358,9 +1373,11 @@ update_bobs:
 	move.l	(a4,d4.w),d4	| test pointer
 	jmi		211f			| hardware sprite: skip
 	bne.b	11f
+	.ifndef	RELEASE
 	* not known/registered: we should log that!
 	move.w	#0xF00,0xDFF180
 	move.b	d2,d2
+	.endif
 	bra.b	211f
 11:
 	moveq	#0,d1
@@ -1379,11 +1396,14 @@ update_bobs:
 	move.l	a0,-(a7)
 	move.l	d4,a0
 	move.l	(a0,d3.w),d4
+
 	bne.b	12f
 	* bob is valid but wrong clut
+	.ifndef	RELEASE
 	lsr		#2,d3
 	move.w	#0xFF0,0xDFF180
-	bra.b	22f
+	.endif
+	jra	22f
 12:
 	move.l		bg_drawed_screen_ptr(pc),a1
 	* D0 and D1 are already set
@@ -1503,7 +1523,7 @@ restore_16x_background:
 
     * now just wait for blitter ready to write all registers
 	WAIT_BLIT
-    move.w  #-1,bltalwm(a5)
+    WRITE_BLITTER_REG_WORD	#-1,bltalwm
 
     * blitter registers set
 
@@ -1528,7 +1548,8 @@ restore_16x_background:
 201:
 	.rept	NB_PLAYFIELD_PLANES-2
 	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
-    move.l  #0x01000000,d3    | minterm useD & rect clear (0xA) 
+	moveq	#1,d3
+    ror.l   #8,d3    | minterm useD & rect clear (0xA) 0x10000000
 	* optimize erase for remaining bitplanes
 	lsr.b	#1,d7
 	jcc		202f
@@ -1755,12 +1776,12 @@ process_1_plane:
 	beq.b	60f
 	move.l	d0,a4
 	add.w	d5,a4
-	bra.b	61f
+	jra	61f
 60:
 	* source is 0: just apply mask (less bandwidth lost) and change bltcon
 	WRITE_BLITTER_REG_LONG	d6,bltcon0	| sets con0 and con1: C-A->D cookie cut, B fixed
 	WRITE_BLITTER_REG_WORD	d1,bltbdat	|B word is zero
-	bra.b	62f
+	jra	62f
 61:
 	* non-zero: set data source & bltcon
 	WRITE_BLITTER_REG_LONG	d7,bltcon0	| sets con0 and con1: C-A+B->D cookie cut full
@@ -2035,9 +2056,9 @@ osd_sound_stop:
 	
 
 
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 switch_screen_buffers:
 
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
 	* also toggle previous sprite positions
@@ -2059,9 +2080,9 @@ switch_screen_buffers:
 	move.l	a3,bob_previous_displayed_sprites
 	move.l	a2,bob_previous_drawed_sprites
 	
-	.endif
 	
 	rts
+	.endif
 
 	
 store_system:
@@ -2248,8 +2269,10 @@ platform_init:
     *move.w #0x20,dmacon(a5)
 
 	* install keyboard and vblank/copper handler
-	pea		level2_interrupt(pc)
 	move.l	system_vbr(pc),a1
+	pea		level1_interrupt(pc)
+	move.l	(a7)+,(0x64,a1)
+	pea		level2_interrupt(pc)
 	move.l	(a7)+,(0x68,a1)
 	pea		_vblank(pc)
 	move.l	(a7)+,(0x6C,a1)
@@ -2313,10 +2336,6 @@ load_palette:
 	rts
 	
 
-osd_is_vblank_interrupt_enabled:
-	move.w	_custom+intenar,d0
-	btst	#5,d0			| check vblank interrupt
-	rts
 	
 * < d0: 0 disable interrupts, 1 enable interrupts
 osd_interrupt_control:
@@ -2330,7 +2349,13 @@ osd_enable_interrupts:
 	* works from the game (which calls enable interrupts from interrupt)
 	move.w	#0x2000,SR
 0:
-	move.w	#0xC038,_custom+intena
+	.if		OPT_BLITTER_MODE==1
+	* enable blitter, vblank & software level 1
+	move.w	#0xC06C,_custom+intena
+	.else
+	* enable vblank & software level 1 only
+	move.w	#0xC02C,_custom+intena
+	.endif
 	rts
 	
 osd_disable_interrupts:
@@ -2339,7 +2364,9 @@ osd_disable_interrupts:
 	* if interrupts are disabled again from interrupt, re-set SR
 	move.w	#0x2700,SR
 0:
-	move.w	#0x0030,_custom+intena
+	* leave keyboard (& blitter if set, should be able to process blits)
+	* disable vblank & level 1
+	move.w	#0x0024,_custom+intena
 	rts
 
 
@@ -3252,25 +3279,22 @@ palette:
 sprite_cluts:
 	.include "palette_cluts.68k"
 	
-	DECL_BLITLISTS	0x10000
+	DECL_BLITLISTS	0x8000
 
 	* on amiga, this file is included in donkey_kong.68k file
 	* so the assembler can optimize by using PC-relative addressing
 	* whenever possible (and it does)
 	.ifndef	RELEASE
-	* easier to debug game to have memory aligned on 0x10000
-	.align	0x10000
 
 	.ifne	OPT_ENABLE_LOGGING
 	.section	.bss
-	.ascii	"TILE"
+
 tile_log_table:
 	* 32 cluts, 1024 tiles
 	* a lot of combinations aren't used (fortunately!)
 	ds.w	0x10000
 	.endif
 	.endif
-	.ascii	"CODE_END"
 
 
 	.section	.datachip
@@ -3375,7 +3399,7 @@ bottom_color_line_copper:
 	.set    beampos,beampos+0x800
 	.endr
 	* the line where "credits" is drawn
-    .word	 intreq,0x8010	| no bobs from now on, get more drawing time
+    .word	 intreq,0x8004	| no bobs from now on, get more drawing time
 	
     .long    -2					
 	.ascii	"ENDCPLST"
