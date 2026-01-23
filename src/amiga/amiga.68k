@@ -1,15 +1,19 @@
 *
 *	Amiga-specific portions of donkey_kong
 *
-* (c) JOTD 2024
+* (c) JOTD 2024-2026
 *
 
-.include "../src/donkey_kong.inc"
-.include "custom.i"
-.include "exec_lvos.i"
-.include "dos_lvos.i"
-.include "graphics_lvos.i"
-
+	.include "../src/donkey_kong.inc"
+	.include "../src/breakpoint.inc"
+	.include "custom.i"
+	.include "exec_lvos.i"
+	.include "dos_lvos.i"
+	.include "graphics_lvos.i"
+	
+OPT_BLITTER_MODE = 0
+	.include "blitter_macros.inc"
+	
 AttnFlags = 0x128
 AFB_68010 = 0
 AFB_68020 = 1
@@ -99,13 +103,6 @@ SPRITE_SIZEOF = 4
 	.endif
 .endm
 
-.macro	WAIT_BLIT
-	move.w	#0x8400,(dmacon,a5)		| blitter high priority
-wait\@:
-	BTST	#6,(dmaconr,a5)
-	BNE.S	wait\@
-	move.w	#0x0400,(dmacon,a5)		| blitter normal priority
-.endm
 
 .macro MUL_TABLE value,len
 mul\value\()_table:
@@ -1482,24 +1479,24 @@ restore_16x_background:
 
     * blitter registers set
 
-	move.l d3,bltcon0(a5)	| sets con0 and con1
+	WRITE_BLITTER_REG_LONG	d3,bltcon0	| sets con0 and con1
 
-    move.w  d1,bltamod(a5)	|A modulo
-    move.w  d1,bltdmod(a5)	|D modulo
+	WRITE_BLITTER_REG_WORD	d1,bltamod	|A modulo
+	WRITE_BLITTER_REG_WORD	d1,bltdmod	|D modulo
 
 						
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	a0,bltapt	|source graphic top left corner
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top (bottom) left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 
 	lea	(BG_SCREEN_PLANE_SIZE,a0),a0
 	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
 
 	WAIT_BLIT
 	* second bitplane
-	move.l a0,bltapt(a5)	|source graphic top left corner
-	move.l a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	a0,bltapt	|source graphic top left corner
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top (bottom) left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 201:
 	.rept	NB_PLAYFIELD_PLANES-2
 	lea	(BG_SCREEN_PLANE_SIZE,a1),a1
@@ -1510,9 +1507,9 @@ restore_16x_background:
 	
 	WAIT_BLIT
 	* now simply erase the 3 other planes
-	move.l d3,bltcon0(a5)	
-	move.l a1,bltdpt(a5)	|destination top left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	d3,bltcon0	
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 202:
 	.endr
 	
@@ -1582,24 +1579,24 @@ clear_planes_any_blitter_internal:
     
     * blitter registers set
 	.ifdef	VARIABLE_BLITTER_MASKS_AND_MODS
-    move.l  d7,bltafwm(a5)
+	WRITE_BLITTER_REG_LONG	d7,bltafwm
 	.endif
 	
-	move.l d5,bltcon0(a5)	
-    move.w  d0,bltdmod(a5)	|D modulo
+	WRITE_BLITTER_REG_LONG	d5,bltcon0	
+	WRITE_BLITTER_REG_WORD	d0,bltdmod	|D modulo
 	
 	subq	#1,d3
-	beq.b	4f
+	jeq	4f
 	subq	#1,d3
 3:
-	move.l a1,bltdpt(a5)	|destination top left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 	lea		(BG_SCREEN_PLANE_SIZE,a1),a1
 	WAIT_BLIT
 	dbf		d3,3b
 4:
-	move.l a1,bltdpt(a5)	|destination top left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 	
     rts
 
@@ -1703,12 +1700,12 @@ blit_planes_any_internal_cookie_cut:
     
     * blitter registers set
 
-	move.w d1,bltamod(a5)		|A modulo=bytes to skip between lines
-	move.w d1,bltbmod(a5)		|B modulo=bytes to skip between lines
+	WRITE_BLITTER_REG_WORD	d1,bltamod		|A modulo=bytes to skip between lines
+	WRITE_BLITTER_REG_WORD	d1,bltbmod		|B modulo=bytes to skip between lines
 	moveq	#0,d1
-	move.w	d1,bltalwm(a5)
-    move.w  d0,bltcmod(a5)	|C modulo
-    move.w  d0,bltdmod(a5)	|D modulo
+	WRITE_BLITTER_REG_WORD	d1,bltalwm
+	WRITE_BLITTER_REG_WORD	d0,bltcmod	|C modulo
+	WRITE_BLITTER_REG_WORD	d0,bltdmod	|D modulo
 					
 	subq	#1,d3
 	beq.b	7f
@@ -1725,7 +1722,7 @@ blit_planes_any_internal_cookie_cut:
     rts
 	
 process_1_plane:
-	move.l a3,bltapt(a5)	|source graphic top left corner (mask)
+	WRITE_BLITTER_REG_LONG	a3,bltapt	|source graphic top left corner (mask)
 	move.l (a0)+,d0
 	beq.b	60f
 	move.l	d0,a4
@@ -1733,17 +1730,17 @@ process_1_plane:
 	bra.b	61f
 60:
 	* source is 0: just apply mask (less bandwidth lost) and change bltcon
-	move.l	d6,bltcon0(a5)	| sets con0 and con1: C-A->D cookie cut, B fixed
- 	move.w	d1,bltbdat(a5)	|B word is zero
+	WRITE_BLITTER_REG_LONG	d6,bltcon0	| sets con0 and con1: C-A->D cookie cut, B fixed
+	WRITE_BLITTER_REG_WORD	d1,bltbdat	|B word is zero
 	bra.b	62f
 61:
 	* non-zero: set data source & bltcon
-	move.l	d7,bltcon0(a5)	| sets con0 and con1: C-A+B->D cookie cut full
-	move.l	a4,bltbpt(a5)	|source graphic top left corner
+	WRITE_BLITTER_REG_LONG	d7,bltcon0	| sets con0 and con1: C-A+B->D cookie cut full
+	WRITE_BLITTER_REG_LONG	a4,bltbpt	|source graphic top left corner
 62:
- 	move.l	a1,bltcpt(a5)	|pristine background top (bottom) left corner
-	move.l	a1,bltdpt(a5)	|destination top (bottom) left corner
-	move.w  d4,bltsize(a5)	|rectangle size, starts blit
+	WRITE_BLITTER_REG_LONG	a1,bltcpt	|pristine background top (bottom) left corner
+	WRITE_BLITTER_REG_LONG	a1,bltdpt	|destination top (bottom) left corner
+	WRITE_BLITTER_REG_SIZE	d4	|rectangle size, starts blit
 	
 	rts
 
@@ -2473,7 +2470,8 @@ update_bg_tile:
 	add.w	d7,a3
 	.endif
 
-	WAIT_BLIT
+	
+	*WAIT_BLIT
 
 	* optimization when a well-known
 	* empty character is passed (standard charset)
@@ -3226,6 +3224,8 @@ palette:
 sprite_cluts:
 	.include "palette_cluts.68k"
 	
+	DECL_BLITLISTS	0x10000
+
 	* on amiga, this file is included in donkey_kong.68k file
 	* so the assembler can optimize by using PC-relative addressing
 	* whenever possible (and it does)
@@ -3284,7 +3284,8 @@ blank_sprite:
 	
 	* main copperlist
 copperlist:
-    *.word   0x1801,0xFFFE
+	* waiting seems to avoid artifacts
+    .word   0x0801,0xFFFE
 
 
 panel_bitplanes:
