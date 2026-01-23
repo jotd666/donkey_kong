@@ -639,8 +639,30 @@ _vblank:
 
 	* emergency system to skip a frame if needed!
 	tst.b	skip_screen_update
-	bne.b	0f
+	jne		0f
+	
+	* wait for blits to complete (via soft flag that last blitter command
+	* sets when reaching the end of the list) and reset list pointers
+	NEW_BLITLIST
+	
+	* show the newly drawn buffer THEN switch the buffers
+	.if		OPT_BLITTER_MODE==1
+	jbsr	set_bitplanes
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	jbsr	switch_screen_buffers
+	.endif
+	.endif
+	
+	lea		_custom,a5
+	* start the chain reaction
+	PROCESS_BLITS
+
 	jbsr	really_update_sprites
+	
+	* terminate the blitter command list
+	COMMIT_BLITLIST
+	
+	
 0:
 	clr.b	skip_screen_update
 	move.l	_joypad_state(pc),d1
@@ -701,8 +723,11 @@ _vblank:
 
 	sub.w	d1,delay_timer
 	
+	.if		OPT_BLITTER_MODE==0
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
-	bsr		switch_screen_buffers
+	jbsr		switch_screen_buffers
+	jbsr		set_bitplanes	
+	.endif
 	.endif
 	
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
@@ -713,6 +738,9 @@ _vblank:
 	bne.b	0f
 	jbsr		donkey_kong_irq	
 0:
+
+
+	
 	clr.b	interrupt_mode
 	
 23:
@@ -2030,7 +2058,7 @@ switch_screen_buffers:
 	move.l	a5,bg_displayed_screen_ptr
 	move.l	a3,bob_previous_displayed_sprites
 	move.l	a2,bob_previous_drawed_sprites
-	jbsr		set_bitplanes
+	
 	.endif
 	
 	rts
