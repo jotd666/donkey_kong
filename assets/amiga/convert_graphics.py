@@ -571,7 +571,7 @@ if dump_sprites:
     scaled = ImageOps.scale(four_barrels,dump_scaling_factor,0)
     scaled.save(os.path.join(dump_sprites_dir,f"4_barrels.png"))
 
-# big kong
+# big kong, precompute 3 images to save some blitting/masking
 kong_1_params = (
 (80, 128, 0x27, 8, 0),   # 0x2708
 (80, 104, 0x27, 8, 1),   # 0xA708

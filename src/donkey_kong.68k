@@ -11342,8 +11342,8 @@ l_30ed:
 	jbsr	l_30fa                            	| [$30ed: call    $30fa] Check internal difficulty and timers and return here based on difficulty a percentage of the time
 	jbsr	l_313c                            	| [$30f0: call    $313c] Deploy fire if fire deployment flag is set
 	jbsr	l_31b1                            	| [$30f3: call    $31b1] Process all movement for all fireballs
-	jbsr	l_34f3                            	| [$30f6: call    $34f3] update all fires and firefoxes
-	rts                                    	| [$30f9: ret] return
+	jra		l_34f3                            	| [$30f6: call    $34f3] update all fires and firefoxes
+	                                    	| [$30f9: ret] return
 
 * This routine is used to adjust the fireball speed based on the internal difficulty. It works by forcing the entire fireball movement routine to
 * be skipped on certain frames, returning directly back to the main routine in such cases. The higher the internal difficlty, the less often it
@@ -12007,11 +12007,11 @@ l_3445:
 
 * Fire has completed its spawning and is now free-floating
 l_3456:
-	clr.b	d0                               	| [$3456: xor     a] A := 0
-	move.b	d0,(0x13,a2)                    	| [$3457: ld      (ix+$13),a] Clear fire animation height counter
-	move.b	d0,(0x18,a2)                    	| [$345a: ld      (ix+$18),a] Clear firefox spawning indicator
-	move.b	d0,(0x0d,a2)                    	| [$345d: ld      (ix+$0d),a] Set direction to left
-	move.b	d0,(0x1c,a2)                    	| [$3460: ld      (ix+$1c),a] Clear the still indicator
+	                               	| [$3456: xor     a] A := 0
+	clr.b	(0x13,a2)                    	| [$3457: ld      (ix+$13),a] Clear fire animation height counter
+	clr.b	(0x18,a2)                    	| [$345a: ld      (ix+$18),a] Clear firefox spawning indicator
+	clr.b	(0x0d,a2)                    	| [$345d: ld      (ix+$0d),a] Set direction to left
+	clr.b	(0x1c,a2)                    	| [$3460: ld      (ix+$1c),a] Clear the still indicator
 	move.b	(0x03,a2),d0                    	| [$3463: ld      a,(ix+$03)] \ Make copy of X-position
 	move.b	d0,(0x0e,a2)                    	| [$3466: ld      (ix+$0e),a] /
 	move.b	(0x05,a2),d0                    	| [$3469: ld      a,(ix+$05)] \ Make copy of Y-position
@@ -12112,17 +12112,17 @@ l_34ca:
 	and.b	#0x06,d0                         	| [$34cf: and     $06]|
 	move.b	d0,d1                           	| [$34d1: ld      c,a] /
 	add.w	d1,a0                            	| [$34d2: add     hl,bc] add this result into HL to get offset into table
-	move.b	(a0),d0                         	| [$34d3: ld      a,(hl)] \  Copy X-position from table into fireball X-position
+	move.b	(a0)+,d0                         	| [$34d3: ld      a,(hl)] \  Copy X-position from table into fireball X-position
 	move.b	d0,(0x03,a2)                    	| [$34d4: ld      (ix+$03),a]|
 	move.b	d0,(0x0e,a2)                    	| [$34d7: ld      (ix+$0e),a] /
-	addq.w	#1,a0                           	| [$34da: inc     hl] next table entry
+	                           	| [$34da: inc     hl] next table entry
 	move.b	(a0),d0                         	| [$34db: ld      a,(hl)] \  Copy Y-position from table into fireball Y-position
 	move.b	d0,(0x05,a2)                    	| [$34dc: ld      (ix+$05),a]|
 	move.b	d0,(0x0f,a2)                    	| [$34df: ld      (ix+$0f),a] /
-	clr.b	d0                               	| [$34e2: xor     a] A := 0
-	move.b	d0,(0x0d,a2)                    	| [$34e3: ld      (ix+$0d),a] Set fireball direction to left
-	move.b	d0,(0x18,a2)                    	| [$34e6: ld      (ix+$18),a] Clear fireball spawning indicator
-	move.b	d0,(0x1c,a2)                    	| [$34e9: ld      (ix+$1c),a] Clear +1C = still indicator
+	                               	| [$34e2: xor     a] A := 0
+	clr.b	(0x0d,a2)                    	| [$34e3: ld      (ix+$0d),a] Set fireball direction to left
+	clr.b	(0x18,a2)                    	| [$34e6: ld      (ix+$18),a] Clear fireball spawning indicator
+	clr.b	(0x1c,a2)                    	| [$34e9: ld      (ix+$1c),a] Clear +1C = still indicator
 	rts                                    	| [$34ec: ret] return
 
 l_34ed:
@@ -12143,22 +12143,22 @@ l_34fb:
 	jeq	l_351e                             	| [$34fd: jp      z,$351e] no, jump away and set for next sprite
 
 	addq.w	#3,a0                           	| [$3500: inc     l] * 3
-	move.b	(a0),d0                         	| [$3503: ld      a,(hl)] load A with firefox X position
-	move.b	d0,(a1)+                         	| [$3504: ld      (de),a] store into sprite X position
+	move.b	(a0),(a1)+                         	| [$3503: ld      a,(hl)] load A with firefox X position
+                         	| [$3504: ld      (de),a] store into sprite X position
 	addq.w	#0x04,a0                        	| [$3505: ld      a,$04] A := 4
 												| [$3507: add     a,l] add to L
 												| [$3508: ld      l,a] HL now points to firefox's Y position (IX + #07)
 	                           	| [$3509: inc     e] next DE, now it has sprite Y position
-	move.b	(a0)+,d0                         	| [$350a: ld      a,(hl)] load A with firefox Y position
-	move.b	d0,(a1)+                         	| [$350b: ld      (de),a] store into hardaware sprite Y position
+	move.b	(a0)+,(a1)+                         	| [$350a: ld      a,(hl)] load A with firefox Y position
+	                        	| [$350b: ld      (de),a] store into hardaware sprite Y position
 												| [$350c: inc     l] next HL
 	                           	| [$350d: inc     e] next DE
-	move.b	(a0),d0                         	| [$350e: ld      a,(hl)] load A with firefox sprite color value
-	move.b	d0,(a1)+                         	| [$350f: ld      (de),a] store sprite color
+	move.b	(a0),(a1)+                         	| [$350e: ld      a,(hl)] load A with firefox sprite color value
+                        	| [$350f: ld      (de),a] store sprite color
 	subq.w	#3,a0                           	| [$3510: dec     l] * 3
 	                           	| [$3513: inc     e] next DE
-	move.b	(a0),d0                         	| [$3514: ld      a,(hl)] load A with sprite value
-	move.b	d0,(a1)+                         	| [$3515: ld      (de),a] store sprite value to hardware
+	move.b	(a0),(a1)+                         	| [$3514: ld      a,(hl)] load A with sprite value
+	                        	| [$3515: ld      (de),a] store sprite value to hardware
 												| [$3516: inc     de] next DE
 
 l_3517:

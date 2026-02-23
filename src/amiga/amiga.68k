@@ -15,6 +15,8 @@
 OPT_BLITTER_MODE = 0
 	.include "blitter_macros.inc"
 	
+OPT_KONG_SPRITE_HACK = 1
+
 AttnFlags = 0x128
 AFB_68010 = 0
 AFB_68020 = 1
@@ -638,9 +640,12 @@ level3_interrupt:
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
 	move.w	(intreqr,a5),d0
+	btst	#4,d0
+	jne		copper_interrupt
 	btst	#5,d0
-	beq.b		1f
+	jeq		not_vblank
 
+	add.l	#1,0x114
 
 	move.l	_joypad_state(pc),d1
 	moveq	#1,d0
@@ -676,13 +681,9 @@ level3_interrupt:
 	move.w	#0x20,(intreq,a5)
 	move.w	#0x20,(intreq,a5)	
 	jra	3f
-1:
-	.ifndef	RELEASE
+not_vblank:
 	btst	#6,d0
-	jne		2f
-	BREAKPOINT	"unexpected level 3 interrupt"
-2:
-	.endif
+	jeq		3f
 	* has to be blitter operation completed: handle next blit
 	* ack blitter int twice (040/pistorm bug)
 	move.w	#0x40,(intreq,a5)
@@ -696,18 +697,23 @@ level3_interrupt:
 	rte
 	
 
-level1_interrupt:
+
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
+copper_interrupt:
+	.ifne	OPT_BLITTER_MODE
+	move.w	#0x2100,SR		| allow interrupt from blitter
+	.endif
+	
 	move.w	(intreqr,a5),d0
 	* we're going to ack copper interrupt now
 	* do it twice (040/pistorm bug)
-	move.w	#0x04,(intreq,a5)
-	move.w	#0x04,(intreq,a5)
+	move.w	#0x10,(intreq,a5)
+	move.w	#0x10,(intreq,a5)
 	
 	* emergency system to skip a frame if needed!
-	tst.b	skip_screen_update
-	jne		0f
+	*tst.b	skip_screen_update
+	*jne		0f
 	
 	* wait for blits to complete (via soft flag that last blitter command
 	* sets when reaching the end of the list) and reset list pointers
@@ -773,16 +779,16 @@ level1_interrupt:
 	* now we check copper interrupt again
 	lea		_custom,a5
 	move.w	intreqr(a5),d0
-	btst	#2,d0
+	btst	#4,d0
 	beq.b	3f		| clear: ok
 	* level 1 interrupt has been called, which means that
 	* rendering was so slow that we couldn't cope within a frame
 	* skip a tick and ack again, we lose one update frame
 	st.b	skip_screen_update
 	.ifndef	RELEASE
-	move.w	#0xF00,_custom+color
+	COLOR0_FLASH	0xF0F
 	.endif
-	move.w	#0x4,intreq(a5)
+	move.w	#0x10,intreq(a5)
 3:
     movem.l (a7)+,d0-d7/a0-a6
     rte
@@ -1280,7 +1286,7 @@ update_bobs:
 	moveq	#0,d4
 	move.b	(TARGET_SPRITE_WIDTH,a4),d3
 	move.b	(TARGET_SPRITE_HEIGHT,a4),d4
-	bsr		restore_16x_background
+	jbsr		restore_16x_background
 11:
 	addq	#PREVIOUS_SPRITE_SIZE,a4
 	addq	#CURRENT_SPRITE_SIZE,a3
@@ -1325,6 +1331,7 @@ update_bobs:
 	* (per bitplane, but still...), saving roughly 300+ bytes 
 	* transfer to read / mask / write on the last 16 bits of each tile!
 	
+	.if	OPT_KONG_SPRITE_HACK==1
 	move.l	(a0),d3
 	lsr.l	#8,d3		| get central part in D3.w
 	cmp.w	#0x2708,d3
@@ -1352,7 +1359,7 @@ update_bobs:
 	.endif
 	jbsr	blit_big_kong
 	move.l	(a7)+,a0
-	
+	* skip the whole lot of kong sprites
 	add.w	#CURRENT_SPRITE_SIZE*10,a0
 	add.w	#PREVIOUS_SPRITE_SIZE*10,a6		| next previous sprite pos
 	sub.w	#9,d7
@@ -1396,7 +1403,8 @@ update_bobs:
 	**********************
 	* end of mega kludge *
 	**********************
-
+	.endif
+	
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2
 	
@@ -1432,7 +1440,7 @@ update_bobs:
 	bne.b	11f
 	.ifndef	RELEASE
 	* not known/registered: we should log that!
-	move.w	#0xF00,0xDFF180
+	COLOR0_FLASH	0xF00
 	move.b	d2,d2
 	.endif
 	bra.b	211f
@@ -1458,7 +1466,7 @@ update_bobs:
 	* bob is valid but wrong clut
 	.ifndef	RELEASE
 	lsr		#2,d3
-	move.w	#0xFF0,0xDFF180
+	COLOR0_FLASH	0xFF0
 	.endif
 	jra	22f
 12:
@@ -1533,7 +1541,7 @@ update_bobs:
 	bsr		erase_four_barrels
 301:
 	rts
-	rts
+
 	* rarer case: blit upside down (kong falling)
 14:
 	bsr		blit_planes_cookie_cut_16x_flipped	
@@ -2324,8 +2332,8 @@ platform_init:
 
 	* install keyboard and vblank/copper handler
 	move.l	system_vbr(pc),a1
-	pea		level1_interrupt(pc)
-	move.l	(a7)+,(0x64,a1)
+	*pea		level1_interrupt(pc)
+	*move.l	(a7)+,(0x64,a1)
 	pea		level2_interrupt(pc)
 	move.l	(a7)+,(0x68,a1)
 	pea		level3_interrupt(pc)
@@ -2398,29 +2406,27 @@ osd_interrupt_control:
 * 60Hz VBLANK interrupt (also keyboard)
 osd_enable_interrupts:
 	tst.b	interrupt_mode
-	beq.b	0f
-	* clear SR from interrupt mode, so enable interrupts really
-	* works from the game (which calls enable interrupts from interrupt)
-	move.w	#0x2000,SR
-0:
+	jne		1f
+
 	.if		OPT_BLITTER_MODE==1
 	* enable blitter, vblank & software level 1
-	move.w	#0xC06C,_custom+intena
+	move.w	#0xC078,_custom+intena
 	.else
 	* enable vblank & software level 1 only
-	move.w	#0xC02C,_custom+intena
+	move.w	#0xC038,_custom+intena
 	.endif
+1:
 	rts
 	
 osd_disable_interrupts:
 	tst.b	interrupt_mode
-	beq.b	0f
-	* if interrupts are disabled again from interrupt, re-set SR
-	move.w	#0x2700,SR
+	jne	1f
+
 0:
 	* leave keyboard (& blitter if set, should be able to process blits)
 	* disable vblank & level 1
-	move.w	#0x0024,_custom+intena
+	move.w	#0x0030,_custom+intena
+1:
 	rts
 
 
@@ -3440,6 +3446,7 @@ top_color_line_copper:
     .word  0xFFDF,0xFFFE       | PAL wait
  	.set    beampos,0x0401		| more lines to align
 bottom_color_line_copper:
+	* the line where "credits" is drawn
 	.rept	4
 	.word	beampos,0xFFFE
 	* the 4 last colored rows
@@ -3448,8 +3455,7 @@ bottom_color_line_copper:
 	.word	color+6,0
 	.set    beampos,beampos+0x800
 	.endr
-	* the line where "credits" is drawn
-    .word	 intreq,0x8004	| no bobs from now on, get more drawing time
+    .word	 intreq,0x8010	| no bobs from now on, get more drawing time
 	
     .long    -2					
 	.ascii	"ENDCPLST"

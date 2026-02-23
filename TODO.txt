@@ -1,4 +1,3 @@
-- optimize tile xy computation like in tetris
 - blitter using blit chain (doesn't work properly in cycle exact, seems to crash)
 - too slow on level 2 (cement factory) on a500
 - sound priorities to check
