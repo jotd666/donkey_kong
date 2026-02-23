@@ -27,8 +27,7 @@ CURRENT_SPRITE_SIZE = 4
 SPRITE_Y_CORRECTION = 0
 SPRITE_X_CORRECTION = 1
 
-BIG_KONG_Y_CORRECTION = 16
-BIG_KONG_X_CORRECTION = 16+8
+
 BIG_KONG_X_SIZE = 8
 BIG_KONG_Y_SIZE = 32
 
@@ -109,8 +108,11 @@ SPRITE_SIZEOF = 4
       move.l    (a7)+,0x\address
 	.endif
 .endm
-
-
+	
+	.macro	COLOR0_FLASH	color
+	move.w	#\color,_custom+color
+	.endm
+	
 .macro MUL_TABLE value,len
 mul\value\()_table:
 	.set    mulv,0
@@ -1278,10 +1280,6 @@ update_bobs:
 	moveq	#0,d4
 	move.b	(TARGET_SPRITE_WIDTH,a4),d3
 	move.b	(TARGET_SPRITE_HEIGHT,a4),d4
-	cmp.b	#16,d4
-	jeq	6666f
-	move.b	#0,0x110
-6666:
 	bsr		restore_16x_background
 11:
 	addq	#PREVIOUS_SPRITE_SIZE,a4
@@ -1316,6 +1314,17 @@ update_bobs:
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
 	jeq		211f				| x=0: don't show
 
+	******************************************************
+	* mega kludge to avoid to display                    *
+	* 6 tiles for big kong and destroy blitter bandwidth *
+	******************************************************
+	
+	* we detect 2 following typical kong sprites, decide it's
+	* the whole kong sprite and draw it, skipping 6 blits with
+	* a lot of cookie cutting, and replacing it with 1 big blit
+	* (per bitplane, but still...), saving roughly 300+ bytes 
+	* transfer to read / mask / write on the last 16 bits of each tile!
+	
 	move.l	(a0),d3
 	lsr.l	#8,d3		| get central part in D3.w
 	cmp.w	#0x2708,d3
@@ -1331,15 +1340,16 @@ update_bobs:
 	moveq	#0,d1
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	* adjust X/Y
-	sub.b	#BIG_KONG_Y_CORRECTION,d1
-	sub.b	#BIG_KONG_X_CORRECTION,d0
+	sub.b	#16,d1
+	sub.b	#16+8,d0
+	lea		big_kong_1,a0
+150:
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
 	.ifne	SPRITE_X_CORRECTION
 	add.w	#SPRITE_X_CORRECTION,d0
 	.endif
-	lea		big_kong_1,a0
 	jbsr	blit_big_kong
 	move.l	(a7)+,a0
 	
@@ -1349,6 +1359,43 @@ update_bobs:
 	dbf		d7,1b
 	jra		250f
 200:
+	move.l	(a0),d3
+	lsr.l	#8,d3		| get central part in D3.w
+	cmp.w	#0x2708,d3
+	jne		200f
+	move.l	(4,a0),d3
+	lsr.l	#8,d3
+	cmp.w	#0x2608,d3
+	jne		200f
+	move.l	a0,-(a7)
+	moveq	#0,d1
+	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
+	* adjust X/Y
+	sub.b	#16,d1
+	sub.b	#16+8+2,d0
+	lea		big_kong_2,a0
+	jra		150b
+200:
+	move.l	(a0),d3
+	lsr.l	#8,d3		| get central part in D3.w
+	cmp.w	#0xa608,d3
+	jne		200f
+	move.l	(4,a0),d3
+	lsr.l	#8,d3
+	cmp.w	#0xa708,d3
+	jne		200f
+	move.l	a0,-(a7)
+	moveq	#0,d1
+	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
+	* adjust X/Y
+	sub.b	#16,d1
+	sub.b	#16+12+2,d0
+	lea		big_kong_3,a0
+	jra		150b
+200:
+	**********************
+	* end of mega kludge *
+	**********************
 
 	moveq	#0,d2
 	move.b	(TARGET_SPRITE_CODE,a0),d2

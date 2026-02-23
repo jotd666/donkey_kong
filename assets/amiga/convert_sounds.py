@@ -23,7 +23,7 @@ vhq_sample_rate = 22050
 hq_sample_rate = 16000
 lq_sample_rate = 11025
 
-music_volume = 26
+music_volume = 32
 
 EMPTY_SND = "EMPTY_SND"
 sound_dict = {
@@ -41,8 +41,8 @@ sound_dict = {
 "GORILLA_YELLS_SND"       :{"index":0xF,"channel":3,"sample_rate":hq_sample_rate,"priority":5},  # also matches MUS define
 
 # tunes match the MUS defines in donkey_kong.68k source
-"START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":40,"ticks":250},
-"LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":32,"ticks":150},
+"START_TUNE_SND"              :{"index":1,"pattern":1,"loops":False,"volume":50,"ticks":250},
+"LEVEL_TUNE_SND"              :{"index":2,"pattern":2,"loops":False,"volume":36,"ticks":150},
 "OUT_OF_TIME_TUNE_SND"              :{"index":3,"pattern":0xC,"loops":True,"volume":music_volume},
 "HAMMER_TUNE_SND"              :{"index":4,"pattern":3,"loops":True,"volume":music_volume},
 "END_SCREEN_TUNE_SND"              :{"index":7,"pattern":5,"loops":False,"volume":40,"ticks":95},
@@ -129,7 +129,7 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
 
             def get_sox_cmd(sr,output):
                 # -D option is very important. Without it there is a lot of noise.
-                return [sox,"--volume","0.92",wav_file,"--channels","1","-D","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
+                return [sox,"--volume","2.0",wav_file,"--channels","1","-D","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
 
 
             used_sampling_rate = details["sample_rate"]
