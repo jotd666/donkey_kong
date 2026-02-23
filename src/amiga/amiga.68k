@@ -11,10 +11,12 @@
 	.include "dos_lvos.i"
 	.include "graphics_lvos.i"
 	
-* for some unknown reason, using interrupt-driven blits crashes badly
+* for some unknown reason, using interrupt-driven blits is slow, level 1 interrupt
+* doesn't fire as often as copper interrupt, so we cannot use it. Strange as it works on other games.
 OPT_BLITTER_MODE = 0
 	.include "blitter_macros.inc"
 	
+* this alone allows to speed up game a lot
 OPT_KONG_SPRITE_HACK = 1
 
 AttnFlags = 0x128
@@ -645,8 +647,6 @@ level3_interrupt:
 	btst	#5,d0
 	jeq		not_vblank
 
-	add.l	#1,0x114
-
 	move.l	_joypad_state(pc),d1
 	moveq	#1,d0
 	jsr	_read_joystick
@@ -701,9 +701,6 @@ not_vblank:
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
 copper_interrupt:
-	.ifne	OPT_BLITTER_MODE
-	move.w	#0x2100,SR		| allow interrupt from blitter
-	.endif
 	
 	move.w	(intreqr,a5),d0
 	* we're going to ack copper interrupt now
@@ -712,8 +709,8 @@ copper_interrupt:
 	move.w	#0x10,(intreq,a5)
 	
 	* emergency system to skip a frame if needed!
-	*tst.b	skip_screen_update
-	*jne		0f
+	tst.b	skip_screen_update
+	jne		0f
 	
 	* wait for blits to complete (via soft flag that last blitter command
 	* sets when reaching the end of the list) and reset list pointers
@@ -737,7 +734,6 @@ copper_interrupt:
 	COMMIT_BLITLIST
 
 0:
-	clr.b	skip_screen_update
 	
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
@@ -756,12 +752,18 @@ copper_interrupt:
 
 	sub.w	d1,delay_timer
 	
+	* emergency system to skip a frame if needed!
+	tst.b	skip_screen_update
+	jne		0f
+
 	.if		OPT_BLITTER_MODE==0
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	jbsr		switch_screen_buffers
 	jbsr		set_bitplanes	
 	.endif
 	.endif
+0:
+	clr.b	skip_screen_update
 	
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
 	* also set SR accordingly
@@ -1191,6 +1193,7 @@ blit_big_kong:
 	move.w	#NB_PLAYFIELD_PLANES,d3
 	move.w	#BIG_KONG_Y_SIZE,d4
 	move.b	d0,(TARGET_SPRITE_X,a6)
+	subq.b	#2,(TARGET_SPRITE_X,a6)		| else some pixels are left behind at times on factory level
 	move.b	d1,(TARGET_SPRITE_Y,a6)
 	move.b	d2,(TARGET_SPRITE_WIDTH,a6)
 	move.b	d4,(TARGET_SPRITE_HEIGHT,a6)
