@@ -26,6 +26,11 @@ CURRENT_SPRITE_SIZE = 4
 SPRITE_Y_CORRECTION = 0
 SPRITE_X_CORRECTION = 1
 
+BIG_KONG_Y_CORRECTION = 16
+BIG_KONG_X_CORRECTION = 16+8
+BIG_KONG_X_SIZE = 8
+BIG_KONG_Y_SIZE = 32
+
 BASE_BPLCON2_VALUE = 0x0024
 SCREEN_ADDRESS = 0x7400
 
@@ -625,7 +630,7 @@ _nmi:
 	move.w	#0x7FFF,_custom+intreq
 	rts
 	
-_vblank:
+level3_interrupt:
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
 	move.w	(intreqr,a5),d0
@@ -1194,12 +1199,8 @@ erase_four_barrels:
 	move.w	#FOUR_BARRELS_Y,d1                                     | speedup kludge
 	move.w	#4,d3
 	st		d2
+	move.w	#32,d4
 	bsr		restore_16x_background									| speedup kludge
-	move.w	#FOUR_BARRELS_X,d0                                     | speedup kludge
-	move.w	#FOUR_BARRELS_Y+16,d1                                     | speedup kludge
-	st		d2
-	move.w	#4,d3
-	bsr		restore_16x_background
 	movem.l	(a7)+,d0-d7/a0-a3/a5
 	rts
 	
@@ -1213,7 +1214,10 @@ update_bobs:
 	clr.b	climbing_kong_present									| speedup kludge
 	clr.b	four_barrels_present									| speedup kludge
 	
-	* clear previous positions
+	****************************
+	* clear previous positions *
+	****************************
+	
 	moveq	#NB_TARGET_SPRITES-1,d7
 	move.b		screen_number_6227,d6		| we need the screen number to display sprites or bobs!
 	tst.b	erase_four_barrels_flag
@@ -1265,6 +1269,7 @@ update_bobs:
 	.endif
 	move.b	(ACTIVE_BITPLANE_MASK,a4),d2
 	move.w	#4,d3
+	move.w	#16,d4
 	bsr		restore_16x_background
 11:
 	addq	#PREVIOUS_SPRITE_SIZE,a4
@@ -1277,7 +1282,8 @@ update_bobs:
 	clr.w	big_kong_x
 	move.w	big_kong_y,d1
 	st.b	d2
-	move.w	#8,d3
+	move.w	#BIG_KONG_X_SIZE,d3
+	move.w	#BIG_KONG_Y_SIZE,d4
 	bsr		restore_16x_background
 50:
 
@@ -1321,8 +1327,8 @@ update_bobs:
 	moveq	#0,d1
 	move.b	(TARGET_SPRITE_Y,a0),d1  | sprite Y
 	* adjust X/Y
-	sub.b	#16,d1
-	sub.b	#12,d0
+	sub.b	#BIG_KONG_Y_CORRECTION,d1
+	sub.b	#BIG_KONG_X_CORRECTION,d0
 	.ifne	SPRITE_Y_CORRECTION
 	add.w	#SPRITE_Y_CORRECTION,d1
 	.endif
@@ -1490,6 +1496,7 @@ update_bobs:
 * < D2: bitplane restore mask. If all zeroes restore nothing
 *       if all ones restore all bitplanes
 * < D3: blit width: 4: 32 bit (16 wide)
+* < D4: blit height
 
 * trashes: D0-D1
 
@@ -1509,7 +1516,6 @@ restore_16x_background:
 	add.w	d0,a1
 	add.w	d0,a0
 	
-	moveq	#16,d4		| height
 	move.w	d3,d2
     move.l  #0x09f00000,d3    | A->D copy, ascending mode
 	move.w	#NB_BYTES_PER_ROW,d1		| blit modulo
@@ -1627,9 +1633,6 @@ clear_planes_any_blitter_internal:
 	WAIT_BLIT
     
     * blitter registers set
-	.ifdef	VARIABLE_BLITTER_MASKS_AND_MODS
-	WRITE_BLITTER_REG_LONG	d7,bltafwm
-	.endif
 	
 	WRITE_BLITTER_REG_LONG	d5,bltcon0	
 	WRITE_BLITTER_REG_WORD	d0,bltdmod	|D modulo
@@ -2274,7 +2277,7 @@ platform_init:
 	move.l	(a7)+,(0x64,a1)
 	pea		level2_interrupt(pc)
 	move.l	(a7)+,(0x68,a1)
-	pea		_vblank(pc)
+	pea		level3_interrupt(pc)
 	move.l	(a7)+,(0x6C,a1)
 	pea		_nmi(pc)
 	move.l	(a7)+,(0x7C,a1)
