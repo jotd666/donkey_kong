@@ -11,6 +11,7 @@
 	.include "dos_lvos.i"
 	.include "graphics_lvos.i"
 	
+* for some unknown reason, using interrupt-driven blits crashes badly
 OPT_BLITTER_MODE = 0
 	.include "blitter_macros.inc"
 	
@@ -20,7 +21,7 @@ AFB_68020 = 1
 NO68020 = 1
 
 
-PREVIOUS_SPRITE_SIZE = 6
+PREVIOUS_SPRITE_SIZE = 8
 CURRENT_SPRITE_SIZE = 4
 
 SPRITE_Y_CORRECTION = 0
@@ -49,7 +50,8 @@ TARGET_SPRITE_ATTRIBUTES = 2
 TARGET_SPRITE_CODE = 1
 TARGET_SPRITE_Y = 3
 ACTIVE_BITPLANE_MASK = 4   | for optimized bitplane erase
-
+TARGET_SPRITE_WIDTH = 5
+TARGET_SPRITE_HEIGHT = 6
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -1176,12 +1178,16 @@ blit_four_barrels:
 blit_big_kong:
 	movem.l	d0-d7/a0-a3/a5,-(a7)
 	lea		_custom,a5
-	move.w	d0,big_kong_x
-	move.w	d1,big_kong_y
-	move.l	(NB_PLAYFIELD_PLANES*4,a0),a3
-	move.w	#8,d2
+	move.l	(NB_PLAYFIELD_PLANES*4,a0),a3		| mask
+	move.w	#BIG_KONG_X_SIZE,d2
 	move.w	#NB_PLAYFIELD_PLANES,d3
-	move.w	#32,d4
+	move.w	#BIG_KONG_Y_SIZE,d4
+	move.b	d0,(TARGET_SPRITE_X,a6)
+	move.b	d1,(TARGET_SPRITE_Y,a6)
+	move.b	d2,(TARGET_SPRITE_WIDTH,a6)
+	move.b	d4,(TARGET_SPRITE_HEIGHT,a6)
+	move.b	#0x27,(TARGET_SPRITE_CODE,a6)  | needs to be redrawn
+	st.b	(ACTIVE_BITPLANE_MASK,a6)	| restore all bitplanes
 	moveq	#0,d5
 	move.l	bg_drawed_screen_ptr(pc),a1
 	
@@ -1268,25 +1274,20 @@ update_bobs:
 	add.w	#SPRITE_X_CORRECTION,d0
 	.endif
 	move.b	(ACTIVE_BITPLANE_MASK,a4),d2
-	move.w	#4,d3
-	move.w	#16,d4
+	moveq	#0,d3
+	moveq	#0,d4
+	move.b	(TARGET_SPRITE_WIDTH,a4),d3
+	move.b	(TARGET_SPRITE_HEIGHT,a4),d4
+	cmp.b	#16,d4
+	jeq	6666f
+	move.b	#0,0x110
+6666:
 	bsr		restore_16x_background
 11:
 	addq	#PREVIOUS_SPRITE_SIZE,a4
 	addq	#CURRENT_SPRITE_SIZE,a3
 	dbf		d7,1b
 	
-	* special case for big kong
-	move.w	big_kong_x,d0
-	jeq		50f
-	clr.w	big_kong_x
-	move.w	big_kong_y,d1
-	st.b	d2
-	move.w	#BIG_KONG_X_SIZE,d3
-	move.w	#BIG_KONG_Y_SIZE,d4
-	bsr		restore_16x_background
-50:
-
 	lea		smart_redraw_flag_table,a5
 	lea		bob_table,a4
 	move.l	bob_previous_drawed_sprites(pc),a6
@@ -1308,6 +1309,9 @@ update_bobs:
 	
 111:
 	move.l	d1,(a6)			| store current sprite attributes to previous ones
+	* default values for width height: standard 16x16 tile
+	move.b	#4,(TARGET_SPRITE_WIDTH,a6)
+	move.b	#16,(TARGET_SPRITE_HEIGHT,a6)
 	moveq	#0,d0
 	move.b	(TARGET_SPRITE_X,a0),d0  | sprite X	
 	jeq		211f				| x=0: don't show
@@ -3170,10 +3174,6 @@ keyboard_table:
 interrupt_mode:
 	.word	0
 
-big_kong_x:
-	.word	0
-big_kong_y:
-	.word	0
 	
 pause_flag:
 	.word	0
