@@ -281,22 +281,24 @@ _user:
 	beq.b	2f
 	bset	#2,misc_options+3
 2:
- 	bsr		load_highscores
-	
    * check if "floppy" file is here
-    
     move.l  _dosbase(pc),a6
     move.l   #floppy_file,d1
     move.l  #1005,d2   | MODE_OLDFILE
     jsr     _LVOOpen(a6)
     move.l  d0,d1
-    beq.b   .no_floppy
+	sne		floppy_file_present
+    beq.b   0f
     
     * "floppy" file found
     jsr     _LVOClose(a6)
-    * wait 2 seconds for floppy drive to switch off
-    move.l  #100,d1
-    jsr     _LVODelay(a6)
+0:
+
+
+ 	bsr		load_highscores
+	
+    
+	jbsr	wait_if_floppy
 
 
 	lea		_custom,a5
@@ -319,7 +321,6 @@ _user:
 	jsr	_LVOWaitTOF(a6)
 
 
-.no_floppy:
 
 .startup:
 
@@ -397,7 +398,16 @@ _user:
 
 	jra		demo_game
 
-
+wait_if_floppy:
+	tst.b	floppy_file_present
+	jeq		0f
+    move.l  _dosbase(pc),a6
+    * wait 2 seconds for floppy drive to switch off
+    move.l  #100,d1
+    jsr     _LVODelay(a6)
+0:
+	rts
+	
 * so memory is 8-aligned (not trusting .align directives)
 align_8:
 	add.w	#0x10,a0
@@ -590,6 +600,10 @@ load_highscores:
     jsr (_LVORead,a6)
     move.l  d4,d1
     jsr (_LVOClose,a6)   
+
+	* wait more if it's a floppy
+	jbsr	wait_if_floppy
+	
 	st.b	highscore_loaded
 1:
     rts
@@ -3308,8 +3322,10 @@ alt_nb_hiscorename:
 	.asciz	"crazy_kong_nb.high"
 floppy_file:
 	.asciz	"floppy"
+floppy_file_present:
+	.byte	0
 temp_filename_buffer:
-	ds.b	255
+	.skip	255
 _end_of_ng_code:
 		
 	.align 2
