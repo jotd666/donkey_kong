@@ -1,5 +1,10 @@
-- blitter using blit chain (doesn't work properly in cycle exact, seems to crash)
-- too slow on level 2 (cement factory) on a500
+- In v1.0 there was big slowdowns in the second level, when the user is on these conveyor-belts. 
+This then was fixed in v1.1, but sadly in this v1.1, in some cases, the first level could be a bit slower,
+ compared to v1.0. I also realized that now, after the user rh70 mentioned this here. Therefore my question,
+ if it was technically possible, to combine the advantages of both older versions, so that the first and also 
+ the second level runs good on Amiga500 machines now, in this new v1.2? Or is this not possible at all?
+ + floppy led issue but only in japanese level order??? WTF
+ 
 - sound priorities to check
 - problem when too many sprites (barrels) even if bobs should be displayed
   after 8 sprites. Today this is eluded: if there's a problem then
