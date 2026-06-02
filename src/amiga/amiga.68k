@@ -13,7 +13,11 @@
 	
 * for some unknown reason, using interrupt-driven blits is slow, level 1 interrupt
 * doesn't fire as often as copper interrupt, so we cannot use it. Strange as it works on other games.
-OPT_BLITTER_MODE = 0
+OPT_BLIT_CHAIN_MODE = 1
+OPT_VBLIT_SCROLL_MODE = 0
+OPT_VBLIT_MIRROR_MODE = 0
+OPT_BLIT_WAIT_DEBUG = 0
+
 	.include "blitter_macros.inc"
 	
 * this alone allows to speed up game a lot
@@ -394,7 +398,7 @@ _user:
 	jsr	 _detect_controller_types 
 
 	* palette 0
-	bsr		osd_update_palette_bank
+	jbsr		osd_update_palette_bank
 
 	jra		demo_game
 
@@ -656,8 +660,8 @@ level3_interrupt:
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
 	move.w	(intreqr,a5),d0
-	btst	#4,d0
-	jne		copper_interrupt
+*	btst	#4,d0
+*	jne		copper_interrupt
 	btst	#5,d0
 	jeq		not_vblank
 
@@ -711,29 +715,29 @@ not_vblank:
 	rte
 	
 
-
+level1_interrupt:
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5
-copper_interrupt:
+
 	
 	move.w	(intreqr,a5),d0
 	* we're going to ack copper interrupt now
 	* do it twice (040/pistorm bug)
-	move.w	#0x10,(intreq,a5)
-	move.w	#0x10,(intreq,a5)
+	move.w	#0x4,(intreq,a5)
+	move.w	#0x4,(intreq,a5)
 	
 	* emergency system to skip a frame if needed!
 	tst.b	skip_screen_update
-	jne		0f
+	jne		skip_update
 	
 	* wait for blits to complete (via soft flag that last blitter command
 	* sets when reaching the end of the list) and reset list pointers
 	NEW_BLITLIST
 	
 	* show the newly drawn buffer THEN switch the buffers
-	.if		OPT_BLITTER_MODE==1
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
+	.if		OPT_BLIT_CHAIN_MODE==1
 	jbsr	set_bitplanes
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING
 	jbsr	switch_screen_buffers
 	.endif
 	.endif
@@ -747,7 +751,7 @@ copper_interrupt:
 	* terminate the blitter command list
 	COMMIT_BLITLIST
 
-0:
+
 	
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
@@ -766,17 +770,13 @@ copper_interrupt:
 
 	sub.w	d1,delay_timer
 	
-	* emergency system to skip a frame if needed!
-	tst.b	skip_screen_update
-	jne		0f
-
-	.if		OPT_BLITTER_MODE==0
+	.if		OPT_BLIT_CHAIN_MODE==0
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING
 	jbsr		switch_screen_buffers
+	.endif
 	jbsr		set_bitplanes	
 	.endif
-	.endif
-0:
+skip_update:
 	clr.b	skip_screen_update
 	
 	* declare that we're in interrupt mode so osd_disable_interrupts/osd_enable_interrupts
@@ -2349,8 +2349,8 @@ platform_init:
 
 	* install keyboard and vblank/copper handler
 	move.l	system_vbr(pc),a1
-	*pea		level1_interrupt(pc)
-	*move.l	(a7)+,(0x64,a1)
+	pea		level1_interrupt(pc)
+	move.l	(a7)+,(0x64,a1)
 	pea		level2_interrupt(pc)
 	move.l	(a7)+,(0x68,a1)
 	pea		level3_interrupt(pc)
@@ -2425,12 +2425,12 @@ osd_enable_interrupts:
 	tst.b	interrupt_mode
 	jne		1f
 
-	.if		OPT_BLITTER_MODE==1
+	.if		OPT_BLIT_CHAIN_MODE==1
 	* enable blitter, vblank & software level 1
-	move.w	#0xC078,_custom+intena
+	move.w	#0xC06C,_custom+intena
 	.else
 	* enable vblank & software level 1 only
-	move.w	#0xC038,_custom+intena
+	move.w	#0xC02C,_custom+intena
 	.endif
 1:
 	rts
@@ -3474,7 +3474,7 @@ bottom_color_line_copper:
 	.word	color+6,0
 	.set    beampos,beampos+0x800
 	.endr
-    .word	 intreq,0x8010	| no bobs from now on, get more drawing time
+    .word	 intreq,0x8004	| no bobs from now on, get more drawing time
 	
     .long    -2					
 	.ascii	"ENDCPLST"

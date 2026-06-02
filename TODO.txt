@@ -4,8 +4,8 @@ This then was fixed in v1.1, but sadly in this v1.1, in some cases, the first le
  if it was technically possible, to combine the advantages of both older versions, so that the first and also 
  the second level runs good on Amiga500 machines now, in this new v1.2? Or is this not possible at all?
  + floppy led issue but only in japanese level order??? WTF
- 
-- sound priorities to check
+- barrels and other fixed objects could be not deleted, save blitter
+
 - problem when too many sprites (barrels) even if bobs should be displayed
   after 8 sprites. Today this is eluded: if there's a problem then
   last sprite won't be displayed. Hoping it's not noticeable or better:
