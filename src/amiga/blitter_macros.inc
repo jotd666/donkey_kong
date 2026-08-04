@@ -76,12 +76,16 @@ s0\@:
 
 	.if		OPT_BLIT_CHAIN_MODE==0
 	
+	.macro	HW_BLITTER_ACTIVE_TEST	label
+	BTST	#6,(dmaconr,a5)
+	BNE.S	\label
+	.endm
+	
 	.macro	REALLY_WAIT_BLIT
 	CHECK_A5_IS_CUSTOM
 	move.w	#0x8400,(dmacon,a5)		| blitter high priority
 wait\@:
-	BTST	#6,(dmaconr,a5)
-	BNE.S	wait\@
+	HW_BLITTER_ACTIVE_TEST	wait\@
 	move.w	#0x0400,(dmacon,a5)		| blitter normal priority
 	.endm
 	
@@ -135,6 +139,11 @@ wait\@:
 	* no blitlists, empty
 	.macro	DECL_BLITLISTS	size
 	.endm
+
+	.macro	SW_BLITTER_ACTIVE_TEST	label
+	.endm
+	.macro	SW_BLITTER_INACTIVE_SET	label
+	.endm
 	
 	.endif
 	
@@ -145,6 +154,15 @@ wait\@:
 	.if		OPT_BLIT_CHAIN_MODE==1
 	.macro	WAIT_BLIT
 	* do nothing!
+	.endm
+	
+	.macro	SW_BLITTER_ACTIVE_TEST	label
+	tst.b	blitter_chain_running
+	jne		\label
+	.endm
+
+	.macro	SW_BLITTER_INACTIVE_SET
+	clr.b	blitter_chain_running
 	.endm
 	
 	.macro	REALLY_WAIT_BLIT
@@ -163,8 +181,7 @@ sw\@:
 	* if blitter isn't finished, then we wait
 	* this is called from level 1 interrupt so
 	* blitter interrupts can interrupt
-	tst.b	blitter_chain_running
-	jne		sw\@	
+	SW_BLITTER_ACTIVE_TEST	sw\@
 	.endif
 	.endm
 	

@@ -13,7 +13,7 @@
 	
 * for some unknown reason, using interrupt-driven blits is slow, level 1 interrupt
 * doesn't fire as often as copper interrupt, so we cannot use it. Strange as it works on other games.
-OPT_BLIT_CHAIN_MODE = 1
+OPT_BLIT_CHAIN_MODE = 0
 OPT_VBLIT_SCROLL_MODE = 0
 OPT_VBLIT_MIRROR_MODE = 0
 OPT_BLIT_WAIT_DEBUG = 0
@@ -285,24 +285,12 @@ _user:
 	beq.b	2f
 	bset	#2,misc_options+3
 2:
-   * check if "floppy" file is here
-    move.l  _dosbase(pc),a6
-    move.l   #floppy_file,d1
-    move.l  #1005,d2   | MODE_OLDFILE
-    jsr     _LVOOpen(a6)
-    move.l  d0,d1
-	sne		floppy_file_present
-    beq.b   0f
-    
-    * "floppy" file found
-    jsr     _LVOClose(a6)
-0:
-
 
  	bsr		load_highscores
 	
-    
-	jbsr	wait_if_floppy
+	move.b	#0,0x110
+	jbsr	wait_floppy_off
+	
 
 
 	lea		_custom,a5
@@ -401,15 +389,34 @@ _user:
 	jbsr		osd_update_palette_bank
 
 	jra		demo_game
-
-wait_if_floppy:
-	tst.b	floppy_file_present
-	jeq		0f
+	
+wait_floppy_off:
     move.l  _dosbase(pc),a6
-    * wait 2 seconds for floppy drive to switch off
-    move.l  #100,d1
-    jsr     _LVODelay(a6)
+    move.l   #floppy_file,d1
+    move.l  #1005,d2   | MODE_OLDFILE
+    jsr     _LVOOpen(a6)
+    move.l  d0,d1
+    * check if "floppy" file is here
+    beq.b   .no_floppy
+    * "floppy" file found
+    jsr     _LVOClose(a6)
 0:
+    * wait for floppy drive to switch off
+    move.l  #25,d1
+    jsr     _LVODelay(a6)
+    move.b  0xBFD100,d0
+    not.b   d0               | invert: active-low -> 1 = asserted
+    btst    #7,d0            | motor on?
+    beq.s   .led_off         | motor off -> LED off
+    btst    #3,d0            | df0: selected?
+    beq.s   .led_off         | not selected -> LED off
+                             | df0:'s yellow drive LED is ON here
+    jra   0b	
+.led_off:
+	* waiting a bit more seems to do the trick
+    move.l  #25,d1
+    jsr     _LVODelay(a6)
+.no_floppy:
 	rts
 	
 * so memory is 8-aligned (not trusting .align directives)
@@ -605,8 +612,7 @@ load_highscores:
     move.l  d4,d1
     jsr (_LVOClose,a6)   
 
-	* wait more if it's a floppy
-	jbsr	wait_if_floppy
+
 	
 	st.b	highscore_loaded
 1:
@@ -707,7 +713,10 @@ not_vblank:
 	move.w	#0x40,(intreq,a5)
 	move.w	#0x40,(intreq,a5)	
 
-	
+	* can be stopped by level 1 interrupt
+	SW_BLITTER_ACTIVE_TEST	0f
+	jra		3f
+0:
 	PROCESS_ONE_BLIT
 	
 3:	
@@ -725,6 +734,9 @@ level1_interrupt:
 	* do it twice (040/pistorm bug)
 	move.w	#0x4,(intreq,a5)
 	move.w	#0x4,(intreq,a5)
+	
+	
+	SW_BLITTER_ACTIVE_TEST	cancel_update
 	
 	* emergency system to skip a frame if needed!
 	tst.b	skip_screen_update
@@ -793,22 +805,25 @@ skip_update:
 	
 23:
 	* now we check copper interrupt again
-	lea		_custom,a5
-	move.w	intreqr(a5),d0
-	btst	#4,d0
-	beq.b	3f		| clear: ok
-	* level 1 interrupt has been called, which means that
-	* rendering was so slow that we couldn't cope within a frame
-	* skip a tick and ack again, we lose one update frame
-	st.b	skip_screen_update
-	.ifndef	RELEASE
-	COLOR0_FLASH	0xF0F
-	.endif
-	move.w	#0x10,intreq(a5)
-3:
+*	lea		_custom,a5
+*	move.w	intreqr(a5),d0
+*	btst	#2,d0
+*	beq.b	3f		| clear: ok
+*	* level 1 interrupt has been called, which means that
+*	* rendering was so slow that we couldn't cope within a frame
+*	* skip a tick and ack again, we lose one update frame
+*	st.b	skip_screen_update
+*	.ifndef	RELEASE
+*	COLOR0_FLASH	0xF0F
+*	.endif
+*	move.w	#0x4,intreq(a5)
+*3:
     movem.l (a7)+,d0-d7/a0-a6
     rte
-	
+cancel_update:
+	* stop blitter chain, we're dropping this frame
+	SW_BLITTER_INACTIVE_SET
+	jra		skip_update
 
 osd_blitz:
 	blitz
@@ -3322,8 +3337,7 @@ alt_nb_hiscorename:
 	.asciz	"crazy_kong_nb.high"
 floppy_file:
 	.asciz	"floppy"
-floppy_file_present:
-	.byte	0
+
 temp_filename_buffer:
 	.skip	255
 _end_of_ng_code:
