@@ -1,0 +1,33 @@
+
+
+AMIGA CONTROLS:
+
+Joystick or joypad in port 1 or keyboard
+
+- Insert Coin: 5 key or Fire button (from menu).
+- Start Game: 1 key or Up.
+- Move: Joystick or Direction Arrows.
+- Jumo: Ctrl or Fire button.
+- Pause: P key.
+- Quit & Save High-Scores (when run from AmigaDOS): ESC key.
+
+
+USAGE:
+
+Command line arguments (no WHDLoad)
+
+donkey_kong INVINCIBLE/S,INFLIVES/S,INFTIME/S,CHEATKEYS/S,STARTLIVES/K/N
+
+
+CHEATS:
+
+INVINCIBLE: can't die.
+INFLIVES: infinite lives.
+INFTIME: infinite time.
+CHEATKEYS:
+ * F1: complete level.
+ * F2: get hammer.
+STARTLIVES: from 3 to 6.
+
+If any cheat is selected, high scores won't be saved.
+
