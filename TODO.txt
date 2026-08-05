@@ -3,8 +3,7 @@ This then was fixed in v1.1, but sadly in this v1.1, in some cases, the first le
  compared to v1.0. I also realized that now, after the user rh70 mentioned this here. Therefore my question,
  if it was technically possible, to combine the advantages of both older versions, so that the first and also 
  the second level runs good on Amiga500 machines now, in this new v1.2? Or is this not possible at all?
- + floppy led issue but only in japanese level order??? WTF
-- barrels and other fixed objects could be not deleted, save blitter
+- do a sprite multiplexer for barrels with BOB usage in a buffer zone at the center
 
 - problem when too many sprites (barrels) even if bobs should be displayed
   after 8 sprites. Today this is eluded: if there's a problem then
