@@ -1,3 +1,4 @@
+- elevator level bug: Just stand on the upper right platform (to get the purse) and it's insta-death like in some of the earlier vids
 - In v1.0 there was big slowdowns in the second level, when the user is on these conveyor-belts. 
 This then was fixed in v1.1, but sadly in this v1.1, in some cases, the first level could be a bit slower,
  compared to v1.0. I also realized that now, after the user rh70 mentioned this here. Therefore my question,
